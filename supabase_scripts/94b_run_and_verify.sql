@@ -1,0 +1,40 @@
+-- =====================================================================
+-- Instrucciones de ejecución y verificación para 94_client_default_failed_order_financials.sql
+-- =====================================================================
+-- 1) Pre-requisitos
+--    - Haber ejecutado 93_client_profiles_and_accounts_autocreate.sql sin errores.
+--    - Tener disponible la RPC public.rpc_recompute_account_balance.
+--    - Contar con al menos una cuenta de plataforma (platform_revenue) o el usuario
+--      fijo 00000000-0000-0000-0000-000000000001 con una cuenta en public.accounts.
+--
+-- 2) Ejecutar el script 94 (actualizado)
+--    - Abrir 94_client_default_failed_order_financials.sql y ejecutarlo completo.
+--    - Este script es idempotente: si el CHECK ya existe, lo reemplaza solo si falta
+--      alguno de los nuevos tipos (CLIENT_DEBT, PLATFORM_DELIVERY_MARGIN).
+--
+-- 3) Probar la RPC con una orden de prueba
+--    -- Reemplace la UUID por una orden real de su entorno de pruebas
+--    -- SELECT public.rpc_post_client_default(
+--    --   p_order_id => '00000000-0000-0000-0000-0000000000AA'::uuid,
+--    --   p_reason   => 'Cliente no pagó/No show'
+--    -- );
+--
+-- 4) Verificar balance cero por orden
+--    -- SELECT ROUND(COALESCE(SUM(amount),0), 2) as net
+--    -- FROM public.account_transactions
+--    -- WHERE order_id = '00000000-0000-0000-0000-0000000000AA'::uuid;
+--    -- Debe devolver 0.00.
+--
+-- 5) Verificar sumas por tipo
+--    -- SELECT type, SUM(amount) FROM public.account_transactions
+--    -- WHERE order_id = '00000000-0000-0000-0000-0000000000AA'::uuid
+--    -- GROUP BY type
+--    -- ORDER BY type;
+--
+-- 6) Recalcular balances de cuentas si fuese necesario (la RPC ya lo hace)
+--    -- SELECT public.rpc_recompute_account_balance('<ACCOUNT_ID>'::uuid);
+--
+-- 7) Seguridad
+--    -- REVOKE ALL ON FUNCTION public.rpc_post_client_default(uuid, text) FROM public;
+--    -- GRANT EXECUTE ON FUNCTION public.rpc_post_client_default(uuid, text) TO authenticated, service_role;
+-- =====================================================================

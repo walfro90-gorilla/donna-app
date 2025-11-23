@@ -1,0 +1,52 @@
+{
+  "_comment": "Ejemplo de la estructura JSONB que se guarda en delivery_address_structured",
+  "_source": "Google Reverse Geocoding API - address_components",
+  
+  "example_1_mexico": {
+    "street_number": "1021",
+    "route": "Letonia",
+    "sublocality": "Oasis",
+    "neighborhood": "Colonia Oasis",
+    "city": "Oaxaca de Juárez",
+    "state": "Oaxaca",
+    "country": "México",
+    "postal_code": "68050"
+  },
+
+  "example_2_spain": {
+    "street_number": "28",
+    "route": "Calle Gran Vía",
+    "sublocality": "Centro",
+    "city": "Madrid",
+    "state": "Comunidad de Madrid",
+    "country": "España",
+    "postal_code": "28013"
+  },
+
+  "example_3_usa": {
+    "street_number": "1600",
+    "route": "Pennsylvania Avenue NW",
+    "city": "Washington",
+    "state": "District of Columbia",
+    "country": "United States",
+    "postal_code": "20500"
+  },
+
+  "_notes": [
+    "Los campos disponibles dependen de la ubicación y la precisión de Google Maps.",
+    "Campos comunes: street_number, route, sublocality, neighborhood, city, state, country, postal_code",
+    "Este JSONB se puede usar para:",
+    "  1. Análisis de pedidos por ciudad/estado/código postal",
+    "  2. Validación de rangos de entrega por zona",
+    "  3. Autocompletar formularios de envío",
+    "  4. Cálculo de tarifas por zona",
+    "  5. Reportes de cobertura geográfica"
+  ],
+
+  "_sql_query_examples": [
+    "SELECT * FROM orders WHERE delivery_address_structured->>'city' = 'Oaxaca de Juárez';",
+    "SELECT * FROM orders WHERE delivery_address_structured->>'state' = 'Oaxaca';",
+    "SELECT * FROM orders WHERE delivery_address_structured->>'postal_code' = '68050';",
+    "SELECT delivery_address_structured->>'city' AS city, COUNT(*) FROM orders GROUP BY city;"
+  ]
+}

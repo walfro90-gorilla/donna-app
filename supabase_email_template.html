@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirma tu cuenta - DOA Repartos</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%);
+            color: #333;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%);
+            color: white;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .logo {
+            font-size: 60px;
+            margin-bottom: 10px;
+        }
+        .brand-name {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0;
+            letter-spacing: 1px;
+        }
+        .tagline {
+            font-size: 14px;
+            opacity: 0.9;
+            margin: 8px 0 0 0;
+            font-weight: 300;
+        }
+        .content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .welcome-title {
+            font-size: 24px;
+            color: #e91e63;
+            margin: 0 0 16px 0;
+            font-weight: bold;
+        }
+        .welcome-message {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #555;
+            margin: 0 0 30px 0;
+        }
+        .confirm-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%);
+            color: white;
+            text-decoration: none;
+            padding: 16px 40px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 20px 0;
+            box-shadow: 0 4px 20px rgba(233, 30, 99, 0.3);
+            transition: all 0.3s ease;
+        }
+        .confirm-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(233, 30, 99, 0.4);
+        }
+        .security-note {
+            background: #f8f9fa;
+            border-left: 4px solid #e91e63;
+            padding: 16px;
+            margin: 30px 0;
+            text-align: left;
+            border-radius: 4px;
+        }
+        .security-note h3 {
+            margin: 0 0 8px 0;
+            color: #e91e63;
+            font-size: 16px;
+        }
+        .security-note p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #eee;
+        }
+        .footer-text {
+            font-size: 14px;
+            color: #666;
+            margin: 0 0 10px 0;
+            line-height: 1.5;
+        }
+        .social-icons {
+            margin: 20px 0;
+        }
+        .social-icon {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: #e91e63;
+            color: white;
+            border-radius: 50%;
+            text-decoration: none;
+            line-height: 40px;
+            margin: 0 8px;
+            font-size: 18px;
+        }
+        .benefits {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        .benefit {
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+            margin: 10px;
+        }
+        .benefit-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        .benefit-text {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        @media (max-width: 600px) {
+            .email-container {
+                margin: 10px;
+                border-radius: 8px;
+            }
+            .content {
+                padding: 30px 20px;
+            }
+            .benefits {
+                flex-direction: column;
+            }
+            .confirm-button {
+                padding: 14px 30px;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🍴</div>
+            <h1 class="brand-name">DOA REPARTOS</h1>
+            <p class="tagline">Tu comida favorita, a un clic de distancia</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <h2 class="welcome-title">¡Bienvenid@ a la familia DOA! 🎉</h2>
+            <p class="welcome-message">
+                Estás a un paso de disfrutar los mejores sabores de la ciudad. 
+                Confirma tu cuenta para empezar a ordenar de tus restaurantes favoritos.
+            </p>
+
+            <!-- Confirm Button -->
+            <a href="{{ .ConfirmationURL }}" class="confirm-button">
+                ✅ Confirmar mi cuenta
+            </a>
+
+            <!-- Benefits -->
+            <div class="benefits">
+                <div class="benefit">
+                    <div class="benefit-icon">🚚</div>
+                    <div class="benefit-text">Entrega súper rápida</div>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">🍕</div>
+                    <div class="benefit-text">Miles de opciones</div>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">💳</div>
+                    <div class="benefit-text">Pago seguro</div>
+                </div>
+            </div>
+
+            <!-- Security Note -->
+            <div class="security-note">
+                <h3>🔒 Nota de Seguridad</h3>
+                <p>
+                    Este enlace de confirmación es único y personal. Si no creaste una cuenta con DOA Repartos, 
+                    puedes ignorar este email de forma segura. El enlace expirará automáticamente en 24 horas.
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p class="footer-text">
+                <strong>DOA Repartos</strong><br>
+                La mejor experiencia de comida a domicilio 🇲🇽
+            </p>
+            
+            <div class="social-icons">
+                <a href="#" class="social-icon">📱</a>
+                <a href="#" class="social-icon">📧</a>
+                <a href="#" class="social-icon">🌐</a>
+            </div>
+            
+            <p class="footer-text">
+                Si tienes problemas con el botón de confirmación, copia y pega este enlace en tu navegador:<br>
+                <small style="color: #e91e63; word-break: break-all;">{{ .ConfirmationURL }}</small>
+            </p>
+            
+            <p class="footer-text" style="font-size: 12px; margin-top: 20px;">
+                © 2025 DOA Repartos. Todos los derechos reservados.<br>
+                Este es un email automático, por favor no responder.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

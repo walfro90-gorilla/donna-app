@@ -1,0 +1,27 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "donna-app-124dc",
+          "appId": "1:1098500496995:android:e495619f7b3412170ce256",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "donna-app-124dc",
+          "configurations": {
+            "android": "1:1098500496995:android:e495619f7b3412170ce256",
+            "ios": "1:1098500496995:ios:7748cb57734ce4f60ce256",
+            "web": "1:1098500496995:web:8ba033333f0af75e0ce256"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}
