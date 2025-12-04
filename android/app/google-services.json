@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:1098500496995:android:5e220192ad1f9f8f0ce256",
+        "android_client_info": {
+          "package_name": "com.donna.co"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAbXaVkUj1Zo7aULcJSVABvR0NpBqH1ffk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:1098500496995:android:e495619f7b3412170ce256",
         "android_client_info": {
           "package_name": "com.mycompany.CounterApp"
