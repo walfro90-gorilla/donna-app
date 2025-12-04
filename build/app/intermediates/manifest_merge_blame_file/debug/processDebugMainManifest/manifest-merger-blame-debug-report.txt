@@ -84,7 +84,7 @@
 54        android:debuggable="true"
 55        android:extractNativeLibs="false"
 56        android:icon="@mipmap/ic_launcher"
-57        android:label="dreamflow" >
+57        android:label="Doña Repartos" >
 58        <activity
 59            android:name="com.mycompany.CounterApp.MainActivity"
 60            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"

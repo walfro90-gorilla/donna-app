@@ -22,7 +22,7 @@ subprojects {
         if (project.hasProperty("kotlin")) {
             project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
                 kotlinOptions {
-                    jvmTarget = "1.8"
+                    jvmTarget = "11"
                 }
             }
         }
@@ -35,6 +35,10 @@ subprojects {
                 project.plugins.hasPlugin("com.android.library")) {
             project.android {
                 compileSdkVersion 35
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_11
+                    targetCompatibility JavaVersion.VERSION_11
+                }
             }
         }
         if (project.hasProperty('android')) {
