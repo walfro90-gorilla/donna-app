@@ -11,6 +11,9 @@ import 'package:doa_repartos/core/supabase/rpc_names.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_map/flutter_map.dart' as fm;
+import 'package:latlong2/latlong.dart' as ll;
 
 /// Página pública de registro de restaurantes (/nueva-donna)
 /// Diseño inspirado en Rappi - limpio, moderno y profesional
@@ -579,6 +582,52 @@ class _RestaurantRegistrationScreenState extends State<RestaurantRegistrationScr
                       ),
                       
                       if (_selectedLocation != null || (_selectedLat != null && _selectedLon != null)) ...[
+                        const SizedBox(height: 16),
+                        // Mini mapa informativo
+                        Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE0E0E0)),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(11),
+                            child: Stack(
+                              children: [
+                                // Background placeholder
+                                Container(color: const Color(0xFFEEEEEE)),
+                                // Map Layer
+                                fm.FlutterMap(
+                                  options: fm.MapOptions(
+                                    initialCenter: ll.LatLng(_selectedLat!, _selectedLon!),
+                                    initialZoom: 16,
+                                    interactionOptions: const fm.InteractionOptions(
+                                      flags: fm.InteractiveFlag.none,
+                                    ),
+                                  ),
+                                  children: [
+                                    fm.TileLayer(
+                                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                      userAgentPackageName: 'com.doa.repartos',
+                                    ),
+                                    fm.MarkerLayer(
+                                      markers: [
+                                        fm.Marker(
+                                          point: ll.LatLng(_selectedLat!, _selectedLon!),
+                                          width: 48,
+                                          height: 48,
+                                          child: const Icon(Icons.location_on, color: Colors.red, size: 48),
+                                          alignment: Alignment.topCenter, 
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
