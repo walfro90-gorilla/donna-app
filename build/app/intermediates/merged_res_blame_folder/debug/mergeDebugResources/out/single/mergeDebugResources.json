@@ -1,31 +1,15 @@
 [
     {
-        "merged": "C:\\Users\\walfr\\.gradle\\daemon\\8.12\\com.mycompany.CounterApp.app-debug-49:\\mipmap-hdpi_ic_launcher.png.flat",
-        "source": "C:\\Users\\walfr\\.gradle\\daemon\\8.12\\com.mycompany.CounterApp.app-main-43:\\mipmap-hdpi\\ic_launcher.png"
-    },
-    {
-        "merged": "C:\\Users\\walfr\\.gradle\\daemon\\8.12\\com.mycompany.CounterApp.app-debug-49:\\mipmap-xxxhdpi_ic_launcher.png.flat",
-        "source": "C:\\Users\\walfr\\.gradle\\daemon\\8.12\\com.mycompany.CounterApp.app-main-43:\\mipmap-xxxhdpi\\ic_launcher.png"
-    },
-    {
-        "merged": "C:\\Users\\walfr\\.gradle\\daemon\\8.12\\com.mycompany.CounterApp.app-debug-49:\\drawable-v21_launch_background.xml.flat",
-        "source": "C:\\Users\\walfr\\.gradle\\daemon\\8.12\\com.mycompany.CounterApp.app-main-43:\\drawable-v21\\launch_background.xml"
-    },
-    {
         "merged": "com.mycompany.CounterApp.app-debug-49:/mipmap-xxhdpi_ic_launcher.png.flat",
         "source": "com.mycompany.CounterApp.app-main-43:/mipmap-xxhdpi/ic_launcher.png"
-    },
-    {
-        "merged": "C:\\Users\\walfr\\.gradle\\daemon\\8.12\\com.mycompany.CounterApp.app-debug-49:\\mipmap-xhdpi_ic_launcher.png.flat",
-        "source": "C:\\Users\\walfr\\.gradle\\daemon\\8.12\\com.mycompany.CounterApp.app-main-43:\\mipmap-xhdpi\\ic_launcher.png"
     },
     {
         "merged": "com.mycompany.CounterApp.app-debug-49:/mipmap-xhdpi_ic_launcher.png.flat",
         "source": "com.mycompany.CounterApp.app-main-43:/mipmap-xhdpi/ic_launcher.png"
     },
     {
-        "merged": "C:\\Users\\walfr\\.gradle\\daemon\\8.12\\com.mycompany.CounterApp.app-debug-49:\\mipmap-xxhdpi_ic_launcher.png.flat",
-        "source": "C:\\Users\\walfr\\.gradle\\daemon\\8.12\\com.mycompany.CounterApp.app-main-43:\\mipmap-xxhdpi\\ic_launcher.png"
+        "merged": "com.mycompany.CounterApp.app-debug-49:/drawable-v21_launch_background.xml.flat",
+        "source": "com.mycompany.CounterApp.app-main-43:/drawable-v21/launch_background.xml"
     },
     {
         "merged": "com.mycompany.CounterApp.app-debug-49:/mipmap-mdpi_ic_launcher.png.flat",
@@ -38,9 +22,5 @@
     {
         "merged": "com.mycompany.CounterApp.app-debug-49:/mipmap-xxxhdpi_ic_launcher.png.flat",
         "source": "com.mycompany.CounterApp.app-main-43:/mipmap-xxxhdpi/ic_launcher.png"
-    },
-    {
-        "merged": "C:\\Users\\walfr\\.gradle\\daemon\\8.12\\com.mycompany.CounterApp.app-debug-49:\\mipmap-mdpi_ic_launcher.png.flat",
-        "source": "C:\\Users\\walfr\\.gradle\\daemon\\8.12\\com.mycompany.CounterApp.app-main-43:\\mipmap-mdpi\\ic_launcher.png"
     }
 ]

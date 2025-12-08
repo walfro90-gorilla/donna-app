@@ -18,9 +18,20 @@ import 'package:doa_repartos/screens/delivery/delivery_onboarding_dashboard.dart
 import 'package:doa_repartos/screens/public/privacy_policy_screen.dart';
 import 'dart:async';
 import 'package:doa_repartos/core/theme/app_theme_controller.dart';
+import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Google Maps Renderer (Fix for ImageReader_JNI errors)
+  final GoogleMapsFlutterPlatform mapsImplementation = GoogleMapsFlutterPlatform.instance;
+  if (mapsImplementation is GoogleMapsFlutterAndroid) {
+    debugPrint('🗺️ [MAIN] Initializing Google Maps Android Renderer to LATEST');
+    mapsImplementation.useAndroidViewSurface = true;
+    mapsImplementation.initializeWithRenderer(AndroidMapRenderer.latest);
+  }
+
   // Initialize theme preference first
   await AppThemeController.initialize();
   // Initialize services

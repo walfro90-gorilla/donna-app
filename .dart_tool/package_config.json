@@ -345,9 +345,9 @@
     },
     {
       "name": "google_maps_flutter_android",
-      "rootUri": "file:///C:/Users/walfr/AppData/Local/Pub/Cache/hosted/pub.dev/google_maps_flutter_android-2.18.2",
+      "rootUri": "file:///C:/Users/walfr/AppData/Local/Pub/Cache/hosted/pub.dev/google_maps_flutter_android-2.18.6",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.9"
     },
     {
       "name": "google_maps_flutter_ios",

@@ -29,16 +29,16 @@
 23         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin.
 24    -->
 25    <queries>
-25-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:50:5-55:15
+25-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:53:5-58:15
 26        <intent>
-26-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:51:9-54:18
+26-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:54:9-57:18
 27            <action android:name="android.intent.action.PROCESS_TEXT" />
-27-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:52:13-72
-27-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:52:21-70
+27-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:55:13-72
+27-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:55:21-70
 28
 29            <data android:mimeType="text/plain" />
-29-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:53:13-50
-29-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:53:19-48
+29-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:56:13-50
+29-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:56:19-48
 30        </intent>
 31        <intent>
 31-->[:file_picker] C:\Users\walfr\Documents\codes\donna-app\build\file_picker\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:9-12:18
@@ -47,8 +47,8 @@
 32-->[:file_picker] C:\Users\walfr\Documents\codes\donna-app\build\file_picker\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:21-69
 33
 34            <data android:mimeType="*/*" />
-34-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:53:13-50
-34-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:53:19-48
+34-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:56:13-50
+34-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:56:19-48
 35        </intent> <!-- Needs to be explicitly declared on Android R+ -->
 36        <package android:name="com.google.android.apps.maps" />
 36-->[com.google.android.gms:play-services-maps:19.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\b47f7b25dcb9dc35b966b853f2469ac2\transformed\jetified-play-services-maps-19.2.0\AndroidManifest.xml:29:7-61
@@ -118,7 +118,7 @@
 88                <category android:name="android.intent.category.BROWSABLE" />
 89
 90                <data
-90-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:53:13-50
+90-->C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:56:13-50
 91                    android:host="login-callback"
 92                    android:scheme="com.dona.app" />
 93            </intent-filter>
@@ -130,156 +130,159 @@
 99        <meta-data
 100            android:name="flutterEmbedding"
 101            android:value="2" />
-102
-103        <service
-103-->[:firebase_core] C:\Users\walfr\Documents\codes\donna-app\build\firebase_core\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:9-12:19
-104            android:name="com.google.firebase.components.ComponentDiscoveryService"
-104-->[:firebase_core] C:\Users\walfr\Documents\codes\donna-app\build\firebase_core\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:18-89
-105            android:directBootAware="true"
-105-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:32:13-43
-106            android:exported="false" >
-106-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:33:13-37
-107            <meta-data
-107-->[:firebase_core] C:\Users\walfr\Documents\codes\donna-app\build\firebase_core\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:13-11:85
-108                android:name="com.google.firebase.components:io.flutter.plugins.firebase.core.FlutterFirebaseCoreRegistrar"
-108-->[:firebase_core] C:\Users\walfr\Documents\codes\donna-app\build\firebase_core\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:10:17-124
-109                android:value="com.google.firebase.components.ComponentRegistrar" />
-109-->[:firebase_core] C:\Users\walfr\Documents\codes\donna-app\build\firebase_core\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:11:17-82
+102        <meta-data
+103            android:name="com.google.android.geo.API_KEY"
+104            android:value="AIzaSyAH5kg3KoCEIxP9ljVnLbF6cwkOebBp0hE" />
+105
+106        <service
+106-->[:firebase_core] C:\Users\walfr\Documents\codes\donna-app\build\firebase_core\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:9-12:19
+107            android:name="com.google.firebase.components.ComponentDiscoveryService"
+107-->[:firebase_core] C:\Users\walfr\Documents\codes\donna-app\build\firebase_core\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:18-89
+108            android:directBootAware="true"
+108-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:32:13-43
+109            android:exported="false" >
+109-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:33:13-37
 110            <meta-data
-110-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:35:13-37:85
-111                android:name="com.google.firebase.components:com.google.firebase.FirebaseCommonKtxRegistrar"
-111-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:36:17-109
+110-->[:firebase_core] C:\Users\walfr\Documents\codes\donna-app\build\firebase_core\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:13-11:85
+111                android:name="com.google.firebase.components:io.flutter.plugins.firebase.core.FlutterFirebaseCoreRegistrar"
+111-->[:firebase_core] C:\Users\walfr\Documents\codes\donna-app\build\firebase_core\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:10:17-124
 112                android:value="com.google.firebase.components.ComponentRegistrar" />
-112-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:37:17-82
-113        </service>
-114
-115        <provider
-115-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:23:9-28:39
-116            android:name="com.google.firebase.provider.FirebaseInitProvider"
-116-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:24:13-77
-117            android:authorities="com.donna.co.firebaseinitprovider"
-117-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:25:13-72
-118            android:directBootAware="true"
-118-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:26:13-43
-119            android:exported="false"
-119-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:27:13-37
-120            android:initOrder="100" />
-120-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:28:13-36
-121
-122        <service
-122-->[:geolocator_android] C:\Users\walfr\Documents\codes\donna-app\build\geolocator_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:9-12:56
-123            android:name="com.baseflow.geolocator.GeolocatorLocationService"
-123-->[:geolocator_android] C:\Users\walfr\Documents\codes\donna-app\build\geolocator_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:13-77
-124            android:enabled="true"
-124-->[:geolocator_android] C:\Users\walfr\Documents\codes\donna-app\build\geolocator_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:10:13-35
-125            android:exported="false"
-125-->[:geolocator_android] C:\Users\walfr\Documents\codes\donna-app\build\geolocator_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:11:13-37
-126            android:foregroundServiceType="location" />
-126-->[:geolocator_android] C:\Users\walfr\Documents\codes\donna-app\build\geolocator_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:12:13-53
-127
-128        <activity
-128-->[:url_launcher_android] C:\Users\walfr\Documents\codes\donna-app\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:9-11:74
-129            android:name="io.flutter.plugins.urllauncher.WebViewActivity"
-129-->[:url_launcher_android] C:\Users\walfr\Documents\codes\donna-app\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:13-74
-130            android:exported="false"
-130-->[:url_launcher_android] C:\Users\walfr\Documents\codes\donna-app\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:10:13-37
-131            android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
-131-->[:url_launcher_android] C:\Users\walfr\Documents\codes\donna-app\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:11:13-71
-132
-133        <uses-library
-133-->[androidx.window:window:1.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\04fbe0b5d75a4951584d3c14ce931f97\transformed\jetified-window-1.2.0\AndroidManifest.xml:23:9-25:40
-134            android:name="androidx.window.extensions"
-134-->[androidx.window:window:1.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\04fbe0b5d75a4951584d3c14ce931f97\transformed\jetified-window-1.2.0\AndroidManifest.xml:24:13-54
-135            android:required="false" />
-135-->[androidx.window:window:1.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\04fbe0b5d75a4951584d3c14ce931f97\transformed\jetified-window-1.2.0\AndroidManifest.xml:25:13-37
+112-->[:firebase_core] C:\Users\walfr\Documents\codes\donna-app\build\firebase_core\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:11:17-82
+113            <meta-data
+113-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:35:13-37:85
+114                android:name="com.google.firebase.components:com.google.firebase.FirebaseCommonKtxRegistrar"
+114-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:36:17-109
+115                android:value="com.google.firebase.components.ComponentRegistrar" />
+115-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:37:17-82
+116        </service>
+117
+118        <provider
+118-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:23:9-28:39
+119            android:name="com.google.firebase.provider.FirebaseInitProvider"
+119-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:24:13-77
+120            android:authorities="com.donna.co.firebaseinitprovider"
+120-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:25:13-72
+121            android:directBootAware="true"
+121-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:26:13-43
+122            android:exported="false"
+122-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:27:13-37
+123            android:initOrder="100" />
+123-->[com.google.firebase:firebase-common:22.0.0] C:\Users\walfr\.gradle\caches\8.12\transforms\5d68fe74eda0dd120e381988357dd5b5\transformed\jetified-firebase-common-22.0.0\AndroidManifest.xml:28:13-36
+124
+125        <service
+125-->[:geolocator_android] C:\Users\walfr\Documents\codes\donna-app\build\geolocator_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:9-12:56
+126            android:name="com.baseflow.geolocator.GeolocatorLocationService"
+126-->[:geolocator_android] C:\Users\walfr\Documents\codes\donna-app\build\geolocator_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:13-77
+127            android:enabled="true"
+127-->[:geolocator_android] C:\Users\walfr\Documents\codes\donna-app\build\geolocator_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:10:13-35
+128            android:exported="false"
+128-->[:geolocator_android] C:\Users\walfr\Documents\codes\donna-app\build\geolocator_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:11:13-37
+129            android:foregroundServiceType="location" />
+129-->[:geolocator_android] C:\Users\walfr\Documents\codes\donna-app\build\geolocator_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:12:13-53
+130
+131        <activity
+131-->[:url_launcher_android] C:\Users\walfr\Documents\codes\donna-app\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:9-11:74
+132            android:name="io.flutter.plugins.urllauncher.WebViewActivity"
+132-->[:url_launcher_android] C:\Users\walfr\Documents\codes\donna-app\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:13-74
+133            android:exported="false"
+133-->[:url_launcher_android] C:\Users\walfr\Documents\codes\donna-app\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:10:13-37
+134            android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
+134-->[:url_launcher_android] C:\Users\walfr\Documents\codes\donna-app\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:11:13-71
+135
 136        <uses-library
-136-->[androidx.window:window:1.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\04fbe0b5d75a4951584d3c14ce931f97\transformed\jetified-window-1.2.0\AndroidManifest.xml:26:9-28:40
-137            android:name="androidx.window.sidecar"
-137-->[androidx.window:window:1.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\04fbe0b5d75a4951584d3c14ce931f97\transformed\jetified-window-1.2.0\AndroidManifest.xml:27:13-51
-138            android:required="false" /> <!-- Needs to be explicitly declared on P+ -->
-138-->[androidx.window:window:1.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\04fbe0b5d75a4951584d3c14ce931f97\transformed\jetified-window-1.2.0\AndroidManifest.xml:28:13-37
+136-->[androidx.window:window:1.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\04fbe0b5d75a4951584d3c14ce931f97\transformed\jetified-window-1.2.0\AndroidManifest.xml:23:9-25:40
+137            android:name="androidx.window.extensions"
+137-->[androidx.window:window:1.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\04fbe0b5d75a4951584d3c14ce931f97\transformed\jetified-window-1.2.0\AndroidManifest.xml:24:13-54
+138            android:required="false" />
+138-->[androidx.window:window:1.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\04fbe0b5d75a4951584d3c14ce931f97\transformed\jetified-window-1.2.0\AndroidManifest.xml:25:13-37
 139        <uses-library
-139-->[com.google.android.gms:play-services-maps:19.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\b47f7b25dcb9dc35b966b853f2469ac2\transformed\jetified-play-services-maps-19.2.0\AndroidManifest.xml:33:7-86
-140            android:name="org.apache.http.legacy"
-140-->[com.google.android.gms:play-services-maps:19.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\b47f7b25dcb9dc35b966b853f2469ac2\transformed\jetified-play-services-maps-19.2.0\AndroidManifest.xml:33:21-58
-141            android:required="false" />
-141-->[com.google.android.gms:play-services-maps:19.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\b47f7b25dcb9dc35b966b853f2469ac2\transformed\jetified-play-services-maps-19.2.0\AndroidManifest.xml:33:59-83
-142
-143        <activity
-143-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\walfr\.gradle\caches\8.12\transforms\9083bbb9c64b54ffc5f5d4d170196c90\transformed\jetified-play-services-base-18.5.0\AndroidManifest.xml:5:9-173
-144            android:name="com.google.android.gms.common.api.GoogleApiActivity"
-144-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\walfr\.gradle\caches\8.12\transforms\9083bbb9c64b54ffc5f5d4d170196c90\transformed\jetified-play-services-base-18.5.0\AndroidManifest.xml:5:19-85
-145            android:exported="false"
-145-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\walfr\.gradle\caches\8.12\transforms\9083bbb9c64b54ffc5f5d4d170196c90\transformed\jetified-play-services-base-18.5.0\AndroidManifest.xml:5:146-170
-146            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-146-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\walfr\.gradle\caches\8.12\transforms\9083bbb9c64b54ffc5f5d4d170196c90\transformed\jetified-play-services-base-18.5.0\AndroidManifest.xml:5:86-145
-147
-148        <provider
-148-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:24:9-32:20
-149            android:name="androidx.startup.InitializationProvider"
-149-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:25:13-67
-150            android:authorities="com.donna.co.androidx-startup"
-150-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:26:13-68
-151            android:exported="false" >
-151-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:27:13-37
-152            <meta-data
-152-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:29:13-31:52
-153                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-153-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:30:17-78
-154                android:value="androidx.startup" />
-154-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:31:17-49
+139-->[androidx.window:window:1.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\04fbe0b5d75a4951584d3c14ce931f97\transformed\jetified-window-1.2.0\AndroidManifest.xml:26:9-28:40
+140            android:name="androidx.window.sidecar"
+140-->[androidx.window:window:1.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\04fbe0b5d75a4951584d3c14ce931f97\transformed\jetified-window-1.2.0\AndroidManifest.xml:27:13-51
+141            android:required="false" /> <!-- Needs to be explicitly declared on P+ -->
+141-->[androidx.window:window:1.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\04fbe0b5d75a4951584d3c14ce931f97\transformed\jetified-window-1.2.0\AndroidManifest.xml:28:13-37
+142        <uses-library
+142-->[com.google.android.gms:play-services-maps:19.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\b47f7b25dcb9dc35b966b853f2469ac2\transformed\jetified-play-services-maps-19.2.0\AndroidManifest.xml:33:7-86
+143            android:name="org.apache.http.legacy"
+143-->[com.google.android.gms:play-services-maps:19.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\b47f7b25dcb9dc35b966b853f2469ac2\transformed\jetified-play-services-maps-19.2.0\AndroidManifest.xml:33:21-58
+144            android:required="false" />
+144-->[com.google.android.gms:play-services-maps:19.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\b47f7b25dcb9dc35b966b853f2469ac2\transformed\jetified-play-services-maps-19.2.0\AndroidManifest.xml:33:59-83
+145
+146        <activity
+146-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\walfr\.gradle\caches\8.12\transforms\9083bbb9c64b54ffc5f5d4d170196c90\transformed\jetified-play-services-base-18.5.0\AndroidManifest.xml:5:9-173
+147            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+147-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\walfr\.gradle\caches\8.12\transforms\9083bbb9c64b54ffc5f5d4d170196c90\transformed\jetified-play-services-base-18.5.0\AndroidManifest.xml:5:19-85
+148            android:exported="false"
+148-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\walfr\.gradle\caches\8.12\transforms\9083bbb9c64b54ffc5f5d4d170196c90\transformed\jetified-play-services-base-18.5.0\AndroidManifest.xml:5:146-170
+149            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+149-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\walfr\.gradle\caches\8.12\transforms\9083bbb9c64b54ffc5f5d4d170196c90\transformed\jetified-play-services-base-18.5.0\AndroidManifest.xml:5:86-145
+150
+151        <provider
+151-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:24:9-32:20
+152            android:name="androidx.startup.InitializationProvider"
+152-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:25:13-67
+153            android:authorities="com.donna.co.androidx-startup"
+153-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:26:13-68
+154            android:exported="false" >
+154-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:27:13-37
 155            <meta-data
-155-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
-156                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-156-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+155-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:29:13-31:52
+156                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+156-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:30:17-78
 157                android:value="androidx.startup" />
-157-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
-158        </provider>
-159
-160        <meta-data
-160-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\walfr\.gradle\caches\8.12\transforms\95f0fb3ba04a7f995f250287f1c7a91a\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:6:9-122
-161            android:name="com.google.android.gms.version"
-161-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\walfr\.gradle\caches\8.12\transforms\95f0fb3ba04a7f995f250287f1c7a91a\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:6:20-65
-162            android:value="@integer/google_play_services_version" />
-162-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\walfr\.gradle\caches\8.12\transforms\95f0fb3ba04a7f995f250287f1c7a91a\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:6:66-119
-163
-164        <receiver
-164-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
-165            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-165-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
-166            android:directBootAware="false"
-166-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
-167            android:enabled="true"
-167-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
-168            android:exported="true"
-168-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
-169            android:permission="android.permission.DUMP" >
-169-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
-170            <intent-filter>
-170-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
-171                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
-171-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
-171-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
-172            </intent-filter>
+157-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\walfr\.gradle\caches\8.12\transforms\592d77e5b1458cb11f61f089ab430869\transformed\jetified-lifecycle-process-2.8.7\AndroidManifest.xml:31:17-49
+158            <meta-data
+158-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+159                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+159-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+160                android:value="androidx.startup" />
+160-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+161        </provider>
+162
+163        <meta-data
+163-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\walfr\.gradle\caches\8.12\transforms\95f0fb3ba04a7f995f250287f1c7a91a\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:6:9-122
+164            android:name="com.google.android.gms.version"
+164-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\walfr\.gradle\caches\8.12\transforms\95f0fb3ba04a7f995f250287f1c7a91a\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:6:20-65
+165            android:value="@integer/google_play_services_version" />
+165-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\walfr\.gradle\caches\8.12\transforms\95f0fb3ba04a7f995f250287f1c7a91a\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:6:66-119
+166
+167        <receiver
+167-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+168            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+168-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+169            android:directBootAware="false"
+169-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+170            android:enabled="true"
+170-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+171            android:exported="true"
+171-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+172            android:permission="android.permission.DUMP" >
+172-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
 173            <intent-filter>
-173-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
-174                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
-174-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
-174-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+173-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+174                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+174-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+174-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
 175            </intent-filter>
 176            <intent-filter>
-176-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
-177                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
-177-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
-177-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+176-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+177                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+177-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+177-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
 178            </intent-filter>
 179            <intent-filter>
-179-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
-180                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
-180-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
-180-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+179-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+180                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+180-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+180-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
 181            </intent-filter>
-182        </receiver>
-183    </application>
-184
-185</manifest>
+182            <intent-filter>
+182-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+183                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+183-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+183-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\walfr\.gradle\caches\8.12\transforms\a3e832a207ffa4a97f5ee9fb793c0f67\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+184            </intent-filter>
+185        </receiver>
+186    </application>
+187
+188</manifest>

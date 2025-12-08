@@ -1,6 +1,6 @@
 -- Merging decision tree log ---
 application
-INJECTED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:6:5-44:19
+INJECTED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:6:5-47:19
 INJECTED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\debug\AndroidManifest.xml
 MERGED from [:firebase_core] C:\Users\walfr\Documents\codes\donna-app\build\firebase_core\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-13:19
 MERGED from [:firebase_core] C:\Users\walfr\Documents\codes\donna-app\build\firebase_core\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-13:19
@@ -40,9 +40,13 @@ MERGED from [com.google.maps.android:android-maps-utils:3.6.0] C:\Users\walfr\.g
 		ADDED from [androidx.core:core:1.15.0] C:\Users\walfr\.gradle\caches\8.12\transforms\219f9b3277a8e8ecae5885348376ba98\transformed\core-1.15.0\AndroidManifest.xml:28:18-86
 	android:name
 		INJECTED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml
+meta-data#com.google.android.geo.API_KEY
+INJECTED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:44:9-46:44
+	android:value
+		INJECTED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml
 manifest
-ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:1:1-56:12
-MERGED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:1:1-56:12
+ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:1:1-59:12
+MERGED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:1:1-59:12
 INJECTED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\debug\AndroidManifest.xml:1:1-7:12
 INJECTED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\debug\AndroidManifest.xml:1:1-7:12
 INJECTED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\debug\AndroidManifest.xml:1:1-7:12
@@ -147,21 +151,21 @@ ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\Android
 	android:name
 		ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:4:22-78
 queries
-ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:50:5-55:15
+ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:53:5-58:15
 MERGED from [:file_picker] C:\Users\walfr\Documents\codes\donna-app\build\file_picker\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-13:15
 MERGED from [:file_picker] C:\Users\walfr\Documents\codes\donna-app\build\file_picker\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-13:15
 MERGED from [com.google.android.gms:play-services-maps:19.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\b47f7b25dcb9dc35b966b853f2469ac2\transformed\jetified-play-services-maps-19.2.0\AndroidManifest.xml:27:5-30:15
 MERGED from [com.google.android.gms:play-services-maps:19.2.0] C:\Users\walfr\.gradle\caches\8.12\transforms\b47f7b25dcb9dc35b966b853f2469ac2\transformed\jetified-play-services-maps-19.2.0\AndroidManifest.xml:27:5-30:15
 intent#action:name:android.intent.action.PROCESS_TEXT+data:mimeType:text/plain
-ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:51:9-54:18
+ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:54:9-57:18
 action#android.intent.action.PROCESS_TEXT
-ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:52:13-72
+ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:55:13-72
 	android:name
-		ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:52:21-70
+		ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:55:21-70
 data
-ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:53:13-50
+ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:56:13-50
 	android:mimeType
-		ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:53:19-48
+		ADDED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\main\AndroidManifest.xml:56:19-48
 uses-sdk
 INJECTED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\debug\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from C:\Users\walfr\Documents\codes\donna-app\android\app\src\debug\AndroidManifest.xml
