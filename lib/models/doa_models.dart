@@ -134,7 +134,7 @@ class DoaUser {
         if (b is Map) return Map<String, dynamic>.from(b);
         return null;
       })(),
-      profileImageUrl: json['profile_image_url'],
+      profileImageUrl: clientProfile?['profile_image_url'] ?? json['profile_image_url'],
       idDocumentFrontUrl: json['id_document_front_url'],
       idDocumentBackUrl: json['id_document_back_url'],
       vehicleType: json['vehicle_type'],

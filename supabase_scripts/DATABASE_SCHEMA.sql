@@ -343,6 +343,16 @@ CREATE TABLE public.products (
   CONSTRAINT products_pkey PRIMARY KEY (id),
   CONSTRAINT products_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
 );
+CREATE TABLE public.profiles (
+  id uuid NOT NULL,
+  role text DEFAULT 'user'::text CHECK (role = ANY (ARRAY['admin'::text, 'provider'::text, 'user'::text, 'ambassador'::text])),
+  username text UNIQUE,
+  full_name text,
+  avatar_url text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
 CREATE TABLE public.restaurants (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL UNIQUE,
@@ -394,6 +404,19 @@ CREATE TABLE public.reviews (
   CONSTRAINT reviews_subject_user_id_fkey FOREIGN KEY (subject_user_id) REFERENCES public.users(id),
   CONSTRAINT reviews_subject_restaurant_id_fkey FOREIGN KEY (subject_restaurant_id) REFERENCES public.restaurants(id)
 );
+CREATE TABLE public.services (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  provider_id uuid NOT NULL,
+  title text NOT NULL,
+  description text,
+  location text,
+  price_mxn numeric DEFAULT 0,
+  available boolean DEFAULT true,
+  approved boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT services_pkey PRIMARY KEY (id),
+  CONSTRAINT services_provider_id_fkey FOREIGN KEY (provider_id) REFERENCES public.profiles(id)
+);
 CREATE TABLE public.settlements (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   payer_account_id uuid,
@@ -418,6 +441,16 @@ CREATE TABLE public.system_debug_log (
   tag text,
   data jsonb,
   CONSTRAINT system_debug_log_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.transactions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  wallet_id uuid NOT NULL,
+  amount numeric NOT NULL,
+  type text CHECK (type = ANY (ARRAY['deposit'::text, 'withdrawal'::text, 'payment'::text, 'refund'::text])),
+  reference_id text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT transactions_pkey PRIMARY KEY (id),
+  CONSTRAINT transactions_wallet_id_fkey FOREIGN KEY (wallet_id) REFERENCES public.wallets(user_id)
 );
 CREATE TABLE public.trigger_debug_log (
   id bigint NOT NULL DEFAULT nextval('trigger_debug_log_id_seq'::regclass),
@@ -459,4 +492,12 @@ CREATE TABLE public.users (
   email_confirm boolean DEFAULT false,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.wallets (
+  user_id uuid NOT NULL,
+  balance numeric DEFAULT 0,
+  currency_code text DEFAULT 'AXO'::text,
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT wallets_pkey PRIMARY KEY (user_id),
+  CONSTRAINT wallets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );

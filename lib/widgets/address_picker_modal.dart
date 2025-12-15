@@ -627,6 +627,9 @@ class _AddressPickerModalState extends State<AddressPickerModal> {
                     )
                   : Stack(
                       children: [
+                        // Background placeholder (prevents "white screen" if tiles load slow)
+                        Container(color: const Color(0xFFEEEEEE)),
+                        
                         // GoogleMap (mobile/desktop) or FlutterMap fallback (web)
                         if (kIsWeb)
                           fm.FlutterMap(
