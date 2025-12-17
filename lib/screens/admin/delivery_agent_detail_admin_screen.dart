@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:doa_repartos/models/doa_models.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
+import 'package:doa_repartos/screens/admin/admin_account_ledger_screen.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as latLng;
+import 'package:intl/intl.dart';
 
 /// Admin view: Full delivery agent details page with tabs
 /// - Combines users + delivery_agent_profiles + client_profiles (si lo reviso)
@@ -890,7 +894,22 @@ class _AdminDeliveryAgentDetailScreenState extends State<AdminDeliveryAgentDetai
             const SizedBox(height: 12),
             const Divider(),
             const SizedBox(height: 8),
-            Text('Transacciones (${_allTx.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Transacciones (${_allTx.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => AdminAccountLedgerScreen(
+                      account: _account!,
+                      ownerName: widget.agent.name ?? 'Repartidor',
+                    )));
+                  },
+                  child: const Text('Ver historial completo'),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             if (_allTx.isEmpty) _emptyState('Sin transacciones'),
             if (_allTx.isNotEmpty)
@@ -940,37 +959,102 @@ class _AdminDeliveryAgentDetailScreenState extends State<AdminDeliveryAgentDetai
     if (_locationHistory.isEmpty) {
       return _emptyState('Sin historial de ubicaciones');
     }
+
+    // Prepare points for map
+    final points = _locationHistory.map((loc) {
+      final lat = (loc['lat'] as num?)?.toDouble() ?? 0.0;
+      final lon = (loc['lon'] as num?)?.toDouble() ?? 0.0;
+      return latLng.LatLng(lat, lon);
+    }).where((p) => p.latitude != 0 && p.longitude != 0).toList();
+
     return Column(
       children: [
-        for (final loc in _locationHistory)
+        if (points.isNotEmpty)
           Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(10),
+            height: 300,
+            margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            clipBehavior: Clip.antiAlias,
+            child: FlutterMap(
+              options: MapOptions(
+                initialCenter: points.first,
+                initialZoom: 13,
+              ),
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, color: Colors.red, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text('Lat: ${loc['lat']}, Lon: ${loc['lon']}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.donna.app',
+                ),
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: points,
+                      strokeWidth: 4,
+                      color: Colors.blue,
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(loc['recorded_at'] != null ? _formatDate(DateTime.parse(loc['recorded_at'])) : '', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                if (loc['order_id'] != null) Text('Orden: ${(loc['order_id'] as String).substring(0, 8)}', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                if (loc['speed'] != null) Text('Velocidad: ${loc['speed']} m/s', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                if (loc['heading'] != null) Text('Dirección: ${loc['heading']}°', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                MarkerLayer(
+                  markers: [
+                    // Start marker
+                    Marker(
+                      point: points.first,
+                      width: 40,
+                      height: 40,
+                      child: const Icon(Icons.location_on, color: Colors.blue, size: 40),
+                    ),
+                    // End marker
+                     if (points.length > 1)
+                      Marker(
+                        point: points.last,
+                        width: 40,
+                        height: 40,
+                        child: const Icon(Icons.flag, color: Colors.green, size: 40),
+                      ),
+                  ],
+                ),
               ],
             ),
-          )
+          ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _locationHistory.length,
+          itemBuilder: (context, index) {
+            final loc = _locationHistory[index];
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, color: Colors.red, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text('Lat: ${loc['lat']}, Lon: ${loc['lon']}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(loc['recorded_at'] != null ? _formatDate(DateTime.parse(loc['recorded_at'])) : '', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                  if (loc['order_id'] != null) Text('Orden: ${(loc['order_id'] as String).substring(0, 8)}', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                  if (loc['speed'] != null) Text('Velocidad: ${loc['speed']} m/s', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                  if (loc['heading'] != null) Text('Dirección: ${loc['heading']}°', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                ],
+              ),
+            );
+          },
+        ),
       ],
     );
   }

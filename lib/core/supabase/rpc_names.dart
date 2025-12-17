@@ -47,4 +47,5 @@ class RpcNames {
 
   // Restaurants
   static const String findNearbyRestaurants = 'rpc_find_nearby_restaurants';
+  static const String adminDeleteUser = 'rpc_admin_delete_user';
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:doa_repartos/models/doa_models.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
+import 'package:doa_repartos/screens/admin/client_detail_admin_screen.dart';
 
 /// Administración de Clientes
 /// Lista usuarios con role "client" y muestra datos de client_profiles + acciones
@@ -195,15 +196,32 @@ class _ClientsManagementScreenState extends State<ClientsManagementScreen> {
                   onPressed: () => _showAccount(u.id, displayName),
                 ),
                 OutlinedButton.icon(
-                  icon: const Icon(Icons.edit_location_alt, size: 18),
-                  label: const Text('Editar dirección'),
+                  icon: const Icon(Icons.location_on, size: 18),
+                  label: const Text('Dirección'),
                   onPressed: () => _editAddress(u),
                 ),
                 FilledButton.icon(
-                  icon: const Icon(Icons.verified_user, size: 18),
-                  label: const Text('Asegurar perfil'),
-                  onPressed: () => _ensureProfile(u.id),
+                  icon: const Icon(Icons.visibility, size: 18),
+                  label: const Text('Detalle Completo'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.blue.shade700,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AdminClientDetailScreen(client: u),
+                      ),
+                    ).then((_) => _load()); // Refresh on return
+                  },
                 ),
+                // Botón "Asegurar perfil" movido al menú de detalle o mantenido como auxiliar
+                if (!u.emailConfirm)
+                  TextButton.icon(
+                    icon: const Icon(Icons.verified_user, size: 16),
+                    label: const Text('Asegurar perfil'),
+                    onPressed: () => _ensureProfile(u.id),
+                  ),
               ],
             )
           ],

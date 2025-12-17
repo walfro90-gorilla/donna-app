@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:doa_repartos/models/doa_models.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
 import 'package:doa_repartos/screens/orders/order_details_screen.dart';
+import 'package:doa_repartos/screens/admin/admin_account_ledger_screen.dart';
 import 'package:intl/intl.dart';
 
 /// Admin view: Full restaurant details page with comprehensive data
@@ -1119,7 +1120,27 @@ class _AdminRestaurantDetailScreenState extends State<AdminRestaurantDetailScree
               ],
             ),
             const SizedBox(height: 12),
-            const Text('Últimas transacciones', style: TextStyle(fontWeight: FontWeight.w600)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Últimas transacciones', style: TextStyle(fontWeight: FontWeight.w600)),
+                if (_account != null)
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AdminAccountLedgerScreen(
+                            account: _account!,
+                            ownerName: _restaurant?.name ?? 'Restaurante',
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Ver historial completo'),
+                  ),
+              ],
+            ),
             const SizedBox(height: 8),
             if (_recentTx.isEmpty) _emptyState('Sin transacciones') else _transactionsList(),
           ],
