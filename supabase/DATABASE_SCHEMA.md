@@ -124,6 +124,7 @@ CREATE TABLE public.client_profiles (
   total_reviews integer DEFAULT 0,
   profile_image_url text,
   status text NOT NULL DEFAULT 'active'::text CHECK (status = ANY (ARRAY['active'::text, 'inactive'::text, 'suspended'::text])),
+  location USER-DEFINED,
   CONSTRAINT client_profiles_pkey PRIMARY KEY (user_id),
   CONSTRAINT client_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
@@ -151,6 +152,7 @@ CREATE TABLE public.courier_locations_latest (
   heading double precision,
   source text,
   last_seen_at timestamp with time zone NOT NULL DEFAULT now(),
+  location USER-DEFINED,
   CONSTRAINT courier_locations_latest_pkey PRIMARY KEY (user_id),
   CONSTRAINT courier_locations_latest_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT courier_locations_latest_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
@@ -375,6 +377,7 @@ CREATE TABLE public.restaurants (
   profile_completion_percentage integer DEFAULT 0,
   commission_bps integer NOT NULL DEFAULT 1500 CHECK (commission_bps >= 0 AND commission_bps <= 3000),
   facade_image_url text,
+  location USER-DEFINED,
   CONSTRAINT restaurants_pkey PRIMARY KEY (id),
   CONSTRAINT restaurants_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
@@ -382,7 +385,7 @@ CREATE TABLE public.reviews (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   order_id uuid NOT NULL,
   author_id uuid NOT NULL,
-  author_role text NOT NULL CHECK (author_role = ANY (ARRAY['cliente'::text, 'restaurante'::text, 'repartidor'::text])),
+  author_role text NOT NULL CHECK (author_role = ANY (ARRAY['client'::text, 'restaurant'::text, 'delivery_agent'::text, 'admin'::text, 'system'::text])),
   subject_user_id uuid,
   subject_restaurant_id uuid,
   rating smallint NOT NULL CHECK (rating >= 1 AND rating <= 5),
