@@ -171,7 +171,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             'lon': _selectedLon,
             'address_structured': _addressStructured,
             'email_confirm': true, // Google users are auto-verified
-            if (avatarUrl != null) 'avatar_url': avatarUrl,
           },
         );
         

@@ -413,7 +413,7 @@ class SupabaseAuth {
         // Check if user profile exists in database
         final existingUser = await SupabaseConfig.client
             .from('users')
-            .select('id, avatar_url')
+            .select('id')
             .eq('id', user.id)
             .maybeSingle();
         
@@ -451,17 +451,7 @@ class SupabaseAuth {
         } else {
           debugPrint('✅ User profile exists in database');
           // Update avatar_url if Google provides one and it's different
-          final googleAvatarUrl = user.userMetadata?['avatar_url']?.toString();
-          if (googleAvatarUrl != null && googleAvatarUrl.isNotEmpty) {
-            final currentAvatarUrl = existingUser['avatar_url']?.toString();
-            if (currentAvatarUrl != googleAvatarUrl) {
-              debugPrint('📸 Updating avatar URL from Google: $googleAvatarUrl');
-              await SupabaseConfig.client
-                  .from('users')
-                  .update({'avatar_url': googleAvatarUrl})
-                  .eq('id', user.id);
-            }
-          }
+          debugPrint('ℹ️ User profile synced (avatar handled by client_profiles)');
         }
       }
       
@@ -502,7 +492,7 @@ class SupabaseAuth {
         // Check if user profile exists in database
         final existingUser = await SupabaseConfig.client
             .from('users')
-            .select('id, avatar_url')
+            .select('id')
             .eq('id', user.id)
             .maybeSingle();
 
@@ -688,7 +678,7 @@ class SupabaseAuth {
           'phone': userData?['phone'] ?? '',
             'role': normalizeRoleString(userData?['role']),
           'email_confirm': isEmailConfirmed, // Set based on actual email confirmation
-          if (avatarUrl != null) 'avatar_url': avatarUrl, // Add avatar from Google
+          // if (avatarUrl != null) 'avatar_url': avatarUrl, // Moved to client_profiles
         };
 
         debugPrint('📝 TEST 3 DATA: Inserting user profile: $userProfile');
