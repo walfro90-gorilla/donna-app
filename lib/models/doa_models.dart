@@ -441,6 +441,7 @@ class DoaRestaurant {
   // Onboarding tracking
   final bool onboardingCompleted;
   final int onboardingStep;
+  final int profileCompletionPercentage;
   // Distance in meters (calculated by PostGIS RPC)
   final double? distanceMeters;
 
