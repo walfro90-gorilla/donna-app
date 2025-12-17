@@ -17,7 +17,8 @@ class RestaurantService extends BaseService {
   String get serviceName => 'RESTAURANT';
   
   @override
-  String get requiredRole => 'restaurante';
+  @override
+  String get requiredRole => 'restaurant';
 
   Stream<DoaRestaurant?> get restaurantStream => _restaurantController.stream;
   Stream<List<DoaOrder>> get ordersStream => _ordersController.stream;

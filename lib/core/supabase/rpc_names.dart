@@ -44,4 +44,7 @@ class RpcNames {
 
   // Client profile address (new schema)
   static const String updateClientDefaultAddress = 'update_client_default_address';
+
+  // Restaurants
+  static const String findNearbyRestaurants = 'rpc_find_nearby_restaurants';
 }

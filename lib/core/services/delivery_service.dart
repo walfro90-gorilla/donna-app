@@ -21,7 +21,8 @@ class DeliveryService extends BaseService {
   String get serviceName => 'DELIVERY';
   
   @override
-  String get requiredRole => 'repartidor';
+  @override
+  String get requiredRole => 'delivery_agent';
 
   // Streams públicos
   Stream<List<DoaOrder>> get availableOrdersStream => _availableOrdersController.stream;

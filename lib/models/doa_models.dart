@@ -441,7 +441,8 @@ class DoaRestaurant {
   // Onboarding tracking
   final bool onboardingCompleted;
   final int onboardingStep;
-  final int profileCompletionPercentage;
+  // Distance in meters (calculated by PostGIS RPC)
+  final double? distanceMeters;
 
   DoaRestaurant({
     required this.id,
@@ -476,6 +477,7 @@ class DoaRestaurant {
     this.deliveryTime,
     this.deliveryFee,
     this.isOpen = true,
+    this.distanceMeters,
     // Onboarding properties
     this.onboardingCompleted = false,
     this.onboardingStep = 0,
@@ -496,14 +498,14 @@ class DoaRestaurant {
 
     return DoaRestaurant(
       id: json['id'],
-      userId: json['user_id'],
+      userId: json['user_id'] ?? json['owner_id'], // Manejo de variaciones en nombre de columna
       name: json['name'],
       description: json['description'],
       logoUrl: json['logo_url'],
       status: RestaurantStatus.fromString(json['status']),
       online: json['online'] ?? false,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : DateTime.now(),
       user: json['users'] != null ? DoaUser.fromJson(json['users']) : 
             json['user'] != null ? DoaUser.fromJson(json['user']) : null,
       address: json['address'],
@@ -527,7 +529,8 @@ class DoaRestaurant {
       rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
       deliveryTime: json['delivery_time'] != null ? json['delivery_time'] as int : json['estimated_delivery_time_minutes'],
       deliveryFee: json['delivery_fee'] != null ? (json['delivery_fee'] as num).toDouble() : null,
-      isOpen: json['is_open'] ?? true,
+      isOpen: json['is_open'] ?? true, // RPC returns "is_open"
+      distanceMeters: json['distance_meters'] != null ? (json['distance_meters'] as num).toDouble() : null,
       // Onboarding properties
       onboardingCompleted: json['onboarding_completed'] ?? false,
       onboardingStep: json['onboarding_step'] ?? 0,
@@ -562,6 +565,8 @@ class DoaRestaurant {
       'onboarding_completed': onboardingCompleted,
       'onboarding_step': onboardingStep,
       'profile_completion_percentage': profileCompletionPercentage,
+      // Computed or transient fields usually aren't sent back, but harmless to include if needed
+      'distance_meters': distanceMeters,
     };
   }
 
@@ -647,6 +652,7 @@ class DoaRestaurant {
     int? deliveryTime,
     double? deliveryFee,
     bool? isOpen,
+    double? distanceMeters,
     bool? onboardingCompleted,
     int? onboardingStep,
     int? profileCompletionPercentage,
@@ -679,6 +685,7 @@ class DoaRestaurant {
       deliveryTime: deliveryTime ?? this.deliveryTime,
       deliveryFee: deliveryFee ?? this.deliveryFee,
       isOpen: isOpen ?? this.isOpen,
+      distanceMeters: distanceMeters ?? this.distanceMeters,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       onboardingStep: onboardingStep ?? this.onboardingStep,
       profileCompletionPercentage: profileCompletionPercentage ?? this.profileCompletionPercentage,

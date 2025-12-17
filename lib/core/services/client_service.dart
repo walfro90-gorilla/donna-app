@@ -4,6 +4,7 @@ import 'package:doa_repartos/core/events/event_bus.dart';
 import 'package:doa_repartos/core/utils/order_status_helper.dart';
 import 'package:doa_repartos/models/doa_models.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
+import 'package:doa_repartos/core/supabase/rpc_names.dart';
 
 /// 🛍️ ClientService - Servicio para usuarios tipo Cliente
 class ClientService extends BaseService {
@@ -20,7 +21,7 @@ class ClientService extends BaseService {
   String get serviceName => 'CLIENT';
   
   @override
-  String get requiredRole => 'cliente';
+  String get requiredRole => 'client';
 
   // Streams públicos
   Stream<List<DoaRestaurant>> get restaurantsStream => _restaurantsController.stream;
@@ -82,7 +83,8 @@ class ClientService extends BaseService {
     }
   }
 
-  /// 🏪 Cargar restaurantes disponibles
+
+  /// 🏪 Cargar restaurantes disponibles (Legacy / Fallback)
   Future<void> loadRestaurants() async {
     if (!hasAccess()) return;
     
@@ -104,6 +106,47 @@ class ClientService extends BaseService {
     } catch (e) {
       print('❌ [CLIENT] Error cargando restaurantes: $e');
       _restaurantsController.add([]);
+    }
+  }
+
+  /// 🔍 Buscar restaurantes cercanos (usando PostGIS + RPC Optimizado)
+  Future<List<DoaRestaurant>> searchRestaurants({
+    required double lat,
+    required double lon,
+    String? query,
+    int radiusMeters = 5000,
+  }) async {
+    if (!hasAccess()) return [];
+
+    try {
+      print('🔍 [CLIENT] Buscando restaurantes cerca de $lat, $lon ...');
+      
+      final params = {
+        'p_lat': lat,
+        'p_lon': lon,
+        'p_radius_meters': radiusMeters,
+        'p_search_text': query,
+      };
+
+      final response = await SupabaseConfig.client
+          .rpc(RpcNames.findNearbyRestaurants, params: params);
+
+      final restaurants = (response as List)
+          .map((json) => DoaRestaurant.fromJson(json))
+          .toList();
+      
+      print('✅ [CLIENT] ${restaurants.length} restaurantes encontrados');
+      
+      // Opcional: Actualizar el stream principal si es una búsqueda general
+      if (query == null || query.isEmpty) {
+        _restaurantsController.add(restaurants);
+      }
+      
+      return restaurants;
+      
+    } catch (e) {
+      print('❌ [CLIENT] Error buscando restaurantes: $e');
+      return [];
     }
   }
 
