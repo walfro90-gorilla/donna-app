@@ -288,12 +288,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _openAddressPicker() async {
     try {
+      /*
+      // ANTERIOR: Modal Bottom Sheet (causaba problemas con el teclado)
       final result = await showModalBottomSheet<AddressPickResult>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
         builder: (_) => AddressPickerModal(
           initialAddress: _deliveryAddress ?? (_currentUser?.address ?? ''),
+        ),
+      );
+      */
+      
+      // NUEVO: Full Screen Dialog para evitar traslape de teclado
+      final result = await Navigator.of(context).push<AddressPickResult>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => Scaffold(
+            body: AddressPickerModal(
+              initialAddress: _deliveryAddress ?? (_currentUser?.address ?? ''),
+            ),
+          ),
         ),
       );
       if (result != null && mounted) {

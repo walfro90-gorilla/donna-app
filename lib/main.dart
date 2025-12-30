@@ -27,9 +27,14 @@ void main() async {
   // Initialize Google Maps Renderer (Fix for ImageReader_JNI errors)
   final GoogleMapsFlutterPlatform mapsImplementation = GoogleMapsFlutterPlatform.instance;
   if (mapsImplementation is GoogleMapsFlutterAndroid) {
-    debugPrint('🗺️ [MAIN] Initializing Google Maps Android Renderer to LATEST');
-    mapsImplementation.useAndroidViewSurface = true;
-    mapsImplementation.initializeWithRenderer(AndroidMapRenderer.latest);
+    debugPrint('🗺️ [MAIN] Initializing Google Maps Android Renderer to LEGACY (Compatibility Mode)');
+    mapsImplementation.useAndroidViewSurface = false; // Try false for better performance on some devices, or true if needed.
+    // LATEST renderer can cause issues on some devices/emulators. Using platformDefault or legacy is safer.
+    try {
+      mapsImplementation.initializeWithRenderer(AndroidMapRenderer.legacy);
+    } catch (e) {
+      debugPrint('⚠️ [MAIN] Failed to initialize map renderer: $e');
+    }
   }
 
   // Initialize theme preference first

@@ -348,7 +348,7 @@ class _AddressPickerModalState extends State<AddressPickerModal> {
     return Container(
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        // borderRadius: const BorderRadius.vertical(top: Radius.circular(20)), // Ya no necesario en FullScreen
       ),
       child: SafeArea(
         child: Column(
