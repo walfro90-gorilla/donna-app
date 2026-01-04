@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart' as fm;
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:doa_repartos/services/places_service.dart';
 import 'package:doa_repartos/services/google_maps_loader.dart';
+import 'package:geolocator/geolocator.dart';
 
 /// Resultado del picker de direcciones
 class AddressPickResult {
@@ -68,12 +69,63 @@ class _AddressPickerModalState extends State<AddressPickerModal> {
     super.initState();
     _searchController.text = widget.initialAddress;
     _initGoogleMapsIfNeeded();
-    // If initial coordinates are provided (e.g., after autocomplete),
-    // jump straight to map confirmation step.
+    // If initial coordinates are provided, jump to map.
     if (widget.initialLatLng != null) {
       _selectedLocation = widget.initialLatLng;
       _selectedAddress = widget.initialAddress.isNotEmpty ? widget.initialAddress : null;
       _showMap = true;
+    } else {
+      // Auto-detect location if starting fresh
+      _detectCurrentLocation();
+    }
+  }
+
+  Future<void> _detectCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    
+    if (permission == LocationPermission.deniedForever) return;
+
+    try {
+      setState(() => _isProcessing = true);
+      final pos = await Geolocator.getCurrentPosition();
+      
+      // Reverse geocode to get address
+      if (mounted) {
+        final details = await PlacesService.reverseGeocode(pos.latitude, pos.longitude);
+        String? address;
+        String? placeId;
+        
+        if (details != null) {
+          address = details['formatted_address'];
+          placeId = details['place_id'];
+        }
+
+        setState(() {
+          _selectedLocation = LatLng(pos.latitude, pos.longitude);
+          _selectedAddress = address ?? 'Mi ubicación actual';
+          _selectedPlaceId = placeId;
+          _showMap = true; // Switch to map view
+          _isProcessing = false;
+        });
+        
+        // Move web map if needed
+        if (kIsWeb && _webMapController != null) {
+           _webMapController!.move(ll.LatLng(pos.latitude, pos.longitude), _webZoom);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error detecting location: $e');
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
@@ -657,7 +709,7 @@ class _AddressPickerModalState extends State<AddressPickerModal> {
                             children: [
                               fm.TileLayer(
                                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                userAgentPackageName: 'com.doa.repartos',
+                                userAgentPackageName: 'com.donna.co',
                               ),
                             ],
                           )
@@ -671,17 +723,7 @@ class _AddressPickerModalState extends State<AddressPickerModal> {
                               debugPrint('🧭 [ADDRESS_PICKER] GoogleMap created successfully');
                               if (mounted) {
                                 setState(() => _mapController = controller);
-                                // Apply light map style for better visibility
-                                try {
-                                  controller.setMapStyle('''
-                                    [
-                                      {"featureType": "all", "elementType": "geometry", "stylers": [{"color": "#f5f5f5"}]},
-                                      {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#c9e5f7"}]}
-                                    ]
-                                  ''');
-                                } catch (e) {
-                                  debugPrint('🧭 [ADDRESS_PICKER] Could not apply map style: $e');
-                                }
+                                // Removed custom style to prevent blank map issues
                               }
                             },
                             markers: {

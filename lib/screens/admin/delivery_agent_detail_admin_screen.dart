@@ -960,12 +960,17 @@ class _AdminDeliveryAgentDetailScreenState extends State<AdminDeliveryAgentDetai
       return _emptyState('Sin historial de ubicaciones');
     }
 
-    // Prepare points for map
+    // Prepare points for map with safer parsing
     final points = _locationHistory.map((loc) {
-      final lat = (loc['lat'] as num?)?.toDouble() ?? 0.0;
-      final lon = (loc['lon'] as num?)?.toDouble() ?? 0.0;
+      // DEBUG: Print raw values
+      // debugPrint('Parsing loc: lat=${loc['lat']} (${loc['lat'].runtimeType}), lon=${loc['lon']} (${loc['lon'].runtimeType})');
+      
+      final lat = double.tryParse(loc['lat']?.toString() ?? '') ?? 0.0;
+      final lon = double.tryParse(loc['lon']?.toString() ?? '') ?? 0.0;
       return latLng.LatLng(lat, lon);
     }).where((p) => p.latitude != 0 && p.longitude != 0).toList();
+
+    debugPrint('🗺️ Map points parsed: ${points.length}');
 
     return Column(
       children: [
@@ -986,7 +991,7 @@ class _AdminDeliveryAgentDetailScreenState extends State<AdminDeliveryAgentDetai
               children: [
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.donna.app',
+                  userAgentPackageName: 'com.donna.co',
                 ),
                 PolylineLayer(
                   polylines: [
@@ -999,15 +1004,13 @@ class _AdminDeliveryAgentDetailScreenState extends State<AdminDeliveryAgentDetai
                 ),
                 MarkerLayer(
                   markers: [
-                    // Start marker
                     Marker(
                       point: points.first,
                       width: 40,
                       height: 40,
                       child: const Icon(Icons.location_on, color: Colors.blue, size: 40),
                     ),
-                    // End marker
-                     if (points.length > 1)
+                    if (points.length > 1)
                       Marker(
                         point: points.last,
                         width: 40,
@@ -1018,6 +1021,14 @@ class _AdminDeliveryAgentDetailScreenState extends State<AdminDeliveryAgentDetai
                 ),
               ],
             ),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 16),
+            width: double.infinity,
+            decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(8)),
+            child: const Text('⚠️ No se pudieron generar coordenadas válidas para el mapa.', textAlign: TextAlign.center),
           ),
         ListView.builder(
           shrinkWrap: true,
