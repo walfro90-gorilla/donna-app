@@ -38,6 +38,12 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
     'activeOrders': 0,
     'completedOrders': 0,
   };
+  Map<String, dynamic> keyMetrics = {
+    'todaySales': 0.0,
+    'todayOrders': 0,
+    'pendingEarnings': 0.0,
+    'avgTime': 25, // Mocked default
+  };
   bool isLoadingStats = true;
   Timer? _refreshTimer;
   Set<String> _notifiedOrderIds = <String>{};
@@ -603,11 +609,56 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
           .gte('created_at', todayStart)
           .lte('created_at', todayEnd);
 
+      // --- Métricas Clave ---
+      // Ventas Hoy (Sumar total_amount de pedidos entregados hoy)
+      final salesResponse = await SupabaseConfig.client
+          .from('orders')
+          .select('total_amount')
+          .eq('restaurant_id', _restaurant!.id)
+          .eq('status', 'delivered')
+          .gte('created_at', todayStart)
+          .lte('created_at', todayEnd);
+      
+      double tSales = 0.0;
+      if (salesResponse != null) {
+        for (var item in (salesResponse as List)) {
+          tSales += (item['total_amount'] as num).toDouble();
+        }
+      }
+
+      // Ganancias Pendientes (Sumar total_amount de pedidos activos)
+      final pendingResponse = await SupabaseConfig.client
+          .from('orders')
+          .select('total_amount')
+          .eq('restaurant_id', _restaurant!.id)
+          .inFilter('status', ['confirmed', 'preparing', 'in_preparation', 'ready_for_pickup', 'assigned', 'on_the_way', 'picked_up', 'in_transit']);
+      
+      double pEarnings = 0.0;
+      if (pendingResponse != null) {
+        for (var item in (pendingResponse as List)) {
+          pEarnings += (item['total_amount'] as num).toDouble();
+        }
+      }
+
+      // Conteo de pedidos hoy (total)
+      final todayOrdersResponse = await SupabaseConfig.client
+          .from('orders')
+          .select('id')
+          .eq('restaurant_id', _restaurant!.id)
+          .gte('created_at', todayStart)
+          .lte('created_at', todayEnd);
+
       setState(() {
         orderStats = {
           'newOrders': newCount,
           'activeOrders': (activeOrdersResponse as List).length,
           'completedOrders': (completedOrdersResponse as List).length,
+        };
+        keyMetrics = {
+          'todaySales': tSales,
+          'todayOrders': (todayOrdersResponse as List).length,
+          'pendingEarnings': pEarnings,
+          'avgTime': 25, // TODO: Calcular tiempo promedio real si hay data
         };
       });
 
@@ -1023,7 +1074,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _onItemTapped(2); // Ir a perfil del restaurante
+                _onItemTapped(4); // Ir a perfil (nueva posición)
               },
               child: const Text('Completar Perfil'),
             ),
@@ -1060,7 +1111,6 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
         children: [
           _buildDashboardHome(),
           const SimpleOrdersDashboard(),
-          const RestaurantProfileScreen(),
           const ProductsManagementScreen(),
           const RestaurantBalanceScreen(),
           const ProfileScreen(),
@@ -1070,38 +1120,40 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        backgroundColor: Colors.white,
-        selectedItemColor: NavigationService.getRoleColor(context, UserRole.restaurant),
-        unselectedItemColor: Colors.grey.shade600,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        backgroundColor: const Color(0xFF1E1E1E), // Fondo oscuro para el navbar
+        selectedItemColor: const Color(0xFFFFA000), // Naranja premium para el seleccionado
+        unselectedItemColor: Colors.white54, // Gris claro para los no seleccionados
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 10,
+        ),
         items: [
           const BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
+            icon: Icon(Icons.dashboard_rounded),
             label: 'Dashboard',
           ),
           BottomNavigationBarItem(
             icon: orderStats['newOrders']! > 0
               ? Badge(
                   label: Text('${orderStats['newOrders']}'),
-                  child: const Icon(Icons.receipt_long),
+                  child: const Icon(Icons.receipt_long_rounded),
                 )
-              : const Icon(Icons.receipt_long),
+              : const Icon(Icons.receipt_long_rounded),
             label: 'Pedidos',
           ),
           const BottomNavigationBarItem(
-            icon: Icon(Icons.store),
-            label: 'Mi Restaurante',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.restaurant_menu),
+            icon: Icon(Icons.restaurant_menu_rounded),
             label: 'Productos',
           ),
           const BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet),
+            icon: Icon(Icons.account_balance_wallet_rounded),
             label: 'Balance',
           ),
           const BottomNavigationBarItem(
-            icon: Icon(Icons.person),
+            icon: Icon(Icons.person_rounded),
             label: 'Perfil',
           ),
         ],
@@ -1113,43 +1165,146 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
   Widget _buildDashboardHome() {
     return Scaffold(
       appBar: AppBar(
-        title: Text(NavigationService.getDashboardTitle(UserRole.restaurant)),
         backgroundColor: NavigationService.getRoleColor(context, UserRole.restaurant),
         foregroundColor: Colors.white,
+        elevation: 0,
+        toolbarHeight: 70, // Un poco más de espacio para el título multi-linea
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Gestionar Restaurante:',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white70,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            Text(
+              _restaurant?.name ?? 'Mi Restaurante',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
         actions: [
+          // Theme toggle (Escondido por solicitud)
+          /*
           ValueListenableBuilder<ThemeMode>(
             valueListenable: AppThemeController.themeMode,
             builder: (_, mode, __) => IconButton(
               icon: Icon(mode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode),
               tooltip: mode == ThemeMode.dark ? 'Modo Claro' : 'Modo Oscuro',
               onPressed: AppThemeController.toggle,
+              iconSize: 20,
             ),
           ),
-          if (_restaurant != null)
-            Row(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Icon(
-                    isRestaurantOnline ? Icons.power : Icons.power_off,
-                    color: isRestaurantOnline ? Colors.limeAccent : Colors.white,
-                    size: 22,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Switch.adaptive(
-                    value: isRestaurantOnline,
-                    onChanged: (_) => _toggleOnlineStatus(),
-                    activeColor: Colors.white,
-                    activeTrackColor: Colors.greenAccent.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
+          */
+          
+          // Refresh (mantenido según solicitud)
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => _loadRestaurantData(),
+            iconSize: 20,
+          ),
+
+          const SizedBox(width: 2),
+
+          // Botón de toggle Compacto "I/O" (según solicitud)
+          if (_restaurant != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: GestureDetector(
+                onTap: _toggleOnlineStatus,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                  decoration: BoxDecoration(
+                    color: isRestaurantOnline ? const Color(0xFF2E7D32) : Colors.grey.shade800,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!isRestaurantOnline)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Text(
+                            'O',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      Container(
+                        width: 14,
+                        height: 14,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      if (isRestaurantOnline)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 6),
+                          child: Text(
+                            'I',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          const SizedBox(width: 8),
+
+          // Botón de CAMPANA para notificaciones (Agregado según solicitud)
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications, color: Colors.white),
+                  onPressed: () {
+                    // Acción para notificaciones - por ahora podemos mostrar un snackbar o navegar si existiera la pantalla
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Notificaciones próximamente')),
+                    );
+                  },
+                ),
+                // Punto rojo de notificación (Badge)
+                if (orderStats['newOrders']! > 0)
+                  Positioned(
+                    right: 8,
+                    top: 12,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 8,
+                        minHeight: 8,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1161,54 +1316,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header con toggle online/offline
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: NavigationService.getRoleColor(context, UserRole.restaurant).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: NavigationService.getRoleColor(context, UserRole.restaurant).withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          NavigationService.getRoleIcon(UserRole.restaurant),
-                          size: 32,
-                          color: NavigationService.getRoleColor(context, UserRole.restaurant),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _restaurant?.name ?? 'Mi Restaurante',
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: NavigationService.getRoleColor(context, UserRole.restaurant),
-                            ),
-                          ),
-                        ),
-                        // Toggle de estado removido del dashboard por solicitud
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Gestiona tu restaurante, productos y pedidos desde aquí.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // Card de bienvenida y onboarding (solo cuando preferencias estén resueltas)
+              // Card de bienvenida y onboarding
               if (_restaurant != null && _prefsResolved && _showWelcomeCard && _isFirstTime) ...[
                 FutureBuilder<OnboardingStatus>(
                   future: OnboardingNotificationService.calculateRestaurantOnboardingAsync(_restaurant!),
@@ -1217,15 +1325,11 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
                       return Card(
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
+                        child: const Padding(
+                          padding: EdgeInsets.all(20),
                           child: Row(
-                            children: const [
-                              SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
+                            children: [
+                              SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)),
                               SizedBox(width: 12),
                               Expanded(child: Text('Calculando progreso de tu perfil...')),
                             ],
@@ -1241,21 +1345,19 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
                       welcomeMessage: welcomeMessage,
                       onboardingStatus: onboardingStatus,
                       onActionPressed: () {
-                        // Marcar como visto cuando el usuario toma acción
                         final user = SupabaseConfig.client.auth.currentUser;
                         if (user != null && !_welcomeMarked) {
                           _welcomeMarked = true;
                           OnboardingNotificationService.markRestaurantWelcomeSeen(user.id);
                         }
                         if (onboardingStatus.isComplete) {
-                          _onItemTapped(1); // Ir a pedidos
+                          _onItemTapped(1); 
                         } else {
-                          _onItemTapped(2); // Ir a perfil para completar
+                          _onItemTapped(2); 
                         }
                       },
-                       onDismiss: () {
+                      onDismiss: () {
                         setState(() => _showWelcomeCard = false);
-                        // Marcar como visto al cerrar
                         final user = SupabaseConfig.client.auth.currentUser;
                         if (user != null && !_welcomeMarked) {
                            _welcomeMarked = true;
@@ -1268,7 +1370,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
                 const SizedBox(height: 16),
               ],
               
-              // Card de progreso de completado del perfil (solo si no es primera vez y prefs resueltas)
+              // Card de progreso de completado del perfil
               if (_restaurant != null && _prefsResolved && !_isFirstTime && _restaurant!.profileCompletionPercentage < 100)
                 FutureBuilder<_ProfileChecklistStatus>(
                   future: _computeRestaurantProfileStatus(_restaurant!),
@@ -1278,78 +1380,48 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
                       restaurant: _restaurant!,
                       percentageOverride: overridePerc,
                       productsCompleteOverride: snapshot.data?.hasMinProducts ?? false,
-                      onTapComplete: () => _onItemTapped(2), // Ir a perfil de restaurante
+                      onTapComplete: () => _onItemTapped(2),
                       onSectionTap: _handleProfileSectionTap,
                     );
                   },
                 ),
               
-              // Acceso rápido a Liquidaciones
-              Card(
-                elevation: 1,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.payments, color: Colors.orange),
+              const SizedBox(height: 16),
+
+              // Métricas en Tiempo Real (Relocalizada arriba)
+              if (_restaurant != null) ...[
+                if (isLoadingStats)
+                  const Center(child: CircularProgressIndicator())
+                else
+                  Row(
+                    children: [
+                      Expanded(child: _buildOrderStatCard('Nuevos', 'Por aceptar', orderStats['newOrders']!, const Color(0xFFFFA000), Icons.notifications, type: 'new')),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildOrderStatCard('En Curso', 'Preparando', orderStats['activeOrders']!, const Color(0xFF2196F3), Icons.person, type: 'in_progress')),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildOrderStatCard('Terminados', 'Completados hoy', orderStats['completedOrders']!, const Color(0xFF4CAF50), Icons.check_circle, type: 'completed')),
+                    ],
                   ),
-                  title: const Text('Liquidaciones de Efectivo'),
-                  subtitle: const Text('Confirma las liquidaciones pendientes de repartidores'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const RestaurantBalanceScreen(initialTabIndex: 1),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
-              
-              // Contadores de pedidos
-              if (isLoadingStats)
-                const Center(child: CircularProgressIndicator())
-              else if (_restaurant != null) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildOrderStatCard(
-                        'Nuevos',
-                        'Por aceptar',
-                        orderStats['newOrders']!,
-                        Colors.orange,
-                        Icons.pending_actions,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildOrderStatCard(
-                        'En Curso',
-                        'Preparando/Listos',
-                        orderStats['activeOrders']!,
-                        Colors.blue,
-                        Icons.restaurant,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildOrderStatCard(
-                        'Terminados',
-                        'Completados hoy',
-                        orderStats['completedOrders']!,
-                        Colors.green,
-                        Icons.check_circle,
-                      ),
-                    ),
-                  ],
-                ),
-                
+                const SizedBox(height: 24),
+
+                // Métricas Clave
+                if (isLoadingStats)
+                  const Center(child: CircularProgressIndicator())
+                else
+                  GridView.count(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    childAspectRatio: 2.1,
+                    children: [
+                      _buildKeyMetricCard('Ventas Hoy', '\$${keyMetrics['todaySales'].toStringAsFixed(0)}', Icons.assignment_turned_in_rounded, const Color(0xFFFFA000)),
+                      _buildKeyMetricCard('Pedidos Hoy', '${keyMetrics['todayOrders']}', Icons.receipt_rounded, const Color(0xFFFFA000)),
+                      _buildKeyMetricCard('Ganancias Pen.', '\$${keyMetrics['pendingEarnings'].toStringAsFixed(0)}', Icons.account_balance_wallet_rounded, const Color(0xFFFFA000)),
+                      _buildKeyMetricCard('Tiempo Prom.', '${keyMetrics['avgTime']} min', Icons.access_time_filled_rounded, const Color(0xFFFFA000)),
+                    ],
+                  ),
                 const SizedBox(height: 24),
               ],
               
@@ -1368,42 +1440,136 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
     String subtitle,
     int count,
     Color color,
-    IconData icon,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+    IconData icon, {
+    String type = 'default',
+  }) {
+    // Colores base para el diseño oscuro
+    const cardBgColor = Color(0xFF231F1D); // Fondo oscuro muy profundo (café/negro)
+    const borderColor = Color(0xFF383230); // Borde sutil
+    
+    return GestureDetector(
+      onTap: () => _onItemTapped(1), // Navega a la pestaña de Pedidos
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 110), // Altura reducida para eliminar espacio en blanco
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+        decoration: BoxDecoration(
+          color: cardBgColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor, width: 1.5),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min, // Ajuste al contenido
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icono central
+                if (type == 'in_progress')
+                  const Icon(Icons.face, color: Colors.white70, size: 28)
+                else
+                  Icon(
+                    icon, 
+                    color: type == 'new' ? color : (type == 'completed' ? color : Colors.white70), 
+                    size: 28
+                  ),
+                
+                const SizedBox(height: 8),
+                
+                // Título (Evitar wrap)
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+                
+                // Contador
+                Text(
+                  '($count)',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: type == 'default' ? Colors.white : color,
+                  ),
+                ),
+              ],
+            ),
+            
+            // Elementos adicionales según tipo
+            if (type == 'new' && count > 0)
+              Positioned(
+                top: -4,
+                right: 15,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFA000),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Text(
+                    '1',
+                    style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
-      child: Column(
+    );
+  }
+
+  Widget _buildKeyMetricCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF231F1D),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF383230), width: 1),
+      ),
+      child: Row(
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 6),
-          Text(
-            count.toString(),
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
+            child: Icon(icon, color: color, size: 22),
           ),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: color,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    value,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 9,
-              color: color.withValues(alpha: 0.7),
-            ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

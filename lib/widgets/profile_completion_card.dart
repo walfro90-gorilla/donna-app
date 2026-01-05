@@ -40,248 +40,315 @@ class _ProfileCompletionCardState extends State<ProfileCompletionCard> with Sing
   Widget build(BuildContext context) {
     final percentage = widget.percentageOverride ?? widget.restaurant.profileCompletionPercentage;
     final isComplete = percentage >= 100;
-    final isPending = widget.restaurant.status == RestaurantStatus.pending;
-    final isApproved = widget.restaurant.status == RestaurantStatus.approved;
 
-    return Card(
-      elevation: 3,
-      margin: const EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
+    // ESTADO COMPLETO: Barra delgada estilo "Banner"
+    if (isComplete) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              isComplete ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
-              isComplete ? Colors.green.withValues(alpha: 0.05) : Colors.orange.withValues(alpha: 0.05),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16),
+          color: const Color(0xFF1B5E20).withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(12),
         ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            // Header clickable
-            InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => setState(() => _expanded = !_expanded),
-              child: Row(
+            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Perfil 100% completado',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            Icon(Icons.stars, color: Colors.white.withValues(alpha: 0.5), size: 18),
+          ],
+        ),
+      );
+    }
+
+    // ESTADO PENDIENTE: Card Premium con Stepper (Diseño anterior)
+    return GestureDetector(
+      onTap: () => setState(() => _expanded = !_expanded),
+      child: Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2B2624), // Fondo oscuro café profundo
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isComplete ? Colors.green : Colors.orange,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      isComplete ? Icons.check_circle : Icons.edit_note,
-                      color: Colors.white,
-                      size: 28,
+                  // Lado Izquierdo: Progreso Circular
+                  SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 85,
+                          height: 85,
+                          child: CircularProgressIndicator(
+                            value: percentage / 100,
+                            strokeWidth: 8,
+                            backgroundColor: const Color(0xFF423B38),
+                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFA000)),
+                            strokeCap: StrokeCap.round,
+                          ),
+                        ),
+                        Text(
+                          '$percentage%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 24),
+                  
+                  // Lado Derecho: Título y Lista Corta
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          isComplete ? '¡Perfil Completo!' : 'Completa tu Perfil',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isComplete ? Colors.green.shade700 : Colors.orange.shade700,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Completa tu Perfil',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$percentage% completado',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey.shade600,
-                          ),
+                        const SizedBox(height: 16),
+                        
+                        // Items de Checklist
+                        _buildCompactStep(
+                          'Información básica',
+                          widget.restaurant.name.isNotEmpty && 
+                          widget.restaurant.description != null && 
+                          widget.restaurant.cuisineType != null,
+                          showLine: true,
+                        ),
+                        _buildCompactStep(
+                          'Imágenes del local',
+                          widget.restaurant.logoUrl != null && 
+                          widget.restaurant.coverImageUrl != null,
+                          showLine: true,
+                        ),
+                        _buildCompactStep(
+                          'Menú y Productos',
+                          widget.productsCompleteOverride ?? false,
+                          showLine: false,
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  AnimatedRotation(
-                    duration: const Duration(milliseconds: 200),
-                    turns: _expanded ? 0.5 : 0.0,
-                    child: Icon(
-                      Icons.expand_more,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
                 ],
               ),
+              
+              // Contenido Expandible (Checklist Detallado)
+              AnimatedCrossFade(
+                firstChild: const SizedBox.shrink(),
+                secondChild: Column(
+                  children: [
+                    const SizedBox(height: 24),
+                    const Divider(color: Color(0xFF423B38), height: 1),
+                    const SizedBox(height: 20),
+                    _buildDetailedChecklist(),
+                    const SizedBox(height: 20),
+                    
+                    // Estado y Botón
+                    _buildStatusFooter(),
+                    
+                    if (!isComplete && widget.onTapComplete != null) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: widget.onTapComplete,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFFA000),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'COMPLETAR PERFIL AHORA',
+                            style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                duration: const Duration(milliseconds: 300),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Construye un paso compacto al estilo de la imagen
+  Widget _buildCompactStep(String label, bool isDone, {bool showLine = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: const Color(0xFF5D4E44),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isDone ? const Color(0xFFFFA000) : Colors.transparent,
+                  width: 1.5,
+                ),
+              ),
+              child: Icon(
+                Icons.check,
+                size: 12,
+                color: isDone ? const Color(0xFFFFA000) : Colors.white38,
+              ),
             ),
-
-            const SizedBox(height: 16),
-
-            // Barra de progreso (siempre visible)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                value: percentage / 100,
-                minHeight: 12,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  isComplete ? Colors.green : Colors.orange,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isDone ? Colors.white.withValues(alpha: 0.9) : Colors.white54,
+                  fontSize: 14,
+                  fontWeight: isDone ? FontWeight.w500 : FontWeight.w400,
                 ),
               ),
             ),
+          ],
+        ),
+        if (showLine)
+          Padding(
+            padding: const EdgeInsets.only(left: 8.5),
+            child: Container(
+              width: 1,
+              height: 10,
+              color: const Color(0xFF5D4E44),
+            ),
+          ),
+      ],
+    );
+  }
 
-            // Contenido expandible
-            AnimatedCrossFade(
-              firstChild: const SizedBox(height: 0),
-              secondChild: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 16),
-                  // Checklist (solo lectura)
-                  _buildChecklistSection(
-                    context,
-                    'Información del Restaurante',
-                    Icons.info_outline,
-                    [
-                      ChecklistItem(
-                        label: 'Nombre del restaurante',
-                        subtitle: 'Nombre comercial único',
-                        isComplete: widget.restaurant.name.isNotEmpty,
-                        icon: Icons.store,
-                        onTap: () => widget.onSectionTap?.call(ProfileSection.basicInfo),
-                      ),
-                      ChecklistItem(
-                        label: 'Descripción',
-                        subtitle: 'Cuéntanos sobre tu restaurante',
-                        isComplete: widget.restaurant.description != null && widget.restaurant.description!.isNotEmpty,
-                        icon: Icons.description,
-                        onTap: () => widget.onSectionTap?.call(ProfileSection.basicInfo),
-                      ),
-                      ChecklistItem(
-                        label: 'Tipo de cocina',
-                        subtitle: 'Ej: Italiana, Mexicana, etc.',
-                        isComplete: widget.restaurant.cuisineType != null,
-                        icon: Icons.local_dining,
-                        onTap: () => widget.onSectionTap?.call(ProfileSection.basicInfo),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  _buildChecklistSection(
-                    context,
-                    'Imágenes y Visual',
-                    Icons.image_outlined,
-                    [
-                      ChecklistItem(
-                        label: 'Logo del restaurante',
-                        subtitle: 'Imagen cuadrada (recomendado 512x512)',
-                        isComplete: widget.restaurant.logoUrl != null,
-                        icon: Icons.image,
-                        onTap: () => widget.onSectionTap?.call(ProfileSection.logo),
-                      ),
-                      ChecklistItem(
-                        label: 'Foto de portada',
-                        subtitle: 'Imagen horizontal (recomendado 1920x1080)',
-                        isComplete: widget.restaurant.coverImageUrl != null,
-                        icon: Icons.photo_camera,
-                        onTap: () => widget.onSectionTap?.call(ProfileSection.cover),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  _buildChecklistSection(
-                    context,
-                    'Productos y Menú',
-                    Icons.restaurant_menu_outlined,
-                    [
-                      ChecklistItem(
-                        label: 'Agregar productos',
-                        subtitle: 'Mínimo 3 productos para empezar a vender',
-                        isComplete: widget.productsCompleteOverride ?? false,
-                        icon: Icons.restaurant_menu,
-                        onTap: () => widget.onSectionTap?.call(ProfileSection.products),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Estado del restaurante
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: widget.restaurant.status.color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: widget.restaurant.status.color.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(widget.restaurant.status.icon, color: widget.restaurant.status.color, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Estado: ${widget.restaurant.status.displayName}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: widget.restaurant.status.color,
-                                ),
-                              ),
-                              if (isPending) ...[
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'Tu restaurante está siendo revisado por el equipo',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ] else if (isApproved) ...[
-                                const SizedBox(height: 4),
-                                const Text(
-                                  '¡Puedes ponerte ONLINE y recibir pedidos!',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  if (!isComplete && widget.onTapComplete != null) ...[
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: widget.onTapComplete,
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Completar Perfil'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-              duration: const Duration(milliseconds: 250),
+  /// Checklist detallado original adaptado al nuevo diseño
+  Widget _buildDetailedChecklist() {
+    return Column(
+      children: [
+        _buildChecklistSection(
+          context,
+          'Detalles del Negocio',
+          Icons.store_outlined,
+          [
+            ChecklistItem(
+              label: 'Nombre y Descripción',
+              subtitle: 'Identidad de tu marca',
+              isComplete: widget.restaurant.name.isNotEmpty && widget.restaurant.description != null,
+              icon: Icons.edit,
+              onTap: () => widget.onSectionTap?.call(ProfileSection.basicInfo),
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        _buildChecklistSection(
+          context,
+          'Visuales',
+          Icons.image_outlined,
+          [
+            ChecklistItem(
+              label: 'Logo y Portada',
+              subtitle: 'Fotos de alta calidad',
+              isComplete: widget.restaurant.logoUrl != null && widget.restaurant.coverImageUrl != null,
+              icon: Icons.camera_alt,
+              onTap: () => widget.onSectionTap?.call(ProfileSection.logo),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildChecklistSection(
+          context,
+          'Menú',
+          Icons.restaurant_menu_outlined,
+          [
+            ChecklistItem(
+              label: 'Catálogo de Productos',
+              subtitle: 'Mínimo 3 ítems activos',
+              isComplete: widget.productsCompleteOverride ?? false,
+              icon: Icons.list_alt,
+              onTap: () => widget.onSectionTap?.call(ProfileSection.products),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Footer con estado de la cuenta
+  Widget _buildStatusFooter() {
+    final status = widget.restaurant.status;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: status.color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: status.color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(status.icon, color: status.color, size: 24),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Estado: ${status.displayName}',
+                  style: TextStyle(color: status.color, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  status == RestaurantStatus.approved 
+                    ? '¡Tu cuenta está lista para vender!' 
+                    : 'Estamos validando tus datos...',
+                  style: TextStyle(color: status.color.withValues(alpha: 0.7), fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:doa_repartos/models/doa_models.dart';
 import 'package:doa_repartos/screens/auth/login_screen.dart';
 import 'package:doa_repartos/screens/orders/my_orders_screen.dart';
 import 'package:doa_repartos/screens/delivery/delivery_onboarding_dashboard.dart';
+import 'package:doa_repartos/screens/restaurant/restaurant_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -206,6 +207,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           
                           const Divider(height: 1),
+
+                          if ((_currentUser?.role ?? UserRole.client) == UserRole.restaurant) ...[
+                            _ProfileMenuItem(
+                              icon: Icons.store_outlined,
+                              title: 'Mi Restaurante',
+                              subtitle: 'Gestionar información del negocio',
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const RestaurantProfileScreen()),
+                                );
+                              },
+                            ),
+                            const Divider(height: 1),
+                          ],
                           
                           _ProfileMenuItem(
                             icon: Icons.location_on_outlined,
