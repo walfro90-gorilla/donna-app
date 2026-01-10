@@ -443,6 +443,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
+              /*
               const SizedBox(height: 12),
 
               // Botón de Facebook Sign-In (debajo de Google)
@@ -466,6 +467,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
+              */
 
               const SizedBox(height: 24),
 

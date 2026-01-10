@@ -110,15 +110,18 @@ class _SimpleOrdersDashboardState extends State<SimpleOrdersDashboard> {
               children: [
                 const Icon(Icons.analytics, color: Colors.white, size: 28),
                 const SizedBox(width: 12),
-                const Text(
-                  'Dashboard Restaurante',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                const Expanded(
+                  child: Text(
+                    'Dashboard Restaurante',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18, // Ligeramente más pequeño para optimizar espacio
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8), // Reemplazo Spacer por un margen fijo para dar prioridad al título si hay espacio
                 // Estado del restaurante
                 if (_restaurant != null)
                   Container(

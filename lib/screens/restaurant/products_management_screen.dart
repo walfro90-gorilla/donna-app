@@ -226,31 +226,27 @@ class _ProductsManagementScreenState extends State<ProductsManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gestión de Productos'),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
+        title: const Text('Mis Productos'),
         actions: [
           if (_restaurant != null)
-            PopupMenuButton<String>(
-              onSelected: (value) async {
-                if (value == 'new_product') {
-                  await _showProductDialog();
-                } else if (value == 'new_combo') {
-                  final ok = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(
-                      builder: (_) => ComboEditScreen(restaurant: _restaurant!),
-                    ),
-                  );
-                  if (ok == true) await _loadRestaurantAndProducts();
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'new_product', child: Text('Nuevo producto')),
-                PopupMenuItem(value: 'new_combo', child: Text('Nuevo combo')),
-              ],
-            ),
+             IconButton(
+               icon: const Icon(Icons.add_circle_outline),
+               onPressed: () => _showProductDialog(),
+               tooltip: 'Nuevo producto',
+             ),
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            onPressed: () {},
+          ),
         ],
       ),
+      floatingActionButton: _restaurant != null ? FloatingActionButton.extended(
+        onPressed: () => _showAddMenu(context),
+        label: const Text('Agregar'),
+        icon: const Icon(Icons.add),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+      ) : null,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _restaurant == null
@@ -264,336 +260,242 @@ class _ProductsManagementScreenState extends State<ProductsManagementScreen> {
                     ],
                   ),
                 )
-              : Column(
-                  children: [
-                    // Search + filters
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _searchCtrl,
-                              decoration: InputDecoration(
-                                hintText: 'Buscar productos',
-                                prefixIcon: const Icon(Icons.search),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              onSubmitted: (_) => _loadRestaurantAndProducts(reset: true),
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth > 700;
+                    return Column(
+                      children: [
+                        // Header: Search + Category Pills
+                        Container(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).appBarTheme.backgroundColor,
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(24),
+                              bottomRight: Radius.circular(24),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          FilterChip(
-                            selected: _showAvailableOnly,
-                            onSelected: (v) async {
-                              setState(() => _showAvailableOnly = v);
-                              await _loadRestaurantAndProducts(reset: true);
-                            },
-                            label: const Text('Disponibles'),
-                          ),
-                          const SizedBox(width: 8),
-                          PopupMenuButton<String?>(
-                            onSelected: (v) async {
-                              setState(() => _typeFilter = v);
-                              await _loadRestaurantAndProducts(reset: true);
-                            },
-                            itemBuilder: (_) => [
-                              const PopupMenuItem<String?>(value: null, child: Text('Todos los tipos')),
-                               const PopupMenuItem<String?>(value: 'principal', child: Text('Principal')),
-                               const PopupMenuItem<String?>(value: 'bebida', child: Text('Bebida')),
-                               const PopupMenuItem<String?>(value: 'postre', child: Text('Postre')),
-                               const PopupMenuItem<String?>(value: 'entrada', child: Text('Entrada')),
-                               const PopupMenuItem<String?>(value: 'combo', child: Text('Combos')),
-                            ],
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.filter_list, size: 18),
-                                  const SizedBox(width: 6),
-                                   Text(
-                                     _typeFilter == null
-                                         ? 'Todos'
-                                         : (_typeFilter![0].toUpperCase() + _typeFilter!.substring(1)),
-                                   ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Counter + quick add
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      child: Row(
-                        children: [
-                          Text('Total: ${_products.length}${_hasMore ? '+' : ''}', style: Theme.of(context).textTheme.bodyMedium),
-                          const Spacer(),
-                          if (_restaurant != null)
-                            MenuAnchor(
-                              builder: (context, controller, _) => FilledButton.tonal(
-                                onPressed: () => controller.isOpen ? controller.close() : controller.open(),
-                                child: const Text('Agregar'),
-                              ),
-                              menuChildren: [
-                                MenuItemButton(
-                                  onPressed: () => _showProductDialog(),
-                                  leadingIcon: const Icon(Icons.add_circle_outline),
-                                  child: const Text('Producto simple'),
-                                ),
-                                MenuItemButton(
-                                  onPressed: () async {
-                                    final ok = await Navigator.of(context).push<bool>(
-                                      MaterialPageRoute(
-                                        builder: (_) => ComboEditScreen(restaurant: _restaurant!),
-                                      ),
-                                    );
-                                    if (ok == true) await _loadRestaurantAndProducts(reset: true);
-                                  },
-                                  leadingIcon: const Icon(Icons.all_inbox_outlined),
-                                  child: const Text('Combo (paquete)'),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    Expanded(
-                      child: _products.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.restaurant_menu_outlined, size: 64, color: Colors.grey),
-                                  const SizedBox(height: 12),
-                                  const Text('No tienes productos aún', style: TextStyle(color: Colors.grey)),
-                                  const SizedBox(height: 12),
-                                  FilledButton(
-                                    onPressed: () => _showProductDialog(),
-                                    style: FilledButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
-                                    child: const Text('Agregar producto'),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: TextField(
+                                  controller: _searchCtrl,
+                                  decoration: InputDecoration(
+                                    hintText: 'Buscar en mi menú...',
+                                    prefixIcon: const Icon(Icons.search),
+                                    filled: true,
+                                    fillColor: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
                                   ),
-                                ],
+                                  onSubmitted: (_) => _loadRestaurantAndProducts(reset: true),
+                                ),
                               ),
-                            )
-                          : ListView.separated(
-                              controller: _scrollController,
-                              padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
-                              itemCount: _products.length + (_isLoadingMore ? 1 : 0),
-                              separatorBuilder: (_, __) => const Divider(height: 1),
-                              itemBuilder: (context, index) {
-                                if (index >= _products.length) {
-                                  return const Padding(
-                                    padding: EdgeInsets.all(16),
-                                    child: Center(child: CircularProgressIndicator()),
-                                  );
-                                }
-                                final product = _products[index];
-                                return _DenseProductTile(
-                                  product: product,
-                                  isCombo: _comboProductIds.contains(product.id),
-                                  onEdit: () async {
-                                    if (_comboProductIds.contains(product.id)) {
-                                      // Fetch combo details
-                                      DoaCombo? combo;
-                                      try {
-                                        final combos = await DoaRepartosService.getCombosByRestaurant(_restaurant!.id);
-                                        final match = combos.firstWhere(
-                                          (c) => c['product_id'] == product.id,
-                                          orElse: () => {},
-                                        );
-                                        if (match.isNotEmpty) {
-                                          combo = DoaCombo.fromJson({
-                                            ...match,
-                                            'items': match['items'] ?? [],
-                                          });
-                                        }
-                                      } catch (_) {}
-                                      final ok = await Navigator.of(context).push<bool>(
-                                        MaterialPageRoute(
-                                          builder: (_) => ComboEditScreen(
-                                            restaurant: _restaurant!,
-                                            comboProduct: product,
-                                            combo: combo,
-                                          ),
-                                        ),
-                                      );
-                                      if (ok == true) await _loadRestaurantAndProducts(reset: true);
-                                    } else {
-                                      final ok = await Navigator.of(context).push<bool>(
-                                        MaterialPageRoute(builder: (_) => ProductEditScreen(restaurant: _restaurant!, product: product)),
-                                      );
-                                      if (ok == true) await _loadRestaurantAndProducts(reset: true);
-                                    }
-                                  },
-                                  onToggleAvailability: () => _toggleProductAvailability(product),
-                                  onDelete: () => _deleteProduct(product),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
+                              const SizedBox(height: 12),
+                              _buildCategoryFilters(),
+                            ],
+                          ),
+                        ),
+
+                        // List / Grid
+                        Expanded(
+                          child: _products.isEmpty
+                              ? _buildEmptyState()
+                              : RefreshIndicator(
+                                  onRefresh: () => _loadRestaurantAndProducts(reset: true),
+                                  child: isWide 
+                                    ? _buildProductGrid()
+                                    : _buildProductList(),
+                                ),
+                        ),
+                      ],
+                    );
+                  }
                 ),
     );
   }
-}
+  Widget _buildCategoryFilters() {
+    final categories = [
+      {'id': null, 'label': 'Todos', 'icon': Icons.all_inclusive},
+      {'id': 'principal', 'label': 'Principales', 'icon': Icons.restaurant},
+      {'id': 'bebida', 'label': 'Bebidas', 'icon': Icons.local_drink},
+      {'id': 'postre', 'label': 'Postres', 'icon': Icons.cake},
+      {'id': 'entrada', 'label': 'Entradas', 'icon': Icons.fastfood},
+      {'id': 'combo', 'label': 'Combos', 'icon': Icons.inventory_2},
+    ];
 
-/// Card individual para mostrar producto
-class ProductCard extends StatelessWidget {
-  final DoaProduct product;
-  final VoidCallback onEdit;
-  final VoidCallback onToggleAvailability;
-  final VoidCallback onDelete;
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final cat = categories[index];
+          final isSelected = _typeFilter == cat['id'];
+          return ChoiceChip(
+            selected: isSelected,
+            onSelected: (v) {
+              setState(() => _typeFilter = cat['id'] as String?);
+              _loadRestaurantAndProducts(reset: true);
+            },
+            label: Text(cat['label'] as String),
+            avatar: Icon(cat['icon'] as IconData, size: 16, color: isSelected ? Theme.of(context).colorScheme.onPrimary : null),
+            showCheckmark: false,
+          );
+        },
+      ),
+    );
+  }
 
-  const ProductCard({
-    super.key,
-    required this.product,
-    required this.onEdit,
-    required this.onToggleAvailability,
-    required this.onDelete,
-  });
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.restaurant_menu_outlined, size: 80, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text('No tienes productos aún', style: TextStyle(fontSize: 18, color: Colors.grey, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: () => _showProductDialog(),
+            icon: const Icon(Icons.add),
+            label: const Text('Agregar mi primer producto'),
+          ),
+        ],
+      ),
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                // Imagen del producto (si existe)
-                if (product.imageUrl != null) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      product.imageUrl!,
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.broken_image, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.name,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: product.isAvailable ? null : Colors.grey,
-                        ),
-                      ),
-                      if (product.description != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          product.description!,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: product.isAvailable 
-                                ? Colors.grey.shade700 
-                                : Colors.grey,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      Text(
-                        '\$${product.price.toStringAsFixed(2)}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
+  Widget _buildProductList() {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+      itemCount: _products.length + (_isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= _products.length) {
+          return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
+        }
+        return _buildProductItem(_products[index]);
+      },
+    );
+  }
+
+  Widget _buildProductGrid() {
+    return GridView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 2.8,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: _products.length + (_isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= _products.length) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return _buildProductItem(_products[index]);
+      },
+    );
+  }
+
+  Widget _buildProductItem(DoaProduct product) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: _PremiumProductCard(
+        product: product,
+        isCombo: _comboProductIds.contains(product.id),
+        onEdit: () async {
+          if (_comboProductIds.contains(product.id)) {
+            DoaCombo? combo;
+            try {
+              final combos = await DoaRepartosService.getCombosByRestaurant(_restaurant!.id);
+              final match = combos.firstWhere(
+                (c) => c['product_id'] == product.id,
+                orElse: () => {},
+              );
+              if (match.isNotEmpty) {
+                combo = DoaCombo.fromJson({ ...match, 'items': match['items'] ?? [], });
+              }
+            } catch (_) {}
+            final ok = await Navigator.of(context).push<bool>(
+              MaterialPageRoute(
+                builder: (_) => ComboEditScreen(
+                  restaurant: _restaurant!,
+                  comboProduct: product,
+                  combo: combo,
                 ),
-                Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: product.isAvailable 
-                            ? Colors.green.withValues(alpha: 0.2)
-                            : Colors.red.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        product.isAvailable ? 'Disponible' : 'No disponible',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: product.isAvailable ? Colors.green.shade700 : Colors.red.shade700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onEdit,
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Editar'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onToggleAvailability,
-                    icon: Icon(
-                      product.isAvailable ? Icons.visibility_off : Icons.visibility,
-                      size: 16,
-                    ),
-                    label: Text(product.isAvailable ? 'Deshabilitar' : 'Habilitar'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: product.isAvailable ? Colors.orange : Colors.green,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: onDelete,
-                  icon: const Icon(Icons.delete_outline),
-                  color: Colors.red,
-                  tooltip: 'Eliminar',
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            );
+            if (ok == true) await _loadRestaurantAndProducts(reset: true);
+          } else {
+            final ok = await Navigator.of(context).push<bool>(
+              MaterialPageRoute(builder: (_) => ProductEditScreen(restaurant: _restaurant!, product: product)),
+            );
+            if (ok == true) await _loadRestaurantAndProducts(reset: true);
+          }
+        },
+        onToggleAvailability: () => _toggleProductAvailability(product),
+        onDelete: () => _deleteProduct(product),
+      ),
+    );
+  }
+
+  void _showAddMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.restaurant),
+            title: const Text('Producto simple'),
+            subtitle: const Text('Platillo, bebida o postre individual'),
+            onTap: () {
+              Navigator.pop(context);
+              _showProductDialog();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.inventory_2),
+            title: const Text('Combo (Paquete)'),
+            subtitle: const Text('Varios productos a un precio especial'),
+            onTap: () async {
+              Navigator.pop(context);
+              final ok = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(builder: (_) => ComboEditScreen(restaurant: _restaurant!)),
+              );
+              if (ok == true) await _loadRestaurantAndProducts(reset: true);
+            },
+          ),
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }
 }
 
-/// Compact list tile for products/combos
-class _DenseProductTile extends StatelessWidget {
+
+
+
+/// Card de producto con diseño premium
+class _PremiumProductCard extends StatelessWidget {
   final DoaProduct product;
   final bool isCombo;
   final VoidCallback onEdit;
   final VoidCallback onToggleAvailability;
   final VoidCallback onDelete;
 
-  const _DenseProductTile({
+  const _PremiumProductCard({
     required this.product,
     required this.isCombo,
     required this.onEdit,
@@ -603,77 +505,184 @@ class _DenseProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final color = product.isAvailable ? Colors.green : Colors.red;
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      leading: product.imageUrl != null
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(product.imageUrl!, width: 48, height: 48, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(width: 48, height: 48, color: Colors.grey.shade200, child: const Icon(Icons.image_not_supported))),
-            )
-          : Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.fastfood, color: Colors.orange),
-            ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
-          ),
-          if (isCombo)
-            Container(
-              margin: const EdgeInsets.only(left: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-              child: const Text('Combo', style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.w600)),
-            ),
-        ],
-      ),
-      subtitle: Row(
-        children: [
-          Text('\$${product.price.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-          const SizedBox(width: 8),
-          Icon(product.isAvailable ? Icons.check_circle : Icons.pause_circle, size: 16, color: color),
-          const SizedBox(width: 4),
-          Text(product.isAvailable ? 'Disponible' : 'No disp.', style: TextStyle(color: color, fontSize: 12)),
-        ],
-      ),
-      trailing: PopupMenuButton<String>(
-        onSelected: (value) {
-          switch (value) {
-            case 'edit':
-              onEdit();
-              break;
-            case 'toggle':
-              onToggleAvailability();
-              break;
-            case 'delete':
-              onDelete();
-              break;
-          }
-        },
-        itemBuilder: (context) => [
-          const PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit), title: Text('Editar'))),
-          PopupMenuItem(
-            value: 'toggle',
-            child: ListTile(
-              leading: Icon(product.isAvailable ? Icons.visibility_off : Icons.visibility),
-              title: Text(product.isAvailable ? 'Deshabilitar' : 'Habilitar'),
-            ),
-          ),
-          const PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline, color: Colors.red), title: Text('Eliminar'))),
-        ],
-      ),
+
+    return InkWell(
       onTap: onEdit,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceVariant.withValues(alpha: isDark ? 0.3 : 0.5),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: product.isAvailable 
+                ? Colors.transparent 
+                : Colors.red.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            // Image with status overlay
+            Stack(
+              children: [
+                Hero(
+                  tag: 'product_image_${product.id}',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: product.imageUrl != null
+                        ? Image.network(
+                            product.imageUrl!,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                          )
+                        : _buildPlaceholder(),
+                  ),
+                ),
+                if (!product.isAvailable)
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'PAUSADO',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 16),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          product.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (isCombo)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'COMBO',
+                            style: TextStyle(
+                              color: theme.colorScheme.primary,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '\$${product.price.toStringAsFixed(0)}',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        product.isAvailable ? 'Disponible' : 'No disponible',
+                        style: TextStyle(
+                          color: color.withValues(alpha: 0.8),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Actions
+            Column(
+              children: [
+                IconButton(
+                  icon: Icon(
+                    product.isAvailable ? Icons.pause_circle_outline : Icons.play_circle_outline,
+                    color: color,
+                  ),
+                  onPressed: onToggleAvailability,
+                  visualDensity: VisualDensity.compact,
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) {
+                    if (value == 'delete') onDelete();
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                          SizedBox(width: 8),
+                          Text('Eliminar', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Icon(Icons.fastfood, color: Colors.orange),
     );
   }
 }
+
 
 /// Diálogo para agregar/editar producto
 class ProductFormDialog extends StatefulWidget {
