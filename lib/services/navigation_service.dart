@@ -161,7 +161,7 @@ class NavigationService {
       case UserRole.client:
         return colorScheme.primary; // Azul para clientes
       case UserRole.restaurant:
-        return Colors.orange; // Naranja para restaurantes
+        return const Color(0xFFE4007C); // Rosa mexicano para restaurantes (Doña repartos)
       case UserRole.delivery_agent:
         return Colors.green; // Verde para repartidores
       case UserRole.admin:

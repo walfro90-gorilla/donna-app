@@ -628,7 +628,7 @@ class OnboardingNotificationService {
             title: '👋 Faltan 2 pasos',
             message: 'Agrega al menos 3 productos y espera la aprobación del administrador para empezar a vender.',
             icon: Icons.info,
-            color: Colors.orange,
+            color: const Color(0xFFE4007C), // Rosa mexicano
             actionLabel: 'Completar Perfil',
           );
         }
@@ -672,7 +672,7 @@ class OnboardingNotificationService {
           title: '👋 Faltan $pendingCount pasos',
           message: '$msgCore$msgApproval',
           icon: Icons.info,
-          color: Colors.orange,
+          color: const Color(0xFFE4007C),
           actionLabel: 'Completar Perfil',
         );
         
@@ -690,7 +690,7 @@ class OnboardingNotificationService {
             title: '👋 ¡Ya casi estás listo!',
             message: 'Completa todos los pasos requeridos y espera la aprobación del administrador.',
             icon: Icons.directions_bike,
-            color: Colors.orange,
+            color: const Color(0xFFE4007C), // Rosa mexicano
             actionLabel: 'Completar Perfil',
           );
         } else {
@@ -698,7 +698,7 @@ class OnboardingNotificationService {
             title: '🚚 ¡Bienvenido a DOÑA!',
             message: 'Sube tus documentos y fotos. Revisaremos tu solicitud en 24-48 horas.',
             icon: Icons.assignment,
-            color: Colors.blue,
+            color: const Color(0xFFFFB1C8), // Rosa claro para contraste
             actionLabel: 'Subir Documentos',
           );
         }
@@ -717,7 +717,7 @@ class OnboardingNotificationService {
           title: '👋 ¡Bienvenido!',
           message: 'Gracias por unirte a DOÑA Repartos.',
           icon: Icons.waving_hand,
-          color: Colors.blue,
+          color: const Color(0xFFE4007C),
           actionLabel: 'Continuar',
         );
     }

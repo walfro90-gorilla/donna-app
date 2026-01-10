@@ -120,7 +120,7 @@ class _RestaurantBalanceScreenState extends State<RestaurantBalanceScreen> with 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Balance Financiero'),
-        backgroundColor: Colors.orange,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         actions: [
           if (_pendingSettlements.isNotEmpty)
@@ -282,7 +282,7 @@ class _RestaurantBalanceScreenState extends State<RestaurantBalanceScreen> with 
     final bool isNegative = balance < -epsilon;
 
     final List<Color> gradientColors = isZero
-        ? [Colors.blue.shade600, Colors.blue.shade800]
+        ? [const Color(0xFFE4007C).withValues(alpha: 0.8), const Color(0xFFE4007C)]
         : (isNegative
             ? [Colors.red.shade700, Colors.red.shade900]
             : [Colors.green.shade600, Colors.green.shade800]);
@@ -513,7 +513,7 @@ class _RestaurantBalanceScreenState extends State<RestaurantBalanceScreen> with 
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.delivery_dining, color: Colors.orange, size: 20),
+                    Icon(Icons.delivery_dining, color: Theme.of(context).colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
                     const Text(
                       'Repartidor',
@@ -552,14 +552,14 @@ class _RestaurantBalanceScreenState extends State<RestaurantBalanceScreen> with 
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Pendiente',
                     style: TextStyle(
-                      color: Colors.orange,
+                      color: Theme.of(context).colorScheme.primary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -590,7 +590,7 @@ class _RestaurantBalanceScreenState extends State<RestaurantBalanceScreen> with 
               child: ElevatedButton(
                 onPressed: () => _showConfirmationDialog(settlement),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -650,11 +650,11 @@ class _RestaurantBalanceScreenState extends State<RestaurantBalanceScreen> with 
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                   ),
-                  child: const Text('En espera de plataforma', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.w600)),
+                  child: Text('En espera de plataforma', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -761,7 +761,7 @@ class _RestaurantBalanceScreenState extends State<RestaurantBalanceScreen> with 
             ),
             ElevatedButton(
               onPressed: _isConfirmingSettlement ? null : () => _confirmSettlement(settlement),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Colors.white),
               child: _isConfirmingSettlement
                   ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Text('Confirmar'),

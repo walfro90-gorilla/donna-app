@@ -227,13 +227,9 @@ class _ProductsManagementScreenState extends State<ProductsManagementScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mis Productos'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
         actions: [
-          if (_restaurant != null)
-             IconButton(
-               icon: const Icon(Icons.add_circle_outline),
-               onPressed: () => _showProductDialog(),
-               tooltip: 'Nuevo producto',
-             ),
           IconButton(
             icon: const Icon(Icons.more_vert),
             onPressed: () {},
@@ -449,36 +445,119 @@ class _ProductsManagementScreenState extends State<ProductsManagementScreen> {
     );
   }
 
-  void _showAddMenu(BuildContext context) {
+    void _showAddMenu(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
-      builder: (context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.restaurant),
-            title: const Text('Producto simple'),
-            subtitle: const Text('Platillo, bebida o postre individual'),
-            onTap: () {
-              Navigator.pop(context);
-              _showProductDialog();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.inventory_2),
-            title: const Text('Combo (Paquete)'),
-            subtitle: const Text('Varios productos a un precio especial'),
-            onTap: () async {
-              Navigator.pop(context);
-              final ok = await Navigator.of(context).push<bool>(
-                MaterialPageRoute(builder: (_) => ComboEditScreen(restaurant: _restaurant!)),
-              );
-              if (ok == true) await _loadRestaurantAndProducts(reset: true);
-            },
-          ),
-          const SizedBox(height: 20),
-        ],
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Qué deseas agregar?',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildAddOption(
+              context,
+              icon: Icons.restaurant_rounded,
+              title: 'Producto Individual',
+              subtitle: 'Platillos, bebidas, postres o entradas',
+              color: theme.colorScheme.primary, // Rosa mexicano
+              onTap: () {
+                Navigator.pop(context);
+                _showProductDialog();
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildAddOption(
+              context,
+              icon: Icons.inventory_2_rounded,
+              title: 'Combo / Paquete',
+              subtitle: 'Varios productos a un precio especial',
+              color: theme.colorScheme.secondary, // Rosa pastel contraste
+              onTap: () async {
+                Navigator.pop(context);
+                final ok = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(builder: (_) => ComboEditScreen(restaurant: _restaurant!)),
+                );
+                if (ok == true) await _loadRestaurantAndProducts(reset: true);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddOption(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 14, color: color.withValues(alpha: 0.5)),
+          ],
+        ),
       ),
     );
   }

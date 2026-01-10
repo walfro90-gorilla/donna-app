@@ -193,7 +193,7 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Tus cambios fueron enviados a revisión. Tu restaurante quedará en estado Pendiente hasta aprobación (hasta 24 h).'),
-            backgroundColor: Colors.orange.shade700,
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
         Navigator.of(context).pop(true); // Regresar con éxito
@@ -215,10 +215,11 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Editar Perfil del Restaurante'),
-        backgroundColor: Colors.orange,
+        backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,

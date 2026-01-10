@@ -130,11 +130,11 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
             items: status.items,
             onGoToProfile: () {
               Navigator.of(dialogCtx).pop();
-              _onItemTapped(2); // Mi Restaurante
+              _onItemTapped(4); // Perfil
             },
             onGoToProducts: () {
               Navigator.of(dialogCtx).pop();
-              _onItemTapped(3); // Productos
+              _onItemTapped(2); // Productos
             },
           );
         },
@@ -522,7 +522,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
                 action: SnackBarAction(
                   label: 'IR A PERFIL',
                   textColor: Colors.white,
-                  onPressed: () => _onItemTapped(2), // Ir a página de perfil de restaurante
+                  onPressed: () => _onItemTapped(4), // Ir a página de perfil
                 ),
               ),
             );
@@ -1074,7 +1074,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _onItemTapped(4); // Ir a perfil (nueva posición)
+                _handleProfileSectionTap(ProfileSection.basicInfo);
               },
               child: const Text('Completar Perfil'),
             ),
@@ -1104,6 +1104,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       body: PageView(
         controller: _pageController,
@@ -1120,9 +1121,9 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        backgroundColor: const Color(0xFF1E1E1E), // Fondo oscuro para el navbar
-        selectedItemColor: const Color(0xFFFFA000), // Naranja premium para el seleccionado
-        unselectedItemColor: Colors.white54, // Gris claro para los no seleccionados
+        backgroundColor: const Color(0xFF1F1A1C), // Fondo gris rosáceo oscuro del tema
+        selectedItemColor: theme.colorScheme.primary, // Rosa mexicano
+        unselectedItemColor: theme.colorScheme.onSurface.withValues(alpha: 0.5),
         selectedLabelStyle: const TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 11,
@@ -1163,6 +1164,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
 
   /// Página principal del dashboard (index 0)
   Widget _buildDashboardHome() {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: NavigationService.getRoleColor(context, UserRole.restaurant),
@@ -1353,7 +1355,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
                         if (onboardingStatus.isComplete) {
                           _onItemTapped(1); 
                         } else {
-                          _onItemTapped(2); 
+                          _handleProfileSectionTap(ProfileSection.basicInfo); 
                         }
                       },
                       onDismiss: () {
@@ -1380,7 +1382,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
                       restaurant: _restaurant!,
                       percentageOverride: overridePerc,
                       productsCompleteOverride: snapshot.data?.hasMinProducts ?? false,
-                      onTapComplete: () => _onItemTapped(2),
+                      onTapComplete: () => _handleProfileSectionTap(ProfileSection.basicInfo),
                       onSectionTap: _handleProfileSectionTap,
                     );
                   },
@@ -1395,7 +1397,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
                 else
                   Row(
                     children: [
-                      Expanded(child: _buildOrderStatCard('Nuevos', 'Por aceptar', orderStats['newOrders']!, const Color(0xFFFFA000), Icons.notifications, type: 'new')),
+                      Expanded(child: _buildOrderStatCard('Nuevos', 'Por aceptar', orderStats['newOrders']!, theme.colorScheme.primary, Icons.notifications, type: 'new')),
                       const SizedBox(width: 12),
                       Expanded(child: _buildOrderStatCard('En Curso', 'Preparando', orderStats['activeOrders']!, const Color(0xFF2196F3), Icons.person, type: 'in_progress')),
                       const SizedBox(width: 12),

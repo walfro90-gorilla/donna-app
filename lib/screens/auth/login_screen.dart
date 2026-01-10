@@ -691,7 +691,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     Navigator.of(context).pushNamed('/nueva-donna');
                                   },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
+                              backgroundColor: Theme.of(context).colorScheme.primary,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               elevation: 2,

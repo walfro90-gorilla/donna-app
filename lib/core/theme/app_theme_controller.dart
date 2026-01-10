@@ -8,7 +8,7 @@ class AppThemeController {
 
   static const String _themeKey = 'theme_mode';
   static final ValueNotifier<ThemeMode> themeMode =
-      ValueNotifier<ThemeMode>(ThemeMode.light);
+      ValueNotifier<ThemeMode>(ThemeMode.dark);
 
   /// Initialize and load saved theme preference
   static Future<void> initialize() async {
@@ -21,7 +21,8 @@ class AppThemeController {
       } else if (savedTheme == 'light') {
         themeMode.value = ThemeMode.light;
       } else {
-        themeMode.value = ThemeMode.system;
+        // Default to dark if no preference exists or system preference
+        themeMode.value = ThemeMode.dark;
       }
     } catch (e) {
       debugPrint('⚠️ [THEME] Error loading theme preference: $e');

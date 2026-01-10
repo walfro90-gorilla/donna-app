@@ -41,10 +41,11 @@ class _SimpleOrdersDashboardState extends State<SimpleOrdersDashboard> {
 
   Future<void> _loadData({bool showLoading = true}) async {
     try {
-      if (showLoading) setState(() => _isLoading = true);
+      if (showLoading && mounted) setState(() => _isLoading = true);
       
       final currentUser = SupabaseAuth.currentUser;
       if (currentUser == null) return;
+      if (!mounted) return;
       
       // Cargar restaurante
       final restaurantResponse = await SupabaseConfig.client
@@ -54,6 +55,7 @@ class _SimpleOrdersDashboardState extends State<SimpleOrdersDashboard> {
           .maybeSingle();
       
       if (restaurantResponse != null) {
+        if (!mounted) return;
         _restaurant = DoaRestaurant.fromJson(restaurantResponse);
         
         // Cargar pedidos
@@ -72,6 +74,7 @@ class _SimpleOrdersDashboardState extends State<SimpleOrdersDashboard> {
             .order('created_at', ascending: false)
             .limit(20);
 
+        if (!mounted) return;
         setState(() {
           _orders = (ordersResponse as List)
               .map((data) => DoaOrder.fromJson(data))
@@ -82,7 +85,7 @@ class _SimpleOrdersDashboardState extends State<SimpleOrdersDashboard> {
     } catch (e) {
       debugPrint('❌ Error loading data: $e');
     } finally {
-      if (showLoading) setState(() => _isLoading = false);
+      if (showLoading && mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -95,7 +98,7 @@ class _SimpleOrdersDashboardState extends State<SimpleOrdersDashboard> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.orange,
+            color: Theme.of(context).colorScheme.primary,
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withValues(alpha: 0.3),

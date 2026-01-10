@@ -76,7 +76,7 @@ class _ProfileCompletionCardState extends State<ProfileCompletionCard> with Sing
       child: Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF2B2624), // Fondo oscuro café profundo
+          color: const Color(0xFF1F1A1C), // Gris rosáceo oscuro (fondo premium)
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
@@ -108,7 +108,7 @@ class _ProfileCompletionCardState extends State<ProfileCompletionCard> with Sing
                             value: percentage / 100,
                             strokeWidth: 8,
                             backgroundColor: const Color(0xFF423B38),
-                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFA000)),
+                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFE4007C)),
                             strokeCap: StrokeCap.round,
                           ),
                         ),
@@ -190,7 +190,7 @@ class _ProfileCompletionCardState extends State<ProfileCompletionCard> with Sing
                         child: ElevatedButton(
                           onPressed: widget.onTapComplete,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFFA000),
+                            backgroundColor: const Color(0xFFE4007C),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -229,14 +229,14 @@ class _ProfileCompletionCardState extends State<ProfileCompletionCard> with Sing
                 color: const Color(0xFF5D4E44),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isDone ? const Color(0xFFFFA000) : Colors.transparent,
+                  color: isDone ? const Color(0xFFE4007C) : Colors.transparent,
                   width: 1.5,
                 ),
               ),
               child: Icon(
                 Icons.check,
                 size: 12,
-                color: isDone ? const Color(0xFFFFA000) : Colors.white38,
+                color: isDone ? const Color(0xFFE4007C) : Colors.white38,
               ),
             ),
             const SizedBox(width: 12),
@@ -393,7 +393,7 @@ class _ProfileCompletionCardState extends State<ProfileCompletionCard> with Sing
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: completedCount == totalCount ? Colors.green.shade700 : Colors.orange.shade700,
+                  color: completedCount == totalCount ? Colors.green.shade700 : const Color(0xFFE4007C),
                 ),
               ),
             ),
@@ -452,7 +452,7 @@ class _ProfileCompletionCardState extends State<ProfileCompletionCard> with Sing
                 ),
                 child: Icon(
                   item.icon,
-                  color: item.isComplete ? Colors.green.shade700 : Colors.orange.shade700,
+                  color: item.isComplete ? Colors.green.shade700 : const Color(0xFFE4007C),
                   size: 20,
                 ),
               ),

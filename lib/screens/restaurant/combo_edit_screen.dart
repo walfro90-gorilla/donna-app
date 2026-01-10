@@ -146,166 +146,322 @@ class _ComboEditScreenState extends State<ComboEditScreen> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.comboProduct != null;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEdit ? 'Editar combo' : 'Nuevo combo'),
-        backgroundColor: Colors.orange,
+        title: Text(isEdit ? 'Editar Combo' : 'Nuevo Combo'),
+        backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            ImageUploadField(
-              label: 'Imagen del Combo',
-              hint: 'Toca para subir foto',
-              icon: Icons.camera_alt,
-              imageUrl: widget.comboProduct?.imageUrl,
-              isRequired: false,
-              onImageSelected: (file) => setState(() => _selectedImage = file),
-              helpText: 'Una imagen clara del combo ayuda a vender',
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _nameCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Nombre del combo *',
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _descCtrl,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Descripción',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _priceCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Precio del combo *',
-                      prefixText: '\$ ',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (v) => (double.tryParse((v ?? '').trim()) ?? 0) > 0 ? null : 'Precio inválido',
-                  ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Image Section
+              Center(
+                child: ImageUploadField(
+                  label: 'Imagen del Combo',
+                  hint: 'Toca para subir foto',
+                  icon: Icons.add_a_photo_outlined,
+                  imageUrl: widget.comboProduct?.imageUrl,
+                  isRequired: false,
+                  onImageSelected: (file) => setState(() => _selectedImage = file),
+                  helpText: 'Una imagen clara ayuda a vender más',
                 ),
-                const SizedBox(width: 12),
-                _summaryChip(),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              value: _isAvailable,
-              onChanged: (v) => setState(() => _isAvailable = v),
-              title: const Text('Combo disponible'),
-              subtitle: Text(_isAvailable ? 'Aparecerá en el menú' : 'Oculto para clientes'),
-            ),
-            const SizedBox(height: 8),
-            Text('Componentes del combo', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            if (_allProducts.isEmpty)
-              const Text('Aún no tienes productos simples disponibles'),
-            for (final p in _allProducts)
-              _productSelectorTile(p),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
-              child: _saving
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(isEdit ? 'Guardar cambios' : 'Crear combo'),
-            ),
-          ],
+              ),
+              const SizedBox(height: 32),
+
+              // Info Section
+              _buildSectionTitle('Información General'),
+              const SizedBox(height: 16),
+              
+              TextFormField(
+                controller: _nameCtrl,
+                decoration: _buildInputDecoration('Nombre del combo', Icons.drive_file_rename_outline),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Ingresa el nombre' : null,
+              ),
+              const SizedBox(height: 16),
+              
+              TextFormField(
+                controller: _descCtrl,
+                maxLines: 1,
+                decoration: _buildInputDecoration('Descripción (opcional)', Icons.description_outlined),
+              ),
+              const SizedBox(height: 16),
+              
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _priceCtrl,
+                      decoration: _buildInputDecoration('Precio del combo', Icons.payments_outlined).copyWith(
+                        prefixText: r'$ ',
+                        prefixStyle: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      validator: (v) => (double.tryParse((v ?? '').trim()) ?? 0) > 0 ? null : 'Precio inválido',
+                      onChanged: (_) => setState(() {}), // Update summary chip
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  _summaryChip(),
+                ],
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Availability Switch
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceVariant.withValues(alpha: isDark ? 0.3 : 0.5),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _isAvailable,
+                  onChanged: (v) => setState(() => _isAvailable = v),
+                  title: const Text('Combo disponible', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(
+                    _isAvailable ? 'Aparecerá en el menú' : 'Oculto para clientes',
+                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+                  ),
+                  activeColor: theme.colorScheme.primary,
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Components Section
+              _buildSectionTitle('Componentes del Combo'),
+              const SizedBox(height: 8),
+              Text(
+                'Selecciona entre 2 y 9 unidades totales para armar este combo.',
+                style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+              ),
+              const SizedBox(height: 16),
+              
+              if (_allProducts.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceVariant.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: Text('No hay productos simples disponibles', style: TextStyle(color: Colors.grey)),
+                  ),
+                )
+              else
+                ..._allProducts.map((p) => _productSelectorTile(p)),
+                
+              const SizedBox(height: 40),
+              
+              // Save Button
+              FilledButton(
+                onPressed: _saving ? null : _save,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  elevation: 0,
+                ),
+                child: _saving
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(
+                        isEdit ? 'GUARDAR CAMBIOS' : 'CREAR COMBO',
+                        style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                      ),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    final theme = Theme.of(context);
+    return Text(
+      title,
+      style: theme.textTheme.titleSmall?.copyWith(
+        color: theme.colorScheme.primary,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1.2,
+      ),
+    );
+  }
+
+  InputDecoration _buildInputDecoration(String label, IconData icon) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, size: 22),
+      filled: true,
+      fillColor: theme.colorScheme.surfaceVariant.withValues(alpha: isDark ? 0.2 : 0.4),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+      ),
+      labelStyle: TextStyle(
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+        fontSize: 14,
       ),
     );
   }
 
   Widget _productSelectorTile(DoaProduct p) {
+    final theme = Theme.of(context);
     final qty = _selectedItems[p.id] ?? 0;
-    final selected = qty > 0;
-    return ListTile(
-      leading: p.imageUrl != null
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.network(p.imageUrl!, width: 44, height: 44, fit: BoxFit.cover),
-            )
-          : const CircleAvatar(child: Icon(Icons.fastfood)),
-      title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text('\$${p.price.toStringAsFixed(2)}'),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+    final isSelected = qty > 0;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isSelected 
+            ? theme.colorScheme.primary.withValues(alpha: 0.05)
+            : theme.colorScheme.surfaceVariant.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSelected 
+              ? theme.colorScheme.primary.withValues(alpha: 0.3)
+              : Colors.transparent,
+        ),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: p.imageUrl != null
+              ? Image.network(p.imageUrl!, width: 50, height: 50, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholder())
+              : _buildPlaceholder(),
+        ),
+        title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        subtitle: Text(
+          r'$' + p.price.toStringAsFixed(0),
+          style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
+        ),
+        trailing: Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.remove, size: 18),
+                onPressed: qty > 0 ? () {
+                  setState(() {
+                    _selectedItems[p.id] = qty - 1;
+                    if (_selectedItems[p.id] == 0) _selectedItems.remove(p.id);
+                  });
+                } : null,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  qty.toString(),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.add, size: 18),
+                onPressed: () {
+                  final totalUnits = _selectedItems.values.fold<int>(0, (a, b) => a + b);
+                  if (totalUnits >= 9) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Máximo 9 unidades por combo')));
+                    return;
+                  }
+                  setState(() => _selectedItems[p.id] = qty + 1);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      width: 50,
+      height: 50,
+      color: Colors.grey.withValues(alpha: 0.1),
+      child: const Icon(Icons.fastfood_outlined, color: Colors.grey, size: 24),
+    );
+  }
+
+  Widget _summaryChip() {
+    final theme = Theme.of(context);
+    final total = _componentsTotal;
+    final priceStr = _priceCtrl.text.replaceAll(',', '.');
+    final price = double.tryParse(priceStr) ?? 0;
+    final diff = price - total;
+    final isSaving = price < total && price > 0;
+    
+    final color = isSaving ? Colors.green : (price > 0 ? Colors.orange : Colors.grey);
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                if (_selectedItems.containsKey(p.id)) {
-                  _selectedItems[p.id] = (qty - 1).clamp(0, 999);
-                  if (_selectedItems[p.id] == 0) _selectedItems.remove(p.id);
-                }
-              });
-            },
-            icon: const Icon(Icons.remove_circle_outline),
+          Text(
+            isSaving ? 'Ahorro: \$${(total - price).toStringAsFixed(0)}' : 'Suma base',
+            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 10),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: selected ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(qty.toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          IconButton(
-            onPressed: () {
-              // Respetar máximo 9 unidades totales
-              final totalUnits = _selectedItems.values.fold<int>(0, (a, b) => a + b);
-              if (totalUnits >= 9) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Máximo 9 unidades por combo')));
-                return;
-              }
-              setState(() {
-                _selectedItems[p.id] = qty + 1;
-              });
-            },
-            icon: const Icon(Icons.add_circle_outline),
+          Text(
+            r'$' + total.toStringAsFixed(0),
+            style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 16),
           ),
         ],
       ),
     );
   }
-
-  Widget _summaryChip() {
-    final total = _componentsTotal;
-    final price = double.tryParse(_priceCtrl.text) ?? 0;
-    final diff = price - total;
-    final color = diff >= 0 ? Colors.green : Colors.red;
-    return Tooltip(
-      message: 'Suma componentes: \$${total.toStringAsFixed(2)}\nDiferencia vs precio: \$${diff.toStringAsFixed(2)}',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text('Componentes', style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 11)),
-            Text('\$${total.toStringAsFixed(2)}', style: TextStyle(color: color, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
 }
+
