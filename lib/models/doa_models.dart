@@ -410,9 +410,12 @@ class DoaRestaurant {
   
   // Address structured JSON (contains lat/lon)
   final Map<String, dynamic>? addressStructured;
-  // Geolocation parsed from address_structured
+  // Geolocation parsed from address_structured or direct columns
   final double? lat;
   final double? lon;
+  final double? locationLat;
+  final double? locationLon;
+  final String? locationPlaceId;
   
   // Images
   final String? coverImageUrl;
@@ -427,6 +430,11 @@ class DoaRestaurant {
   final double? deliveryRadiusKm;
   final double? minOrderAmount;
   final int? estimatedDeliveryTimeMinutes;
+
+  // Social Media Links
+  final String? facebookUrl;
+  final String? instagramUrl;
+  final String? websiteUrl;
   
   // Commission in basis points (1500 = 15%)
   final int commissionBps;
@@ -461,6 +469,9 @@ class DoaRestaurant {
     this.addressStructured,
     this.lat,
     this.lon,
+    this.locationLat,
+    this.locationLon,
+    this.locationPlaceId,
     this.coverImageUrl,
     this.menuImageUrl,
     this.facadeImageUrl,
@@ -471,6 +482,9 @@ class DoaRestaurant {
     this.deliveryRadiusKm,
     this.minOrderAmount,
     this.estimatedDeliveryTimeMinutes,
+    this.facebookUrl,
+    this.instagramUrl,
+    this.websiteUrl,
     this.commissionBps = 1500,
     // UI properties with defaults
     this.imageUrl,
@@ -514,6 +528,9 @@ class DoaRestaurant {
       addressStructured: addressStructured,
       lat: lat,
       lon: lon,
+      locationLat: json['location_lat'] != null ? (json['location_lat'] as num).toDouble() : null,
+      locationLon: json['location_lon'] != null ? (json['location_lon'] as num).toDouble() : null,
+      locationPlaceId: json['location_place_id'],
       commissionBps: json['commission_bps'] ?? 1500,
       coverImageUrl: json['cover_image_url'],
       menuImageUrl: json['menu_image_url'],
@@ -525,6 +542,9 @@ class DoaRestaurant {
       deliveryRadiusKm: json['delivery_radius_km'] != null ? (json['delivery_radius_km'] as num).toDouble() : null,
       minOrderAmount: json['min_order_amount'] != null ? (json['min_order_amount'] as num).toDouble() : null,
       estimatedDeliveryTimeMinutes: json['estimated_delivery_time_minutes'],
+      facebookUrl: json['facebook_url'],
+      instagramUrl: json['instagram_url'],
+      websiteUrl: json['website_url'],
       // UI properties
       imageUrl: json['image_url'] ?? json['cover_image_url'] ?? json['logo_url'],
       rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
@@ -553,6 +573,9 @@ class DoaRestaurant {
       'address_structured': addressStructured,
       'lat': lat,
       'lon': lon,
+      'location_lat': locationLat,
+      'location_lon': locationLon,
+      'location_place_id': locationPlaceId,
       'cover_image_url': coverImageUrl,
       'menu_image_url': menuImageUrl,
       'facade_image_url': facadeImageUrl,
@@ -563,6 +586,9 @@ class DoaRestaurant {
       'delivery_radius_km': deliveryRadiusKm,
       'min_order_amount': minOrderAmount,
       'estimated_delivery_time_minutes': estimatedDeliveryTimeMinutes,
+      'facebook_url': facebookUrl,
+      'instagram_url': instagramUrl,
+      'website_url': websiteUrl,
       'onboarding_completed': onboardingCompleted,
       'onboarding_step': onboardingStep,
       'profile_completion_percentage': profileCompletionPercentage,
@@ -636,9 +662,14 @@ class DoaRestaurant {
     DateTime? createdAt,
     DateTime? updatedAt,
     DoaUser? user,
+    String? address,
+    String? phone,
     Map<String, dynamic>? addressStructured,
     double? lat,
     double? lon,
+    double? locationLat,
+    double? locationLon,
+    String? locationPlaceId,
     String? coverImageUrl,
     String? menuImageUrl,
     String? businessPermitUrl,
@@ -648,6 +679,9 @@ class DoaRestaurant {
     double? deliveryRadiusKm,
     double? minOrderAmount,
     int? estimatedDeliveryTimeMinutes,
+    String? facebookUrl,
+    String? instagramUrl,
+    String? websiteUrl,
     String? imageUrl,
     double? rating,
     int? deliveryTime,
@@ -669,9 +703,14 @@ class DoaRestaurant {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       user: user ?? this.user,
+      address: address ?? this.address,
+      phone: phone ?? this.phone,
       addressStructured: addressStructured ?? this.addressStructured,
       lat: lat ?? this.lat,
       lon: lon ?? this.lon,
+      locationLat: locationLat ?? this.locationLat,
+      locationLon: locationLon ?? this.locationLon,
+      locationPlaceId: locationPlaceId ?? this.locationPlaceId,
       coverImageUrl: coverImageUrl ?? this.coverImageUrl,
       menuImageUrl: menuImageUrl ?? this.menuImageUrl,
       businessPermitUrl: businessPermitUrl ?? this.businessPermitUrl,
@@ -681,6 +720,9 @@ class DoaRestaurant {
       deliveryRadiusKm: deliveryRadiusKm ?? this.deliveryRadiusKm,
       minOrderAmount: minOrderAmount ?? this.minOrderAmount,
       estimatedDeliveryTimeMinutes: estimatedDeliveryTimeMinutes ?? this.estimatedDeliveryTimeMinutes,
+      facebookUrl: facebookUrl ?? this.facebookUrl,
+      instagramUrl: instagramUrl ?? this.instagramUrl,
+      websiteUrl: websiteUrl ?? this.websiteUrl,
       imageUrl: imageUrl ?? this.imageUrl,
       rating: rating ?? this.rating,
       deliveryTime: deliveryTime ?? this.deliveryTime,

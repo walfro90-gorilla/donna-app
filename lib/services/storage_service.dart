@@ -200,21 +200,13 @@ class StorageService {
 
       print('✅ [STORAGE] Archivo subido exitosamente: $storageResponse');
 
-      // Generar URL firmada (bucket privado). Si el bucket fuera público, podríamos usar getPublicUrl.
-      try {
-        final signedUrl = await SupabaseConfig.client.storage
-            .from(bucket)
-            .createSignedUrl(path, 60 * 60 * 24 * 7); // 7 días
-        print('🔗 [STORAGE] URL firmada generada: $signedUrl');
-        return signedUrl;
-      } catch (e) {
-        // Fallback: intentar URL pública si por alguna razón falla la firmada
-        final publicUrl = SupabaseConfig.client.storage
-            .from(bucket)
-            .getPublicUrl(path);
-        print('ℹ️ [STORAGE] Fallback a URL pública: $publicUrl');
-        return publicUrl;
-      }
+      // Generar URL pública (asumiendo que el bucket es público para imágenes de perfil/restaurante)
+      final publicUrl = SupabaseConfig.client.storage
+          .from(bucket)
+          .getPublicUrl(path);
+      
+      print('🔗 [STORAGE] URL pública generada: $publicUrl');
+      return publicUrl;
     } catch (e, stackTrace) {
       print('❌ [STORAGE] Error al subir archivo: $e');
       print('📍 [STORAGE] Stack trace: $stackTrace');

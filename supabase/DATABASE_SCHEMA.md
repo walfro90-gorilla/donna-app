@@ -378,6 +378,9 @@ CREATE TABLE public.restaurants (
   commission_bps integer NOT NULL DEFAULT 1500 CHECK (commission_bps >= 0 AND commission_bps <= 3000),
   facade_image_url text,
   location USER-DEFINED,
+  facebook_url text,
+  instagram_url text,
+  website_url text,
   CONSTRAINT restaurants_pkey PRIMARY KEY (id),
   CONSTRAINT restaurants_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
@@ -456,7 +459,7 @@ CREATE TABLE public.users (
   email text NOT NULL UNIQUE,
   name text,
   phone text,
-  role text DEFAULT 'cliente'::text CHECK (role = ANY (ARRAY['client'::text, 'restaurant'::text, 'delivery_agent'::text, 'admin'::text])),
+  role text DEFAULT 'client'::text CHECK (role = ANY (ARRAY['client'::text, 'restaurant'::text, 'delivery_agent'::text, 'admin'::text])),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   email_confirm boolean DEFAULT false,

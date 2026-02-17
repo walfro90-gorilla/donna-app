@@ -18,7 +18,8 @@ class RestaurantDetailScreen extends StatefulWidget {
   State<RestaurantDetailScreen> createState() => _RestaurantDetailScreenState();
 }
 
-class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
+class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   List<DoaProduct> _products = [];
   bool _isLoading = true;
   String _selectedCategory = 'Todos';
@@ -27,6 +28,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   final ValueNotifier<Map<String, int>> _cartVN = ValueNotifier(<String, int>{});
   bool _hasActiveCouriers = true;
   StreamSubscription<void>? _couriersUpdatesSubscription;
+  bool _isPreviewMode = false;
 
   final List<String> _categories = [
     'Todos',
@@ -39,6 +41,12 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   @override
   void initState() {
     super.initState();
+    // Detectar si el usuario actual es el dueño del restaurante para activar modo preview silencioso o explícito
+    final currentUser = SupabaseConfig.client.auth.currentUser;
+    if (currentUser?.id == widget.restaurant.userId) {
+      _isPreviewMode = true;
+    }
+    _tabController = TabController(length: 3, vsync: this);
     _loadProducts();
     _initCourierGate();
   }
@@ -128,153 +136,184 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
           // Header con imagen
           SliverAppBar(
-            expandedHeight: 300,
+            expandedHeight: 220,
             pinned: true,
+            stretch: true,
+            backgroundColor: Theme.of(context).colorScheme.primary,
             flexibleSpace: FlexibleSpaceBar(
-              background: widget.restaurant.imageUrl != null
-                  ? Image.network(
-                      widget.restaurant.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          _buildHeaderPlaceholder(),
-                    )
-                  : _buildHeaderPlaceholder(),
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  widget.restaurant.coverImageUrl != null
+                      ? Image.network(
+                          widget.restaurant.coverImageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              _buildHeaderPlaceholder(),
+                        )
+                      : _buildHeaderPlaceholder(),
+                  // Gradiente para legibilidad de iconos superiores
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.center,
+                        colors: [Colors.black54, Colors.transparent],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            leading: Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.5),
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
+            bottom: TabBar(
+              controller: _tabController,
+              indicatorColor: Colors.white,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              indicatorWeight: 3,
+              tabs: const [
+                Tab(text: 'Menú'),
+                Tab(text: 'Información'),
+                Tab(text: 'Reseñas'),
+              ],
+            ),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
             ),
             actions: [
-              Container(
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.favorite_outline, color: Colors.white),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Favoritos próximamente')),
-                    );
-                  },
-                ),
+              IconButton(
+                icon: const Icon(Icons.share, color: Colors.white),
+                onPressed: () {},
+              ),
+              IconButton(
+                icon: const Icon(Icons.favorite_border, color: Colors.white),
+                onPressed: () {},
               ),
             ],
           ),
 
-          // Información del restaurante
+          // Perfil Social (Logo superpuesto y nombre)
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 45, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          widget.restaurant.name,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                      ),
-                      if (widget.restaurant.rating != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .tertiary
-                                .withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.star,
-                                size: 18,
-                                color: Theme.of(context).colorScheme.tertiary,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                widget.restaurant.rating!.toStringAsFixed(1),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelLarge
-                                    ?.copyWith(
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.restaurant.name,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                if (widget.restaurant.cuisineType != null)
+                                  Text(
+                                    widget.restaurant.cuisineType!,
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.primary,
                                       fontWeight: FontWeight.w600,
                                     ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          _buildSocialIconsGrid(),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      if (widget.restaurant.description != null)
+                        Text(
+                          widget.restaurant.description!,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.7),
                               ),
-                            ],
-                          ),
                         ),
-                    ],
-                  ),
 
-                  const SizedBox(height: 8),
+                      const SizedBox(height: 16),
 
-                  if (widget.restaurant.description != null)
-                    Text(
-                      widget.restaurant.description!,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
+                      // Info de entrega
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        children: [
+                          _InfoChip(
+                            icon: Icons.access_time,
+                            label:
+                                '${widget.restaurant.deliveryTime ?? 30}-${(widget.restaurant.deliveryTime ?? 30) + 15} min',
                           ),
-                    ),
-
-                  const SizedBox(height: 16),
-
-                  // Info de entrega
-                  Row(
-                    children: [
-                      _InfoChip(
-                        icon: Icons.access_time,
-                        label:
-                            '${widget.restaurant.deliveryTime ?? 30}-${(widget.restaurant.deliveryTime ?? 30) + 15} min',
+                          _InfoChip(
+                            icon: Icons.delivery_dining,
+                            label: widget.restaurant.deliveryFee != null &&
+                                    widget.restaurant.deliveryFee! > 0
+                                ? '\$${widget.restaurant.deliveryFee!.toStringAsFixed(0)}'
+                                : 'Gratis',
+                            isHighlight: widget.restaurant.deliveryFee == null ||
+                                widget.restaurant.deliveryFee! == 0,
+                          ),
+                          _InfoChip(
+                            icon: Icons.circle,
+                            label: widget.restaurant.isOpen ? 'Abierto' : 'Cerrado',
+                            color: widget.restaurant.isOpen
+                                ? Theme.of(context).colorScheme.secondary
+                                : Theme.of(context).colorScheme.error,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      _InfoChip(
-                        icon: Icons.delivery_dining,
-                        label: widget.restaurant.deliveryFee != null &&
-                                widget.restaurant.deliveryFee! > 0
-                            ? '\\\$${widget.restaurant.deliveryFee!.toStringAsFixed(0)}'
-                            : 'Gratis',
-                        isHighlight: widget.restaurant.deliveryFee == null ||
-                            widget.restaurant.deliveryFee! == 0,
-                      ),
-                      const SizedBox(width: 12),
-                      _InfoChip(
-                        icon: Icons.circle,
-                        label: widget.restaurant.isOpen ? 'Abierto' : 'Cerrado',
-                        color: widget.restaurant.isOpen
-                            ? Theme.of(context).colorScheme.secondary
-                            : Theme.of(context).colorScheme.error,
-                      ),
+                      const SizedBox(height: 16),
                     ],
                   ),
-                ],
-              ),
+                ),
+                // Logo Circular superpuesto
+                Positioned(
+                  top: -40,
+                  left: 16,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 38,
+                      backgroundColor: Colors.grey.shade200,
+                      backgroundImage: widget.restaurant.logoUrl != null
+                          ? NetworkImage(widget.restaurant.logoUrl!)
+                          : null,
+                      child: widget.restaurant.logoUrl == null
+                          ? const Icon(Icons.restaurant, size: 40, color: Colors.grey)
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -307,120 +346,126 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 ),
               ),
             ),
-
-          // Filtros de categorías
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 50,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _categories.length,
-                itemBuilder: (context, index) {
-                  final category = _categories[index];
-                  final isSelected = _selectedCategory == category;
-
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: FilterChip(
-                      label: Text(category),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedCategory = category;
-                        });
-                      },
-                      backgroundColor: Theme.of(context).colorScheme.surface,
-                      selectedColor:
-                          Theme.of(context).colorScheme.primaryContainer,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-          // Lista de productos
-          _isLoading
-              ? const SliverToBoxAdapter(
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-                )
-              : _products.isEmpty
-                  ? SliverToBoxAdapter(
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.restaurant_menu,
-                                size: 64,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.3),
+          // Contenido basado en la pestaña seleccionada
+          SliverFillRemaining(
+            hasScrollBody: true,
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // PESTAÑA 1: MENÚ (Contenido original)
+                CustomScrollView(
+                  slivers: [
+                    // Filtro de categorías
+                    SliverToBoxAdapter(
+                      child: Container(
+                        height: 60,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _categories.length,
+                          itemBuilder: (context, index) {
+                            final category = _categories[index];
+                            final isSelected = _selectedCategory == category;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: FilterChip(
+                                label: Text(category),
+                                selected: isSelected,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    _selectedCategory = category;
+                                  });
+                                },
+                                selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                checkmarkColor: Theme.of(context).colorScheme.primary,
                               ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No hay productos disponibles',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.7),
-                                    ),
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       ),
-                    )
-                  : SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final product = _products[index];
-                          // Mapa de id -> nombre para resolver los nombres de items del combo
-                          final productNameById = {
-                            for (final p in _products) p.id: p.name,
-                          };
-                          return Padding(
-                            padding: EdgeInsets.only(
-                              left: 16,
-                              right: 16,
-                              bottom: index == _products.length - 1 ? 100 : 16,
-                            ),
-                            child: ProductCard(
-                              product: product,
-                              quantity: _cartVN.value[product.id] ?? 0,
-                              orderingEnabled: _hasActiveCouriers,
-                              onAdd: _hasActiveCouriers
-                                  ? () => _addToCart(product.id)
-                                  : null,
-                              onRemove: _hasActiveCouriers
-                                  ? () => _removeFromCart(product.id)
-                                  : null,
-                              productNameById: productNameById,
-                            ),
-                          );
-                        },
-                        childCount: _products.length,
-                      ),
                     ),
+
+                    // Lista de productos
+                    _isLoading
+                        ? const SliverFillRemaining(
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        : _products.isEmpty
+                            ? const SliverFillRemaining(
+                                child: Center(
+                                  child: Text('No hay productos disponibles'),
+                                ),
+                              )
+                            : SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    final product = _products[index];
+                                    final productNameById = {
+                                      for (final p in _products) p.id: p.name,
+                                    };
+                                    return Padding(
+                                      padding: EdgeInsets.only(
+                                        left: 16,
+                                        right: 16,
+                                        bottom: index == _products.length - 1 ? 100 : 16,
+                                      ),
+                                      child: ProductCard(
+                                        product: product,
+                                        quantity: _cartVN.value[product.id] ?? 0,
+                                        orderingEnabled: _hasActiveCouriers,
+                                        onAdd: _hasActiveCouriers
+                                            ? () => _addToCart(product.id)
+                                            : null,
+                                        onRemove: _hasActiveCouriers
+                                            ? () => _removeFromCart(product.id)
+                                            : null,
+                                        productNameById: productNameById,
+                                      ),
+                                    );
+                                  },
+                                  childCount: _products.length,
+                                ),
+                              ),
+                  ],
+                ),
+
+                // PESTAÑA 2: INFORMACIÓN
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildInfoSection('Horarios', Icons.access_time, _buildHoursWidget()),
+                      const Divider(height: 32),
+                      _buildInfoSection('Ubicación', Icons.location_on, Text(widget.restaurant.addressStructured?['address'] ?? 'No especificada')),
+                      const Divider(height: 32),
+                      _buildInfoSection('Cocina', Icons.restaurant, Text(widget.restaurant.cuisineType ?? 'Varia')),
+                    ],
+                  ),
+                ),
+
+                // PESTAÑA 3: RESEÑAS
+                const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.star_outline, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text('Aún no hay reseñas', style: TextStyle(color: Colors.grey, fontSize: 18)),
+                      Text('¡Sé el primero en dejar una!', style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
-
-      // Botón flotante del carrito
-      floatingActionButton: _totalItems > 0
+      if (_isPreviewMode) _buildPreviewBanner(),
+    ],
+  ),
+  floatingActionButton: _totalItems > 0 && !_isPreviewMode
           ? Container(
               width: double.infinity,
               margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -436,7 +481,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                   child: const Icon(Icons.shopping_cart),
                 ),
                 label: Text(
-                  'Ver carrito • \\\$${_totalAmount.toStringAsFixed(2)}',
+                  'Ver carrito • \u{0024}${_totalAmount.toStringAsFixed(2)}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -446,6 +491,67 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _buildSocialIconsGrid() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.restaurant.facebookUrl != null)
+          _buildSocialBtn(Icons.facebook, Colors.blue.shade800),
+        if (widget.restaurant.instagramUrl != null)
+          _buildSocialBtn(Icons.camera_alt, Colors.pink),
+        if (widget.restaurant.websiteUrl != null)
+          _buildSocialBtn(Icons.language, Colors.teal),
+      ],
+    );
+  }
+
+  Widget _buildSocialBtn(IconData icon, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: color, size: 20),
+    );
+  }
+
+  Widget _buildPreviewBanner() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        child: Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE4007C), // Rosa Mexicano
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.visibility, color: Colors.white, size: 20),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'MODO VISTA PREVIA (Dueño)',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('CERRAR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -467,7 +573,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           Icon(
             Icons.restaurant,
             size: 80,
-            color: Colors.white.withValues(alpha: 0.8),
+            color: Colors.white.withOpacity(0.8),
           ),
           const SizedBox(height: 16),
           Text(
@@ -505,7 +611,51 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   void dispose() {
     _couriersUpdatesSubscription?.cancel();
     _cartVN.dispose();
+    _tabController.dispose();
     super.dispose();
+  }
+
+  Widget _buildInfoSection(String title, IconData icon, Widget content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        content,
+      ],
+    );
+  }
+
+  Widget _buildHoursWidget() {
+    if (widget.restaurant.businessHours == null || widget.restaurant.businessHours!.isEmpty) {
+      return const Text('Consultar directamente con el local');
+    }
+    
+    return Column(
+      children: widget.restaurant.businessHours!.entries.map((entry) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w500)),
+              Text(entry.value.toString()),
+            ],
+          ),
+        );
+      }).toList(),
+    );
   }
 }
 
@@ -528,7 +678,7 @@ class _InfoChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: isHighlight
-            ? Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1)
+            ? Theme.of(context).colorScheme.secondary.withOpacity(0.1)
             : Theme.of(context)
                 .colorScheme
                 .surfaceContainerHighest
@@ -559,7 +709,7 @@ class _InfoChip extends StatelessWidget {
                           : Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withValues(alpha: 0.8)),
+                              .withOpacity(0.8)),
                   fontWeight: isHighlight ? FontWeight.w600 : null,
                 ),
           ),
@@ -662,7 +812,7 @@ class ProductCard extends StatelessWidget {
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface
-                                          .withValues(alpha: 0.8),
+                                          .withOpacity(0.8),
                                       fontWeight: FontWeight.w600,
                                     ),
                               ),

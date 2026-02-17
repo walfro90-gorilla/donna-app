@@ -100,19 +100,19 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
 
   /// Abrir modal de selección de dirección
   Future<void> _selectAddress() async {
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
+    final result = await showModalBottomSheet<dynamic>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const AddressPickerModal(),
     );
 
-    if (result != null && mounted) {
+    if (result is AddressPickResult && mounted) {
       setState(() {
-        _addressController.text = result['formatted_address'] ?? '';
-        _selectedLocation = result['location'];
-        _selectedPlaceId = result['place_id'];
-        _addressStructured = result['address_structured'];
+        _addressController.text = result.formattedAddress;
+        _selectedLocation = LatLng(result.lat, result.lon);
+        _selectedPlaceId = result.placeId;
+        _addressStructured = result.addressStructured;
       });
     }
   }

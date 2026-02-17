@@ -136,47 +136,31 @@ class _AddressPickerModalState extends State<AddressPickerModal> {
   }
 
   void _zoomIn() {
-    if (kIsWeb) {
-      if (_selectedLocation == null) return;
-      _webZoom = _clampZoom(_webZoom + 1.0);
-      try {
-        _webMapController?.move(
-          ll.LatLng(_selectedLocation!.latitude, _selectedLocation!.longitude),
-          _webZoom,
-        );
-      } catch (e) {
-        debugPrint('🧭 [ADDRESS_PICKER] Web zoomIn failed: $e');
-      }
-      setState(() {});
-    } else {
-      try {
-        _mapController?.animateCamera(CameraUpdate.zoomIn());
-      } catch (e) {
-        debugPrint('🧭 [ADDRESS_PICKER] GoogleMap zoomIn failed: $e');
-      }
+    if (_selectedLocation == null) return;
+    _webZoom = _clampZoom(_webZoom + 1.0);
+    try {
+      _webMapController?.move(
+        ll.LatLng(_selectedLocation!.latitude, _selectedLocation!.longitude),
+        _webZoom,
+      );
+    } catch (e) {
+      debugPrint('🧭 [ADDRESS_PICKER] ZoomIn failed: $e');
     }
+    setState(() {});
   }
 
   void _zoomOut() {
-    if (kIsWeb) {
-      if (_selectedLocation == null) return;
-      _webZoom = _clampZoom(_webZoom - 1.0);
-      try {
-        _webMapController?.move(
-          ll.LatLng(_selectedLocation!.latitude, _selectedLocation!.longitude),
-          _webZoom,
-        );
-      } catch (e) {
-        debugPrint('🧭 [ADDRESS_PICKER] Web zoomOut failed: $e');
-      }
-      setState(() {});
-    } else {
-      try {
-        _mapController?.animateCamera(CameraUpdate.zoomOut());
-      } catch (e) {
-        debugPrint('🧭 [ADDRESS_PICKER] GoogleMap zoomOut failed: $e');
-      }
+    if (_selectedLocation == null) return;
+    _webZoom = _clampZoom(_webZoom - 1.0);
+    try {
+      _webMapController?.move(
+        ll.LatLng(_selectedLocation!.latitude, _selectedLocation!.longitude),
+        _webZoom,
+      );
+    } catch (e) {
+      debugPrint('🧭 [ADDRESS_PICKER] ZoomOut failed: $e');
     }
+    setState(() {});
   }
 
   Future<void> _initGoogleMapsIfNeeded() async {
@@ -682,79 +666,47 @@ class _AddressPickerModalState extends State<AddressPickerModal> {
                         // Background placeholder (prevents "white screen" if tiles load slow)
                         Container(color: const Color(0xFFEEEEEE)),
                         
-                        // GoogleMap (mobile/desktop) or FlutterMap fallback (web)
-                        if (kIsWeb)
-                          fm.FlutterMap(
-                            mapController: (_webMapController ??= fm.MapController()),
-                            options: fm.MapOptions(
-                              initialCenter: ll.LatLng(_selectedLocation!.latitude, _selectedLocation!.longitude),
-                              initialZoom: _webZoom,
-                              interactionOptions: const fm.InteractionOptions(
-                                flags: fm.InteractiveFlag.pinchZoom | fm.InteractiveFlag.drag,
-                              ),
-                              onMapEvent: (event) {
-                                // Track zoom and center when user stops moving
-                                if (event is fm.MapEventMoveEnd || event is fm.MapEventFlingAnimationEnd) {
-                                  final c = event.camera.center;
-                                  final z = event.camera.zoom;
-                                  if (mounted) {
-                                    setState(() {
-                                      _selectedLocation = LatLng(c.latitude, c.longitude);
-                                      _webZoom = _clampZoom(z);
-                                    });
-                                  }
+                        // Mapa robusto usando FlutterMap (OSM) para todas las plataformas
+                        // Esto garantiza que el mapa se vea en dispositivos sin Google Play Services (ej. Huawei)
+                        fm.FlutterMap(
+                          mapController: (_webMapController ??= fm.MapController()),
+                          options: fm.MapOptions(
+                            initialCenter: ll.LatLng(_selectedLocation!.latitude, _selectedLocation!.longitude),
+                            initialZoom: _webZoom,
+                            interactionOptions: const fm.InteractionOptions(
+                              flags: fm.InteractiveFlag.pinchZoom | fm.InteractiveFlag.drag,
+                            ),
+                            onMapEvent: (event) {
+                              // Sincronizar ubicación seleccionada con el centro del mapa
+                              if (event is fm.MapEventMove || event is fm.MapEventMoveEnd || event is fm.MapEventFlingAnimationEnd) {
+                                final c = event.camera.center;
+                                final z = event.camera.zoom;
+                                if (mounted) {
+                                  setState(() {
+                                    _selectedLocation = LatLng(c.latitude, c.longitude);
+                                    _webZoom = _clampZoom(z);
+                                  });
                                 }
-                              },
-                            ),
-                            children: [
-                              fm.TileLayer(
-                                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                userAgentPackageName: 'com.donna.co',
-                              ),
-                            ],
-                          )
-                        else
-                          GoogleMap(
-                            initialCameraPosition: CameraPosition(
-                              target: _selectedLocation!,
-                              zoom: 17,
-                            ),
-                            onMapCreated: (controller) {
-                              debugPrint('🧭 [ADDRESS_PICKER] GoogleMap created successfully');
-                              if (mounted) {
-                                setState(() => _mapController = controller);
-                                // Removed custom style to prevent blank map issues
                               }
                             },
-                            markers: {
-                              Marker(
-                                markerId: const MarkerId('selected'),
-                                position: _selectedLocation!,
-                                draggable: true,
-                                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-                                onDragEnd: (newPos) {
-                                  if (mounted) {
-                                    setState(() => _selectedLocation = newPos);
-                                    debugPrint('🧭 [ADDRESS_PICKER] Pin moved to: ${newPos.latitude}, ${newPos.longitude}');
-                                  }
-                                },
-                              ),
-                            },
-                            myLocationButtonEnabled: true,
-                            myLocationEnabled: true,
-                            zoomControlsEnabled: false,
-                            mapToolbarEnabled: false,
-                            compassEnabled: true,
-                            minMaxZoomPreference: const MinMaxZoomPreference(12, 20),
                           ),
+                          children: [
+                            fm.TileLayer(
+                              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              userAgentPackageName: 'com.doa.repartos',
+                            ),
+                          ],
+                        ),
 
-                        // Center pin overlay for web
-                        if (kIsWeb)
-                          IgnorePointer(
-                            child: Center(
-                              child: Icon(Icons.location_on, size: 40, color: Colors.red.shade600),
+                        // Pin central estático (el usuario mueve el mapa debajo del pin)
+                        IgnorePointer(
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 35), // Ajuste para que la punta del pin coincida con el centro
+                              child: Icon(Icons.location_on, size: 45, color: Colors.red.shade600),
                             ),
                           ),
+                        ),
 
                         // Zoom controls (+ / -)
                         Positioned(

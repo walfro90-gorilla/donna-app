@@ -4,7 +4,11 @@ import 'package:doa_repartos/supabase/supabase_config.dart';
 import 'package:doa_repartos/widgets/address_picker_modal.dart';
 import 'package:doa_repartos/widgets/image_upload_field.dart';
 import 'package:doa_repartos/widgets/profile_completion_card.dart';
+import 'package:doa_repartos/screens/restaurants/restaurant_detail_screen.dart';
+import 'package:doa_repartos/services/storage_service.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart' as fm;
+import 'package:latlong2/latlong.dart' as ll;
 import 'package:file_picker/file_picker.dart';
 
 /// Pantalla completa para editar el perfil del restaurante
@@ -31,13 +35,21 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
   final _descriptionController = TextEditingController();
   final _cuisineTypeController = TextEditingController();
   final _addressController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _deliveryRadiusController = TextEditingController();
   final _minOrderAmountController = TextEditingController();
   final _estimatedDeliveryTimeController = TextEditingController();
+  final _facebookController = TextEditingController();
+  final _instagramController = TextEditingController();
+  final _websiteController = TextEditingController();
   
   // Image URLs
   String? _logoUrl;
   String? _coverImageUrl;
+  
+  // Image Uploading States
+  bool _isUploadingLogo = false;
+  bool _isUploadingCover = false;
   // String? _menuImageUrl; // Eliminado: ya no usamos foto del menú
   
   // Location data
@@ -68,6 +80,7 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
     _descriptionController.addListener(_markChanged);
     _cuisineTypeController.addListener(_markChanged);
     _addressController.addListener(_markChanged);
+    _phoneController.addListener(_markChanged);
   }
 
   int _getSectionIndex(ProfileSection section) {
@@ -88,9 +101,10 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
     _nameController.text = widget.restaurant.name;
     _descriptionController.text = widget.restaurant.description ?? '';
     _cuisineTypeController.text = widget.restaurant.cuisineType ?? '';
+    _addressController.text = widget.restaurant.address ?? '';
+    _phoneController.text = widget.restaurant.phone ?? '';
     _logoUrl = widget.restaurant.logoUrl;
     _coverImageUrl = widget.restaurant.coverImageUrl;
-    // _menuImageUrl = widget.restaurant.menuImageUrl; // Eliminado
     
     if (widget.restaurant.deliveryRadiusKm != null) {
       _deliveryRadiusController.text = widget.restaurant.deliveryRadiusKm!.toString();
@@ -101,22 +115,31 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
     if (widget.restaurant.estimatedDeliveryTimeMinutes != null) {
       _estimatedDeliveryTimeController.text = widget.restaurant.estimatedDeliveryTimeMinutes!.toString();
     }
+    _facebookController.text = widget.restaurant.facebookUrl ?? '';
+    _instagramController.text = widget.restaurant.instagramUrl ?? '';
+    _websiteController.text = widget.restaurant.websiteUrl ?? '';
+
+    if (widget.restaurant.locationLat != null && widget.restaurant.locationLon != null) {
+      _selectedLocation = LatLng(widget.restaurant.locationLat!, widget.restaurant.locationLon!);
+      _selectedPlaceId = widget.restaurant.locationPlaceId;
+      _addressStructured = widget.restaurant.addressStructured;
+    }
   }
 
   Future<void> _selectAddress() async {
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
+    final result = await showModalBottomSheet<dynamic>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const AddressPickerModal(),
     );
 
-    if (result != null && mounted) {
+    if (result is AddressPickResult && mounted) {
       setState(() {
-        _addressController.text = result['formatted_address'] ?? '';
-        _selectedLocation = result['location'];
-        _selectedPlaceId = result['place_id'];
-        _addressStructured = result['address_structured'];
+        _addressController.text = result.formattedAddress;
+        _selectedLocation = LatLng(result.lat, result.lon);
+        _selectedPlaceId = result.placeId;
+        _addressStructured = result.addressStructured;
       });
       _markChanged();
     }
@@ -170,13 +193,17 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
         'cuisine_type': _cuisineTypeController.text.trim().isNotEmpty 
             ? _cuisineTypeController.text.trim() 
             : null,
+        'address': _addressController.text.trim().isNotEmpty ? _addressController.text.trim() : null,
+        'phone': _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : null,
         'logo_url': _logoUrl,
         'cover_image_url': _coverImageUrl,
-        // 'menu_image_url': _menuImageUrl, // Eliminado: no persistir foto del menú
+        'facebook_url': _facebookController.text.trim().isEmpty ? null : _facebookController.text.trim(),
+        'instagram_url': _instagramController.text.trim().isEmpty ? null : _instagramController.text.trim(),
+        'website_url': _websiteController.text.trim().isEmpty ? null : _websiteController.text.trim(),
+        'status': 'pending', // Revertir a pendiente para revisión administrativa
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      // Parámetros de delivery se calculan automáticamente (no se guardan manualmente)
       if (_selectedLocation != null) {
         updateData['location_lat'] = _selectedLocation!.latitude;
         updateData['location_lon'] = _selectedLocation!.longitude;
@@ -233,6 +260,29 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Ver vista previa pública',
+            icon: const Icon(Icons.visibility),
+            onPressed: () {
+              // Navegar al perfil público con los datos actuales (clonando el modelo)
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => RestaurantDetailScreen(
+                    restaurant: widget.restaurant.copyWith(
+                      name: _nameController.text.trim(),
+                      description: _descriptionController.text.trim(),
+                      cuisineType: _cuisineTypeController.text.trim(),
+                      logoUrl: _logoUrl,
+                      coverImageUrl: _coverImageUrl,
+                      facebookUrl: _facebookController.text.trim(),
+                      instagramUrl: _instagramController.text.trim(),
+                      websiteUrl: _websiteController.text.trim(),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
           TextButton.icon(
             onPressed: _isSaving ? null : _confirmAndSaveChanges,
             icon: _isSaving
@@ -262,6 +312,7 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
 
   /// TAB 1: Información básica
   Widget _buildBasicInfoTab() {
+    final theme = Theme.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Form(
@@ -361,35 +412,82 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
               controller: _addressController,
               readOnly: true,
               onTap: _selectAddress,
+              style: const TextStyle(fontWeight: FontWeight.w500),
               decoration: InputDecoration(
                 labelText: 'Dirección del Restaurante',
                 hintText: 'Toca para buscar dirección',
                 border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.location_on),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: _selectAddress,
+                suffixIcon: Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.search, size: 20),
+                      onPressed: _selectAddress,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
                 ),
               ),
             ),
             
+            const SizedBox(height: 16),
+            
+            // Teléfono
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Teléfono de Contacto',
+                hintText: 'Ej: +52 656 123 4567',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.phone),
+              ),
+            ),
+            
             if (_selectedLocation != null) ...[
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Icon(Icons.map_outlined, size: 20, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Vista Previa de Ubicación',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  height: 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: _buildMiniMap(_selectedLocation!),
+                ),
+              ),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
+                  color: Colors.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                    const Icon(Icons.check_circle, color: Colors.green, size: 16),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Ubicación confirmada: ${_selectedLocation!.latitude.toStringAsFixed(6)}, ${_selectedLocation!.longitude.toStringAsFixed(6)}',
-                        style: const TextStyle(fontSize: 12, color: Colors.green),
+                        'Confirmado en coordenadas: ${_selectedLocation!.latitude.toStringAsFixed(5)}, ${_selectedLocation!.longitude.toStringAsFixed(5)}',
+                        style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.w500),
                       ),
                     ),
                   ],
@@ -399,6 +497,36 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMiniMap(LatLng location) {
+    return fm.FlutterMap(
+      options: fm.MapOptions(
+        initialCenter: ll.LatLng(location.latitude, location.longitude),
+        initialZoom: 15.0,
+        interactionOptions: const fm.InteractionOptions(flags: fm.InteractiveFlag.none),
+      ),
+      children: [
+        fm.TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.donarepartos.app',
+        ),
+        fm.MarkerLayer(
+          markers: [
+            fm.Marker(
+              point: ll.LatLng(location.latitude, location.longitude),
+              width: 40,
+              height: 40,
+              child: const Icon(
+                Icons.location_on,
+                color: Colors.red,
+                size: 40,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -425,23 +553,45 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
           const SizedBox(height: 24),
           
           // Logo del restaurante
-          _buildImageSection(
+          _buildUploadItem(
             title: 'Logo del Restaurante',
             subtitle: 'Imagen cuadrada (recomendado 512x512)',
             currentUrl: _logoUrl,
-            onImageSelected: (url) => setState(() => _logoUrl = url),
-            icon: Icons.image,
+            isUploading: _isUploadingLogo,
+            onUpload: (file) async {
+              setState(() => _isUploadingLogo = true);
+              final url = await StorageService.uploadRestaurantLogo(widget.restaurant.id, file);
+              if (mounted) {
+                setState(() {
+                  _logoUrl = url;
+                  _isUploadingLogo = false;
+                  _hasChanges = true;
+                });
+              }
+            },
+            icon: Icons.storefront,
           ),
           
           const SizedBox(height: 24),
           
           // Foto de portada
-          _buildImageSection(
+          _buildUploadItem(
             title: 'Foto de Portada',
             subtitle: 'Imagen horizontal (recomendado 1920x1080)',
             currentUrl: _coverImageUrl,
-            onImageSelected: (url) => setState(() => _coverImageUrl = url),
-            icon: Icons.photo_camera,
+            isUploading: _isUploadingCover,
+            onUpload: (file) async {
+              setState(() => _isUploadingCover = true);
+              final url = await StorageService.uploadRestaurantCover(widget.restaurant.id, file);
+              if (mounted) {
+                setState(() {
+                  _coverImageUrl = url;
+                  _isUploadingCover = false;
+                  _hasChanges = true;
+                });
+              }
+            },
+            icon: Icons.photo_library,
           ),
           
           const SizedBox(height: 24),
@@ -451,72 +601,75 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
     );
   }
 
-  Widget _buildImageSection({
+  Widget _buildUploadItem({
     required String title,
     required String subtitle,
     required String? currentUrl,
-    required Function(String?) onImageSelected,
+    required bool isUploading,
+    required Function(PlatformFile) onUpload,
     required IconData icon,
-    bool isOptional = false,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 20, color: Colors.orange),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
+                child: Icon(icon, color: theme.colorScheme.primary, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ImageUploadField(
+            label: '',
+            icon: Icons.cloud_upload,
+            imageUrl: currentUrl,
+            onImageSelected: (file) {
+              if (file != null) {
+                onUpload(file);
+              }
+            },
+          ),
+          if (isUploading)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: LinearProgressIndicator(
+                backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
               ),
             ),
-            if (isOptional)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'Opcional',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ImageUploadField(
-          label: '',
-          icon: Icons.cloud_upload,
-          imageUrl: currentUrl,
-          onImageSelected: (file) {
-            // TODO: Implementar upload de imagen a Supabase Storage
-            if (file != null) {
-              print('📷 Imagen seleccionada: ${file.name}');
-              // Por ahora, usar una URL placeholder
-              onImageSelected('https://via.placeholder.com/512');
-              _markChanged();
-            }
-          },
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -537,9 +690,9 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
+              color: Colors.orange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              border: Border.all(color: Colors.orange.withOpacity(0.3)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -555,7 +708,79 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
               ],
             ),
           ),
+          const SizedBox(height: 24),
+          
+          Text(
+            'Redes Sociales',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          
+          _buildSocialField(
+            controller: _facebookController,
+            label: 'Facebook URL',
+            hint: 'https://facebook.com/tu-restaurante',
+            icon: Icons.facebook,
+            color: Colors.blue.shade800,
+          ),
+          const SizedBox(height: 12),
+          _buildSocialField(
+            controller: _instagramController,
+            label: 'Instagram URL',
+            hint: 'https://instagram.com/tu-restaurante',
+            icon: Icons.camera_alt,
+            color: Colors.pink,
+          ),
+          const SizedBox(height: 12),
+          _buildSocialField(
+            controller: _websiteController,
+            label: 'Sitio Web',
+            hint: 'https://www.tu-restaurante.com',
+            icon: Icons.language,
+            color: Colors.teal,
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSocialField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        controller: controller,
+        style: const TextStyle(fontSize: 14),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          prefixIcon: Container(
+            margin: const EdgeInsets.all(12),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade200),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+          ),
+          filled: true,
+          fillColor: theme.colorScheme.surface,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+        onChanged: (_) => _markChanged(),
       ),
     );
   }
@@ -567,9 +792,13 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
     _descriptionController.dispose();
     _cuisineTypeController.dispose();
     _addressController.dispose();
+    _phoneController.dispose();
     _deliveryRadiusController.dispose();
     _minOrderAmountController.dispose();
     _estimatedDeliveryTimeController.dispose();
+    _facebookController.dispose();
+    _instagramController.dispose();
+    _websiteController.dispose();
     super.dispose();
   }
 }
@@ -599,7 +828,7 @@ class _ReviewWarningSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.3),
+                  color: Colors.grey.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
