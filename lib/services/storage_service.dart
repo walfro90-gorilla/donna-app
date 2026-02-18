@@ -1,6 +1,15 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Excepción lanzada cuando falla una subida de archivo a Supabase Storage.
+class StorageUploadException implements Exception {
+  final String message;
+  const StorageUploadException(this.message);
+  @override
+  String toString() => message;
+}
 
 /// Servicio para gestionar la carga de archivos a Supabase Storage
 class StorageService {
@@ -70,48 +79,48 @@ class StorageService {
 
   /// Subir logo de restaurante
   static Future<String?> uploadRestaurantLogo(
-    String restaurantId,
+    String userId,
     PlatformFile file,
   ) async {
     return _uploadFile(
       bucket: _restaurantImagesBucket,
-      path: '$restaurantId/logo_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      path: '$userId/logo_${DateTime.now().millisecondsSinceEpoch}.jpg',
       file: file,
     );
   }
 
   /// Subir imagen de portada de restaurante
   static Future<String?> uploadRestaurantCover(
-    String restaurantId,
+    String userId,
     PlatformFile file,
   ) async {
     return _uploadFile(
       bucket: _restaurantImagesBucket,
-      path: '$restaurantId/cover_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      path: '$userId/cover_${DateTime.now().millisecondsSinceEpoch}.jpg',
       file: file,
     );
   }
 
   /// Subir imagen de fachada de restaurante (nueva)
   static Future<String?> uploadRestaurantFacade(
-    String restaurantId,
+    String userId,
     PlatformFile file,
   ) async {
     return _uploadFile(
       bucket: _restaurantImagesBucket,
-      path: '$restaurantId/facade_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      path: '$userId/facade_${DateTime.now().millisecondsSinceEpoch}.jpg',
       file: file,
     );
   }
 
   /// Subir imagen de menú de restaurante
   static Future<String?> uploadRestaurantMenu(
-    String restaurantId,
+    String userId,
     PlatformFile file,
   ) async {
     return _uploadFile(
       bucket: _restaurantImagesBucket,
-      path: '$restaurantId/menu_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      path: '$userId/menu_${DateTime.now().millisecondsSinceEpoch}.jpg',
       file: file,
     );
   }
@@ -155,38 +164,38 @@ class StorageService {
     );
   }
 
-  /// Método genérico para subir archivo
-  static Future<String?> _uploadFile({
+  /// Método genérico para subir archivo.
+  /// Lanza [StorageUploadException] si el upload falla, para que los callers
+  /// puedan mostrar el error específico al usuario.
+  static Future<String> _uploadFile({
     required String bucket,
     required String path,
     required PlatformFile file,
   }) async {
+    debugPrint('📤 [STORAGE] Iniciando subida a $bucket/$path');
+    debugPrint('📊 [STORAGE] Archivo: ${file.name}, Tamaño: ${file.size} bytes');
+
+    // Obtener los bytes del archivo
+    if (file.bytes == null) {
+      const msg = 'No hay bytes disponibles. Intenta seleccionar la imagen de nuevo.';
+      debugPrint('❌ [STORAGE] $msg');
+      throw StorageUploadException(msg);
+    }
+
+    final fileBytes = file.bytes!;
+
+    String inferContentType(String name) {
+      final lower = name.toLowerCase();
+      if (lower.endsWith('.png')) return 'image/png';
+      if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+      if (lower.endsWith('.webp')) return 'image/webp';
+      if (lower.endsWith('.gif')) return 'image/gif';
+      return 'image/jpeg'; // fallback seguro para imágenes
+    }
+
+    final contentType = inferContentType(file.name);
+
     try {
-      print('📤 [STORAGE] Iniciando subida a $bucket/$path');
-      print('📊 [STORAGE] Archivo: ${file.name}, Tamaño: ${file.size} bytes');
-
-      // Obtener los bytes del archivo
-      if (file.bytes == null) {
-        print('❌ [STORAGE] Error: No hay bytes disponibles para el archivo ${file.name}');
-        return null;
-      }
-
-      final fileBytes = file.bytes!;
-      print('✅ [STORAGE] Bytes obtenidos: ${fileBytes.length} bytes');
-
-      // Detectar content-type básico por extensión para cumplir con restricciones del bucket
-      String _inferContentType(String name) {
-        final lower = name.toLowerCase();
-        if (lower.endsWith('.png')) return 'image/png';
-        if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-        if (lower.endsWith('.webp')) return 'image/webp';
-        if (lower.endsWith('.gif')) return 'image/gif';
-        return 'application/octet-stream';
-      }
-
-      final contentType = _inferContentType(file.name);
-
-      // Subir a Supabase Storage con opción de sobrescritura y contentType explícito
       final storageResponse = await SupabaseConfig.client.storage
           .from(bucket)
           .uploadBinary(
@@ -198,20 +207,37 @@ class StorageService {
             ),
           );
 
-      print('✅ [STORAGE] Archivo subido exitosamente: $storageResponse');
+      debugPrint('✅ [STORAGE] Archivo subido exitosamente: $storageResponse');
 
-      // Generar URL pública (asumiendo que el bucket es público para imágenes de perfil/restaurante)
       final publicUrl = SupabaseConfig.client.storage
           .from(bucket)
           .getPublicUrl(path);
-      
-      print('🔗 [STORAGE] URL pública generada: $publicUrl');
+
+      debugPrint('🔗 [STORAGE] URL pública generada: $publicUrl');
       return publicUrl;
-    } catch (e, stackTrace) {
-      print('❌ [STORAGE] Error al subir archivo: $e');
-      print('📍 [STORAGE] Stack trace: $stackTrace');
-      return null;
+    } catch (e) {
+      final msg = _friendlyStorageError(e);
+      debugPrint('❌ [STORAGE] Error al subir $bucket/$path: $e');
+      throw StorageUploadException(msg);
     }
+  }
+
+  /// Convierte errores de Supabase Storage en mensajes legibles para el usuario.
+  static String _friendlyStorageError(Object e) {
+    final raw = e.toString().toLowerCase();
+    if (raw.contains('bucket not found') || raw.contains("doesn't exist")) {
+      return 'El bucket de almacenamiento no existe. Contacta al administrador.';
+    }
+    if (raw.contains('row-level security') || raw.contains('403') || raw.contains('unauthorized')) {
+      return 'Sin permisos para subir imágenes (RLS). Verifica las políticas de storage.';
+    }
+    if (raw.contains('too large') || raw.contains('413')) {
+      return 'Archivo demasiado grande. Máximo 5MB.';
+    }
+    if (raw.contains('mime') || raw.contains('content-type') || raw.contains('invalid')) {
+      return 'Formato de archivo no permitido. Usa PNG, JPG o JPEG.';
+    }
+    return 'Error al subir imagen: $e';
   }
 
   /// Eliminar archivo
@@ -220,14 +246,12 @@ class StorageService {
     required String path,
   }) async {
     try {
-      print('🗑️ [STORAGE] Deleting file from $bucket/$path');
-
+      debugPrint('🗑️ [STORAGE] Deleting file from $bucket/$path');
       await SupabaseConfig.client.storage.from(bucket).remove([path]);
-
-      print('✅ [STORAGE] File deleted successfully');
+      debugPrint('✅ [STORAGE] File deleted successfully');
       return true;
     } catch (e) {
-      print('❌ [STORAGE] Error deleting file: $e');
+      debugPrint('❌ [STORAGE] Error deleting file: $e');
       return false;
     }
   }
@@ -237,16 +261,14 @@ class StorageService {
     try {
       final uri = Uri.parse(url);
       final segments = uri.pathSegments;
-
       // URL típica: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
       final bucketIndex = segments.indexOf('public');
       if (bucketIndex >= 0 && segments.length > bucketIndex + 2) {
-        // Bucket está en bucketIndex + 1, path empieza en bucketIndex + 2
         return segments.sublist(bucketIndex + 2).join('/');
       }
       return null;
     } catch (e) {
-      print('❌ [STORAGE] Error extracting path from URL: $e');
+      debugPrint('❌ [STORAGE] Error extracting path from URL: $e');
       return null;
     }
   }

@@ -182,7 +182,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
       }
       
     } catch (e) {
-      print('Error cargando perfil: $e');
+      debugPrint('❌ [LOAD] Error cargando perfil: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error cargando perfil: $e')),
@@ -193,90 +193,75 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
     }
   }
 
-  /// Subir imágenes a Supabase Storage
-  Future<void> _uploadImages(String restaurantId, String userId) async {
-    print('🚀 [UPLOAD] Iniciando subida de imágenes');
-    print('   Restaurant ID: $restaurantId');
-    print('   User ID: $userId');
-    
-    // Subir logo
-    if (_logoFile != null) {
-      print('📤 [UPLOAD] Subiendo logo...');
-      final logoUrl = await StorageService.uploadRestaurantLogo(
-        restaurantId,
-        _logoFile!,
-      );
-      if (logoUrl != null) {
-        _logoUrl = logoUrl;
-        print('✅ [UPLOAD] Logo subido: $logoUrl');
-      } else {
-        print('❌ [UPLOAD] Error al subir logo');
-      }
-    }
-    
-    // Subir cover image
-    if (_coverImageFile != null) {
-      print('📤 [UPLOAD] Subiendo imagen de portada...');
-      final coverUrl = await StorageService.uploadRestaurantCover(
-        restaurantId,
-        _coverImageFile!,
-      );
-      if (coverUrl != null) {
-        _coverImageUrl = coverUrl;
-        print('✅ [UPLOAD] Cover subido: $coverUrl');
-      } else {
-        print('❌ [UPLOAD] Error al subir cover');
+  /// Sube imágenes a Supabase Storage.
+  /// Retorna una lista de errores (vacía = todo ok).
+  /// No lanza excepción para no interrumpir el guardado de texto.
+  Future<List<String>> _uploadImages(String restaurantId, String userId) async {
+    debugPrint('🚀 [UPLOAD] Iniciando subida de imágenes — restaurant: $restaurantId');
+    final errors = <String>[];
+
+    Future<void> tryUpload({
+      required String label,
+      required PlatformFile? file,
+      required Future<String?> Function() upload,
+      required void Function(String url) onSuccess,
+    }) async {
+      if (file == null) return;
+      debugPrint('📤 [UPLOAD] Subiendo $label...');
+      try {
+        final url = await upload();
+        if (url != null && url.isNotEmpty) {
+          onSuccess(url);
+          debugPrint('✅ [UPLOAD] $label subido: $url');
+        }
+      } on StorageUploadException catch (e) {
+        debugPrint('❌ [UPLOAD] $label: ${e.message}');
+        errors.add('$label: ${e.message}');
+      } catch (e) {
+        debugPrint('❌ [UPLOAD] $label inesperado: $e');
+        errors.add('$label: $e');
       }
     }
 
-    // Subir imagen de fachada
-    if (_facadeImageFile != null) {
-      print('📤 [UPLOAD] Subiendo imagen de fachada...');
-      final facadeUrl = await StorageService.uploadRestaurantFacade(
-        restaurantId,
-        _facadeImageFile!,
-      );
-      if (facadeUrl != null) {
-        _facadeImageUrl = facadeUrl;
-        print('✅ [UPLOAD] Fachada subida: $facadeUrl');
-      } else {
-        print('❌ [UPLOAD] Error al subir fachada');
-      }
-    }
-    
-    // Subir business permit (usa userId para cumplir políticas)
-    if (_businessPermitFile != null) {
-      print('📤 [UPLOAD] Subiendo permiso de negocio...');
-      final permitUrl = await StorageService.uploadRestaurantPermit(
-        userId, // Cambiar a userId
-        _businessPermitFile!,
-        'business',
-      );
-      if (permitUrl != null) {
-        _businessPermitUrl = permitUrl;
-        print('✅ [UPLOAD] Permiso de negocio subido: $permitUrl');
-      } else {
-        print('❌ [UPLOAD] Error al subir permiso de negocio');
-      }
-    }
-    
-    // Subir health permit (usa userId para cumplir políticas)
-    if (_healthPermitFile != null) {
-      print('📤 [UPLOAD] Subiendo permiso de salubridad...');
-      final healthUrl = await StorageService.uploadRestaurantPermit(
-        userId, // Cambiar a userId
-        _healthPermitFile!,
-        'health',
-      );
-      if (healthUrl != null) {
-        _healthPermitUrl = healthUrl;
-        print('✅ [UPLOAD] Permiso de salubridad subido: $healthUrl');
-      } else {
-        print('❌ [UPLOAD] Error al subir permiso de salubridad');
-      }
-    }
-    
-    print('🏁 [UPLOAD] Subida de imágenes completada');
+    await tryUpload(
+      label: 'logo',
+      file: _logoFile,
+      upload: () => StorageService.uploadRestaurantLogo(userId, _logoFile!),
+      onSuccess: (url) => _logoUrl = url,
+    );
+    await tryUpload(
+      label: 'portada',
+      file: _coverImageFile,
+      upload: () => StorageService.uploadRestaurantCover(userId, _coverImageFile!),
+      onSuccess: (url) => _coverImageUrl = url,
+    );
+    await tryUpload(
+      label: 'fachada',
+      file: _facadeImageFile,
+      upload: () => StorageService.uploadRestaurantFacade(userId, _facadeImageFile!),
+      onSuccess: (url) => _facadeImageUrl = url,
+    );
+    await tryUpload(
+      label: 'menú',
+      file: _menuImageFile,
+      upload: () => StorageService.uploadRestaurantMenu(userId, _menuImageFile!),
+      onSuccess: (url) => _menuImageUrl = url,
+    );
+    await tryUpload(
+      label: 'permiso de negocio',
+      file: _businessPermitFile,
+      upload: () => StorageService.uploadRestaurantPermit(userId, _businessPermitFile!, 'business'),
+      onSuccess: (url) => _businessPermitUrl = url,
+    );
+    await tryUpload(
+      label: 'permiso de salubridad',
+      file: _healthPermitFile,
+      upload: () => StorageService.uploadRestaurantPermit(userId, _healthPermitFile!, 'health'),
+      onSuccess: (url) => _healthPermitUrl = url,
+    );
+
+    debugPrint('🏁 [UPLOAD] Completado. Errores: ${errors.length}');
+    return errors;
   }
 
   /// Guardar o crear perfil del restaurante
@@ -374,10 +359,17 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
       
       // Si es actualización y hay imágenes nuevas, subirlas
       if (_restaurant != null && restaurantId.isNotEmpty) {
-        print('🔄 [SAVE] Actualizando restaurante existente: $restaurantId');
-        await _uploadImages(restaurantId, currentUser.id);
+        debugPrint('🔄 [SAVE] Actualizando restaurante existente: $restaurantId');
+        final uploadErrors = await _uploadImages(restaurantId, currentUser.id);
+        if (uploadErrors.isNotEmpty && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('⚠️ Algunas imágenes no se subieron:\n${uploadErrors.join("\n")}'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 8),
+          ));
+        }
       } else {
-        print('🆕 [SAVE] Creando nuevo restaurante...');
+        debugPrint('🆕 [SAVE] Creando nuevo restaurante...');
       }
       
       final data = {
@@ -421,14 +413,14 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
         
         _restaurant = DoaRestaurant.fromJson(response);
         restaurantId = _restaurant!.id;
-        print('✅ [SAVE] Restaurante creado con ID: $restaurantId');
-        
+        debugPrint('✅ [SAVE] Restaurante creado con ID: $restaurantId');
+
         // Subir imágenes después de crear el restaurante
-        await _uploadImages(restaurantId, currentUser.id);
-        
+        final uploadErrors = await _uploadImages(restaurantId, currentUser.id);
+
         // Actualizar URLs de imágenes en la BD si hay imágenes
         if (_logoUrl != null || _coverImageUrl != null || _facadeImageUrl != null || _businessPermitUrl != null || _healthPermitUrl != null) {
-          print('💾 [SAVE] Actualizando URLs de imágenes en la BD...');
+          debugPrint('💾 [SAVE] Actualizando URLs de imágenes en la BD...');
           await SupabaseConfig.client
               .from('restaurants')
               .update({
@@ -439,7 +431,14 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                 'health_permit_url': _healthPermitUrl,
               })
               .eq('id', restaurantId);
-          print('✅ [SAVE] URLs de imágenes actualizadas');
+          debugPrint('✅ [SAVE] URLs de imágenes actualizadas');
+        }
+        if (uploadErrors.isNotEmpty && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('⚠️ Algunas imágenes no se subieron:\n${uploadErrors.join("\n")}'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 8),
+          ));
         }
             
         if (mounted) {
@@ -449,11 +448,16 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
         }
       } else {
         // Actualizar restaurante existente
-        await SupabaseConfig.client
+        final updated = await SupabaseConfig.client
             .from('restaurants')
             .update(data)
-            .eq('id', _restaurant!.id);
-            
+            .eq('id', _restaurant!.id)
+            .select();
+        debugPrint('✅ [SAVE] Filas actualizadas: ${updated.length}, logo_url: ${data['logo_url']}');
+        if (updated.isEmpty) {
+          debugPrint('⚠️ [SAVE] Sin filas actualizadas - posible bloqueo RLS en restaurants');
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('✅ Restaurante actualizado exitosamente')),
@@ -468,7 +472,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
       await _loadRestaurantProfile();
       
     } catch (e) {
-      print('Error guardando perfil: $e');
+      debugPrint('❌ [SAVE] Error guardando perfil: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('❌ Error guardando: $e')),
@@ -858,7 +862,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
               ],
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -886,6 +890,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
               _buildBusinessDetailsSection(),
               const SizedBox(height: 24),
               _buildDocumentsSection(),
+              const SizedBox(height: 24),
+              _buildToggleOnlineSection(),
             ],
           ),
         ),
@@ -904,6 +910,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
         _buildBusinessDetailsSection(),
         const SizedBox(height: 24),
         _buildDocumentsSection(),
+        const SizedBox(height: 24),
+        _buildToggleOnlineSection(),
       ],
     );
   }
@@ -1084,7 +1092,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
           imageUrl: _logoUrl,
           onImageSelected: (file) {
             setState(() => _logoFile = file);
-            print('🖼️ Logo seleccionado: ${file?.name}');
+            debugPrint('🖼️ Logo seleccionado: ${file?.name}');
           },
           helpText: 'Logo que aparecerá en tu perfil',
         ),
@@ -1095,7 +1103,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
           imageUrl: _coverImageUrl,
           onImageSelected: (file) {
             setState(() => _coverImageFile = file);
-            print('🖼️ Cover seleccionado: ${file?.name}');
+            debugPrint('🖼️ Cover seleccionado: ${file?.name}');
           },
           helpText: 'Imagen de banner de tu restaurante',
         ),
@@ -1106,9 +1114,20 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
           imageUrl: _facadeImageUrl,
           onImageSelected: (file) {
             setState(() => _facadeImageFile = file);
-            print('🖼️ Fachada seleccionada: ${file?.name}');
+            debugPrint('🖼️ Fachada seleccionada: ${file?.name}');
           },
           helpText: 'Fachada del local/food truck para ayudar a repartidores',
+        ),
+        const SizedBox(height: 16),
+        ImageUploadField(
+          label: 'Foto de Menú',
+          icon: Icons.menu_book,
+          imageUrl: _menuImageUrl,
+          onImageSelected: (file) {
+            setState(() => _menuImageFile = file);
+            debugPrint('🖼️ Menú seleccionado: ${file?.name}');
+          },
+          helpText: 'Foto de tu menú o carta',
         ),
       ],
     );
@@ -1121,6 +1140,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
       icon: Icons.business,
       children: [
         DropdownButtonFormField<String>(
+          // ignore: deprecated_member_use
           value: _cuisineTypeController.text.isNotEmpty
               ? _cuisineTypeController.text
               : null,
@@ -1189,7 +1209,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
               : 'No aceptando pedidos'),
           value: _isOnline,
           onChanged: (value) => setState(() => _isOnline = value),
-          activeColor: Colors.green,
+          activeThumbColor: Colors.green,
           secondary: Icon(
             _isOnline ? Icons.check_circle : Icons.cancel,
             color: _isOnline ? Colors.green : Colors.grey,

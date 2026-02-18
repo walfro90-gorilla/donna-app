@@ -284,7 +284,7 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
             },
           ),
           TextButton.icon(
-            onPressed: _isSaving ? null : _confirmAndSaveChanges,
+            onPressed: (_isSaving || _isUploadingLogo || _isUploadingCover) ? null : _confirmAndSaveChanges,
             icon: _isSaving
                 ? const SizedBox(
                     width: 16,
@@ -422,7 +422,7 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
                   margin: const EdgeInsets.only(right: 8),
                   child: CircleAvatar(
                     radius: 18,
-                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                    backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
                     child: IconButton(
                       padding: EdgeInsets.zero,
                       icon: const Icon(Icons.search, size: 20),
@@ -477,7 +477,7 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -560,13 +560,42 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
             isUploading: _isUploadingLogo,
             onUpload: (file) async {
               setState(() => _isUploadingLogo = true);
-              final url = await StorageService.uploadRestaurantLogo(widget.restaurant.id, file);
-              if (mounted) {
-                setState(() {
-                  _logoUrl = url;
-                  _isUploadingLogo = false;
-                  _hasChanges = true;
-                });
+              try {
+                final userId = SupabaseConfig.client.auth.currentUser?.id ?? widget.restaurant.userId;
+                final url = await StorageService.uploadRestaurantLogo(userId, file);
+                await SupabaseConfig.client
+                    .from('restaurants')
+                    .update({'logo_url': url, 'updated_at': DateTime.now().toIso8601String()})
+                    .eq('id', widget.restaurant.id);
+                debugPrint('✅ [EDIT] logo_url guardado en DB: $url');
+                if (mounted) {
+                  setState(() {
+                    _logoUrl = url;
+                    _isUploadingLogo = false;
+                    _hasChanges = true;
+                  });
+                }
+              } on StorageUploadException catch (e) {
+                if (mounted) {
+                  setState(() => _isUploadingLogo = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('❌ ${e.message}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e) {
+                debugPrint('❌ [EDIT] Error guardando logo_url en DB: $e');
+                if (mounted) {
+                  setState(() => _isUploadingLogo = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('❌ Error guardando imagen: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
             icon: Icons.storefront,
@@ -582,13 +611,42 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
             isUploading: _isUploadingCover,
             onUpload: (file) async {
               setState(() => _isUploadingCover = true);
-              final url = await StorageService.uploadRestaurantCover(widget.restaurant.id, file);
-              if (mounted) {
-                setState(() {
-                  _coverImageUrl = url;
-                  _isUploadingCover = false;
-                  _hasChanges = true;
-                });
+              try {
+                final userId = SupabaseConfig.client.auth.currentUser?.id ?? widget.restaurant.userId;
+                final url = await StorageService.uploadRestaurantCover(userId, file);
+                await SupabaseConfig.client
+                    .from('restaurants')
+                    .update({'cover_image_url': url, 'updated_at': DateTime.now().toIso8601String()})
+                    .eq('id', widget.restaurant.id);
+                debugPrint('✅ [EDIT] cover_image_url guardado en DB: $url');
+                if (mounted) {
+                  setState(() {
+                    _coverImageUrl = url;
+                    _isUploadingCover = false;
+                    _hasChanges = true;
+                  });
+                }
+              } on StorageUploadException catch (e) {
+                if (mounted) {
+                  setState(() => _isUploadingCover = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('❌ ${e.message}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e) {
+                debugPrint('❌ [EDIT] Error guardando cover_image_url en DB: $e');
+                if (mounted) {
+                  setState(() => _isUploadingCover = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('❌ Error guardando imagen: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
             icon: Icons.photo_library,
@@ -614,10 +672,10 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -632,7 +690,7 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: theme.colorScheme.primary, size: 20),
@@ -664,7 +722,7 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: LinearProgressIndicator(
-                backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
                 valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
               ),
             ),
@@ -690,9 +748,9 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -828,7 +886,7 @@ class _ReviewWarningSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.3),
+                  color: Colors.grey.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
