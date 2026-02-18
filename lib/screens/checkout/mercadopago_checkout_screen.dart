@@ -36,7 +36,7 @@ class MercadoPagoCheckoutScreen extends StatefulWidget {
 class _MercadoPagoCheckoutScreenState extends State<MercadoPagoCheckoutScreen> {
   late Future<WebViewController?> _controllerFuture;
   bool _isPageLoading = true;
-  bool _isWebPlatform = kIsWeb;
+  final bool _isWebPlatform = kIsWeb;
 
   @override
   void initState() {

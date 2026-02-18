@@ -18,7 +18,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
   bool _isLoading = true;
   OrderStatus? _selectedStatus; // Filter
   Timer? _refreshTimer;
-  int _previousOrderCount = 0;
+  final int _previousOrderCount = 0;
   StreamSubscription<DoaOrder>? _newOrdersSubscription;
   StreamSubscription<DoaOrder>? _orderUpdatesSubscription;
   StreamSubscription<void>? _refreshDataSubscription;

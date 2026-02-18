@@ -353,7 +353,7 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
 
     return Card(
       elevation: 0,
-      color: scheme.surfaceVariant,
+      color: scheme.surfaceContainerHighest,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Wrap(
@@ -467,7 +467,7 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
     return Chip(
       avatar: Icon(ok ? Icons.check_circle : Icons.warning, color: ok ? scheme.secondary : scheme.error),
       label: Text('$label: $value', style: TextStyle(color: scheme.onSurface)),
-      backgroundColor: scheme.surfaceVariant,
+      backgroundColor: scheme.surfaceContainerHighest,
       side: BorderSide(color: ok ? scheme.secondary.withValues(alpha: 0.4) : scheme.error.withValues(alpha: 0.4)),
     );
   }
@@ -591,7 +591,7 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             border: Border.all(color: color.withValues(alpha: 0.6)),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -947,7 +947,7 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
               width: isWide ? constraints.maxWidth / 2 - 10 : constraints.maxWidth,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: scheme.surfaceVariant,
+                color: scheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
               ),
@@ -982,7 +982,7 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
               width: isWide ? constraints.maxWidth / 2 - 10 : constraints.maxWidth,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: scheme.surfaceVariant,
+                color: scheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
               ),
@@ -1042,7 +1042,7 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: scheme.surfaceVariant,
+      color: scheme.surfaceContainerHighest,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -1089,7 +1089,7 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
     final List<Map<String, dynamic>> displayed = _txs.take(_txVisibleCount).toList();
     return Card(
       elevation: 0,
-      color: scheme.surfaceVariant,
+      color: scheme.surfaceContainerHighest,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(

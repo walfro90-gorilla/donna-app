@@ -159,7 +159,7 @@ class _MultiOrderTrackerState extends State<MultiOrderTracker> {
                     ],
                   ),
                   selectedColor: Theme.of(context).colorScheme.primaryContainer,
-                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   labelStyle: TextStyle(
                     color: selectedChip
                         ? Theme.of(context).colorScheme.onPrimaryContainer

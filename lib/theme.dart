@@ -205,7 +205,7 @@ ThemeData get darkTheme => ThemeData(
     shadow: DarkModeColors.darkShadow,
     surface: DarkModeColors.darkSurface,
     onSurface: DarkModeColors.darkOnSurface,
-    surfaceVariant: DarkModeColors.darkSurfaceVariant,
+    surfaceContainerHighest: DarkModeColors.darkSurfaceVariant,
     onSurfaceVariant: DarkModeColors.darkOnSurfaceVariant,
   ),
   brightness: Brightness.dark,

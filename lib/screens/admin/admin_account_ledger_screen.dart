@@ -64,11 +64,14 @@ class _AdminAccountLedgerScreenState extends State<AdminAccountLedgerScreen> {
 
       if (mounted) {
         setState(() {
-          if (_page == 0) _transactions = newTx;
-          else _transactions.addAll(newTx);
-          
+          if (_page == 0) {
+            _transactions = newTx;
+          } else {
+            _transactions.addAll(newTx);
+          }
+
           _page++;
-          if (newTx.length < _pageSize) _hasMore = false;
+          if (newTx.length < _pageSize) { _hasMore = false; }
           _loading = false;
         });
       }

@@ -111,9 +111,9 @@ class SessionEndedEvent extends AppEvent {
   
   const SessionEndedEvent({
     required this.reason,
-    required DateTime timestamp,
-    String? userId,
-  }) : super(timestamp: timestamp, userId: userId);
+    required super.timestamp,
+    super.userId,
+  });
 }
 
 class SessionSwitchedEvent extends AppEvent {
@@ -148,9 +148,9 @@ class DataUpdatedEvent extends AppEvent {
   const DataUpdatedEvent({
     required this.dataType,
     required this.data,
-    required DateTime timestamp,
-    String? userId,
-  }) : super(timestamp: timestamp, userId: userId);
+    required super.timestamp,
+    super.userId,
+  });
 }
 
 class ErrorEvent extends AppEvent {
@@ -162,7 +162,7 @@ class ErrorEvent extends AppEvent {
     required this.error,
     required this.context,
     this.details,
-    required DateTime timestamp,
-    String? userId,
-  }) : super(timestamp: timestamp, userId: userId);
+    required super.timestamp,
+    super.userId,
+  });
 }

@@ -192,7 +192,7 @@ class _ProductEditScreenState extends State<ProductEditScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant.withValues(alpha: isDark ? 0.3 : 0.5),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.3 : 0.5),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: SwitchListTile(
@@ -247,7 +247,7 @@ class _ProductEditScreenState extends State<ProductEditScreen> {
       labelText: label,
       prefixIcon: Icon(icon, size: 22),
       filled: true,
-      fillColor: theme.colorScheme.surfaceVariant.withValues(alpha: isDark ? 0.2 : 0.4),
+      fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.2 : 0.4),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,

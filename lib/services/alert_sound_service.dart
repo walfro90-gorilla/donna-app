@@ -15,7 +15,7 @@ class AlertSoundService {
   final AudioPlayer _player = AudioPlayer()
     ..setVolume(0.9)
     ..setReleaseMode(ReleaseMode.stop);
-  double _volume = 0.9;
+  final double _volume = 0.9;
 
   // Rol actual (para decidir qué sonar)
   UserRole? _currentRole;

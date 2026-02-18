@@ -6,7 +6,7 @@ import '../../core/session/session_manager.dart';
 import 'settlement_screen.dart';
 
 class DeliveryBalanceScreen extends StatefulWidget {
-  const DeliveryBalanceScreen({Key? key}) : super(key: key);
+  const DeliveryBalanceScreen({super.key});
 
   @override
   State<DeliveryBalanceScreen> createState() => _DeliveryBalanceScreenState();

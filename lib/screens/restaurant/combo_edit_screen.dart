@@ -227,7 +227,7 @@ class _ComboEditScreenState extends State<ComboEditScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant.withValues(alpha: isDark ? 0.3 : 0.5),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.3 : 0.5),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: SwitchListTile(
@@ -258,7 +258,7 @@ class _ComboEditScreenState extends State<ComboEditScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceVariant.withValues(alpha: 0.2),
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Center(
@@ -319,7 +319,7 @@ class _ComboEditScreenState extends State<ComboEditScreen> {
       labelText: label,
       prefixIcon: Icon(icon, size: 22),
       filled: true,
-      fillColor: theme.colorScheme.surfaceVariant.withValues(alpha: isDark ? 0.2 : 0.4),
+      fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.2 : 0.4),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,
@@ -350,7 +350,7 @@ class _ComboEditScreenState extends State<ComboEditScreen> {
       decoration: BoxDecoration(
         color: isSelected 
             ? theme.colorScheme.primary.withValues(alpha: 0.05)
-            : theme.colorScheme.surfaceVariant.withValues(alpha: 0.2),
+            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isSelected 

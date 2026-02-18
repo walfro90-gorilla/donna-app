@@ -40,7 +40,7 @@ class RealtimeNotificationService {
   // Stream controllers ÚNICOS para cada usuario
   StreamController<DoaOrder> _newOrdersController = StreamController<DoaOrder>.broadcast();
   StreamController<DoaOrder> _orderUpdatesController = StreamController<DoaOrder>.broadcast();
-  StreamController<DoaOrder> _confirmedOrdersController = StreamController<DoaOrder>.broadcast();
+  final StreamController<DoaOrder> _confirmedOrdersController = StreamController<DoaOrder>.broadcast();
   StreamController<void> _refreshDataController = StreamController<void>.broadcast();
   StreamController<void> _restaurantsUpdatedController = StreamController<void>.broadcast();
   // Nuevo: cambios en repartidores (online/offline)

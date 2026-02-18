@@ -24,7 +24,7 @@ class _ProductsManagementScreenState extends State<ProductsManagementScreen> {
 
   // UI state
   final _searchCtrl = TextEditingController();
-  bool _showAvailableOnly = false;
+  final bool _showAvailableOnly = false;
   String? _typeFilter; // null=all, one of: principal|bebida|postre|entrada|combo
   int _page = 0;
   static const _pageSize = 20;
@@ -282,7 +282,7 @@ class _ProductsManagementScreenState extends State<ProductsManagementScreen> {
                                     hintText: 'Buscar en mi menú...',
                                     prefixIcon: const Icon(Icons.search),
                                     filled: true,
-                                    fillColor: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                                    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(16),
                                       borderSide: BorderSide.none,
@@ -594,7 +594,7 @@ class _PremiumProductCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceVariant.withValues(alpha: isDark ? 0.3 : 0.5),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.3 : 0.5),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: product.isAvailable 

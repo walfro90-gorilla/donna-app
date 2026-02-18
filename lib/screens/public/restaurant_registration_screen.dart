@@ -39,7 +39,7 @@ class _RestaurantRegistrationScreenState extends State<RestaurantRegistrationScr
   final _confirmPasswordController = TextEditingController();
   
   // State
-  int _currentStep = 0;
+  final int _currentStep = 0;
   bool _isSubmitting = false;
   LatLng? _selectedLocation;
   String? _selectedPlaceId;

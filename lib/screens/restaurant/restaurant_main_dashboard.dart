@@ -46,7 +46,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
   };
   bool isLoadingStats = true;
   Timer? _refreshTimer;
-  Set<String> _notifiedOrderIds = <String>{};
+  final Set<String> _notifiedOrderIds = <String>{};
   RealtimeNotificationService? _realtimeService;
   StreamSubscription<List<DoaOrder>>? _ordersSubscription;
   bool _isServiceInitialized = false;
@@ -1886,7 +1886,7 @@ class _EmailVerifiedCongratsDialogState extends State<_EmailVerifiedCongratsDial
                       child: LinearProgressIndicator(
                         value: widget.percentage / 100,
                         minHeight: 10,
-                        backgroundColor: cs.surfaceVariant,
+                        backgroundColor: cs.surfaceContainerHighest,
                         valueColor: AlwaysStoppedAnimation<Color>(
                           widget.percentage >= 80 ? Colors.green : (widget.percentage >= 50 ? Colors.orange : Colors.red),
                         ),

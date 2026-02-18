@@ -35,7 +35,7 @@ class _DeliveryMainDashboardState extends State<DeliveryMainDashboard> {
   
   bool isDeliveryAgentOnline = false; // Estado online del repartidor
   DoaUser? _deliveryAgent;
-  bool _showWelcomeCard = true; // Mostrar card de bienvenida
+  final bool _showWelcomeCard = true; // Mostrar card de bienvenida
   bool _isFirstTime = true; // Es primera vez del usuario
   bool _hasShownWelcomeModal = false; // Evitar mostrar modal más de una vez
   // Selector de periodo para "Tasa de éxito"

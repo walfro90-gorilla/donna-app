@@ -7,7 +7,7 @@ import '../../core/services/financial_service.dart';
 import '../../supabase/supabase_config.dart';
 
 class SettlementScreen extends StatefulWidget {
-  const SettlementScreen({Key? key}) : super(key: key);
+  const SettlementScreen({super.key});
 
   @override
   State<SettlementScreen> createState() => _SettlementScreenState();

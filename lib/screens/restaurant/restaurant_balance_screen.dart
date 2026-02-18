@@ -6,7 +6,7 @@ import '../../core/services/financial_service.dart';
 
 class RestaurantBalanceScreen extends StatefulWidget {
   final int initialTabIndex;
-  const RestaurantBalanceScreen({Key? key, this.initialTabIndex = 0}) : super(key: key);
+  const RestaurantBalanceScreen({super.key, this.initialTabIndex = 0});
 
   @override
   State<RestaurantBalanceScreen> createState() => _RestaurantBalanceScreenState();
