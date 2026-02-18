@@ -810,7 +810,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
       // Subir imagen si se seleccionó una nueva
       if (_selectedImage != null) {
         final uploadedUrl = await StorageService.uploadProductImage(
-          widget.restaurant.id,
+          widget.restaurant.userId,
           _selectedImage!,
         );
         

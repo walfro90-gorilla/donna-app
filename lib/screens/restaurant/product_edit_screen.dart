@@ -50,7 +50,7 @@ class _ProductEditScreenState extends State<ProductEditScreen> {
       String? imageUrl = widget.product?.imageUrl;
 
       if (_selectedImage != null) {
-        imageUrl = await StorageService.uploadProductImage(widget.restaurant.id, _selectedImage!);
+        imageUrl = await StorageService.uploadProductImage(widget.restaurant.userId, _selectedImage!);
       }
 
       final payload = {

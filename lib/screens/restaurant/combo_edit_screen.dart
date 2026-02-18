@@ -107,7 +107,7 @@ class _ComboEditScreenState extends State<ComboEditScreen> {
     try {
       String? imageUrl = widget.comboProduct?.imageUrl;
       if (_selectedImage != null) {
-        imageUrl = await StorageService.uploadProductImage(widget.restaurant.id, _selectedImage!);
+        imageUrl = await StorageService.uploadProductImage(widget.restaurant.userId, _selectedImage!);
       }
 
       final productPayload = {

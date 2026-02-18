@@ -140,12 +140,12 @@ class StorageService {
 
   /// Subir imagen de producto
   static Future<String?> uploadProductImage(
-    String restaurantId,
+    String userId,
     PlatformFile file,
   ) async {
     return _uploadFile(
       bucket: _restaurantImagesBucket,
-      path: '$restaurantId/products/product_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      path: '$userId/products/product_${DateTime.now().millisecondsSinceEpoch}.jpg',
       file: file,
     );
   }
