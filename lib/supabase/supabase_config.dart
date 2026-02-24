@@ -169,7 +169,7 @@ class SupabaseAuth {
       String redirectUrl = 'com.dona.app://login-callback';
       try {
         if (kIsWeb) {
-          redirectUrl = Uri.base.origin;
+          redirectUrl = '${Uri.base.origin}/';
         }
       } catch (e) {
         debugPrint('⚠️ Could not get Uri.base.origin, using default: $redirectUrl');
@@ -390,7 +390,7 @@ class SupabaseAuth {
       debugPrint('🚀 Starting Google OAuth sign-in...');
       // Use dynamic redirect for web to avoid mismatches with share.dreamflow.app subdomain
       // For mobile, use the custom scheme
-      final dynamicRedirect = kIsWeb ? Uri.base.origin : 'com.dona.app://login-callback';
+      final dynamicRedirect = kIsWeb ? '${Uri.base.origin}/' : 'com.dona.app://login-callback';
       debugPrint('🔗 OAuth redirectTo: $dynamicRedirect');
       final response = await SupabaseConfig.auth.signInWithOAuth(
         OAuthProvider.google,
@@ -470,7 +470,7 @@ class SupabaseAuth {
     try {
       debugPrint('🚀 Starting Facebook OAuth sign-in...');
 
-      final dynamicRedirect = kIsWeb ? Uri.base.origin : 'com.dona.app://login-callback';
+      final dynamicRedirect = kIsWeb ? '${Uri.base.origin}/' : 'com.dona.app://login-callback';
       debugPrint('🔗 OAuth redirectTo: $dynamicRedirect');
       final response = await SupabaseConfig.auth.signInWithOAuth(
         OAuthProvider.facebook,
