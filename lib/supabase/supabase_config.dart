@@ -166,7 +166,7 @@ class SupabaseAuth {
   }) async {
     try {
       // Obtener URL de redirect dinámicamente (importante para web)
-      String redirectUrl = 'https://i20tpls7s2z0kjevuoyg.share.dreamflow.app';
+      String redirectUrl = 'com.dona.app://login-callback';
       try {
         if (kIsWeb) {
           redirectUrl = Uri.base.origin;
@@ -555,7 +555,7 @@ class SupabaseAuth {
     try {
       await SupabaseConfig.auth.resetPasswordForEmail(
         email,
-        redirectTo: 'https://1axqls263hxgdsf0e1mn.share.dreamflow.app/',
+        redirectTo: kIsWeb ? '${Uri.base.origin}/login' : 'com.dona.app://login-callback',
       );
     } catch (e) {
       throw _handleAuthError(e);
