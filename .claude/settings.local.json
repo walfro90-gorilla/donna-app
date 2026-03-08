@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /x/Codes/donna-app/lib/services/*.dart)",
+      "Bash(flutter --version)",
+      "Bash(dart --version)"
+    ]
+  }
+}

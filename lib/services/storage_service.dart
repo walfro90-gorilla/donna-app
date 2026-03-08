@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
@@ -175,14 +176,21 @@ class StorageService {
     debugPrint('📤 [STORAGE] Iniciando subida a $bucket/$path');
     debugPrint('📊 [STORAGE] Archivo: ${file.name}, Tamaño: ${file.size} bytes');
 
-    // Obtener los bytes del archivo
-    if (file.bytes == null) {
+    // Obtener los bytes del archivo — primero de memoria, luego del path (Android nativo)
+    Uint8List? fileBytes = file.bytes;
+    if (fileBytes == null && file.path != null && !kIsWeb) {
+      debugPrint('📂 [STORAGE] bytes nulos, leyendo desde path: ${file.path}');
+      try {
+        fileBytes = await File(file.path!).readAsBytes();
+      } catch (e) {
+        debugPrint('❌ [STORAGE] No se pudo leer desde path: $e');
+      }
+    }
+    if (fileBytes == null) {
       const msg = 'No hay bytes disponibles. Intenta seleccionar la imagen de nuevo.';
       debugPrint('❌ [STORAGE] $msg');
       throw StorageUploadException(msg);
     }
-
-    final fileBytes = file.bytes!;
 
     String inferContentType(String name) {
       final lower = name.toLowerCase();

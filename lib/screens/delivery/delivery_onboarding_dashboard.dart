@@ -161,7 +161,7 @@ class _DeliveryOnboardingDashboardState extends State<DeliveryOnboardingDashboar
   }
 
   Future<void> _pickFile(Function(PlatformFile) setter) async {
-    final res = await FilePicker.platform.pickFiles(withReadStream: false, allowMultiple: false, type: FileType.image);
+    final res = await FilePicker.platform.pickFiles(withData: true, allowMultiple: false, type: FileType.image);
     if (res != null && res.files.isNotEmpty) {
       setter(res.files.first);
       setState(() {});
