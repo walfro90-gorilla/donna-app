@@ -1314,6 +1314,7 @@ class DoaOrderItem {
   final String productId;
   final int quantity;
   final double priceAtTimeOfOrder;
+  final double unitPrice;
   final DateTime createdAt;
   final DoaProduct? product;
 
@@ -1323,28 +1324,34 @@ class DoaOrderItem {
     required this.productId,
     required this.quantity,
     required this.priceAtTimeOfOrder,
+    double? unitPrice,
     required this.createdAt,
     this.product,
-  });
+  }) : unitPrice = unitPrice ?? priceAtTimeOfOrder;
+
+  // Precio unitario efectivo: preferir unit_price (campo canónico), fallback a priceAtTimeOfOrder
+  double get effectiveUnitPrice => unitPrice > 0 ? unitPrice : (priceAtTimeOfOrder > 0 ? priceAtTimeOfOrder : (product?.price ?? 0.0));
 
   // Getter de conveniencia para acceder al precio
-  double get price => priceAtTimeOfOrder;
+  double get price => effectiveUnitPrice;
 
   factory DoaOrderItem.fromJson(Map<String, dynamic> json) {
-    // print('🔧 [ORDER_ITEM] Parsing order item: ${json['id']}');
-    // print('🔧 [ORDER_ITEM] Raw JSON: $json');
-    
     try {
+      final unitPriceRaw = json['unit_price'] != null
+          ? (json['unit_price'] as num).toDouble()
+          : null;
+      final priceAtOrder = json['price_at_time_of_order'] != null
+          ? (json['price_at_time_of_order'] as num).toDouble()
+          : 0.0;
       return DoaOrderItem(
         id: json['id'] ?? '',
         orderId: json['order_id'] ?? '',
         productId: json['product_id'] ?? '',
         quantity: json['quantity'] ?? 0,
-        priceAtTimeOfOrder: json['price_at_time_of_order'] != null 
-          ? (json['price_at_time_of_order'] as num).toDouble() 
-          : 0.0,
-        createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at']) 
+        priceAtTimeOfOrder: priceAtOrder,
+        unitPrice: unitPriceRaw ?? priceAtOrder,
+        createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
           : DateTime.now(),
         product: json['product'] != null ? DoaProduct.fromJson(json['product']) : null,
       );
@@ -1368,6 +1375,7 @@ class DoaOrderItem {
       'order_id': orderId,
       'product_id': productId,
       'quantity': quantity,
+      'unit_price': unitPrice,
       'price_at_time_of_order': priceAtTimeOfOrder,
       'created_at': createdAt.toIso8601String(),
     };

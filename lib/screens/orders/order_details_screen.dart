@@ -258,17 +258,115 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     }
   }
 
+  static const _detailsFlowSteps = [
+    OrderStatus.pending,
+    OrderStatus.confirmed,
+    OrderStatus.inPreparation,
+    OrderStatus.readyForPickup,
+    OrderStatus.onTheWay,
+    OrderStatus.delivered,
+  ];
+
+  static const _detailsStepLabels = [
+    'Recibido',
+    'Confirmado',
+    'Preparando',
+    'Listo',
+    'En camino',
+    'Entregado',
+  ];
+
+  static const _detailsStepIcons = [
+    Icons.receipt_long_outlined,
+    Icons.thumb_up_alt_outlined,
+    Icons.restaurant_menu_outlined,
+    Icons.inventory_2_outlined,
+    Icons.delivery_dining_outlined,
+    Icons.home_outlined,
+  ];
+
+  int _detailsCurrentStepIndex(OrderStatus status) {
+    final effective = status == OrderStatus.assigned ? OrderStatus.readyForPickup : status;
+    return _detailsFlowSteps.indexOf(effective);
+  }
+
+  Widget _buildDetailsStepTimeline(BuildContext context, Color statusColor) {
+    final theme = Theme.of(context);
+    final currentIdx = _detailsCurrentStepIndex(_order.status);
+    return SizedBox(
+      height: 64,
+      child: Row(
+        children: List.generate(_detailsStepLabels.length, (i) {
+          final isDone = currentIdx >= 0 && i <= currentIdx;
+          final isActive = i == currentIdx;
+          final isLast = i == _detailsStepLabels.length - 1;
+          final dotColor = isDone ? statusColor : theme.colorScheme.onSurface.withValues(alpha: 0.18);
+          final lineColor = (i < currentIdx) ? statusColor : theme.colorScheme.onSurface.withValues(alpha: 0.12);
+          return Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        width: isActive ? 32 : 26,
+                        height: isActive ? 32 : 26,
+                        decoration: BoxDecoration(
+                          color: isDone ? dotColor : Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: dotColor, width: isActive ? 2.5 : 1.5),
+                          boxShadow: isActive
+                              ? [BoxShadow(color: statusColor.withValues(alpha: 0.3), blurRadius: 8, spreadRadius: 1)]
+                              : [],
+                        ),
+                        child: Icon(
+                          _detailsStepIcons[i],
+                          size: isActive ? 15 : 12,
+                          color: isDone ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _detailsStepLabels[i],
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontSize: 9,
+                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                          color: isDone ? statusColor : theme.colorScheme.onSurface.withValues(alpha: 0.38),
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      height: 2,
+                      margin: const EdgeInsets.only(bottom: 18),
+                      decoration: BoxDecoration(
+                        color: lineColor,
+                        borderRadius: BorderRadius.circular(1),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(_order.status);
-    // Calcular totales de forma robusta
+    // Calcular totales usando unit_price (precio canónico por unidad)
     final itemsTotal = (_order.orderItems ?? [])
-        .fold<double>(0.0, (sum, it) {
-      final unit = (it.priceAtTimeOfOrder > 0)
-          ? it.priceAtTimeOfOrder
-          : (it.product?.price ?? 0.0);
-      return sum + (unit * (it.quantity));
-    });
+        .fold<double>(0.0, (sum, it) => sum + (it.effectiveUnitPrice * it.quantity));
     final deliveryFee = _order.deliveryFee
         ?? _order.restaurant?.deliveryFee
         ?? 35.0; // Fallback a $35 según requerimiento
@@ -290,7 +388,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      body: Stack(
+        children: [
+          RefreshIndicator(
         onRefresh: _refreshOrderDetails,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -300,45 +400,61 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               // Estado del pedido
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      statusColor.withValues(alpha: 0.1),
-                      statusColor.withValues(alpha: 0.05),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: statusColor.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: statusColor.withValues(alpha: 0.3),
+                    color: statusColor.withValues(alpha: 0.25),
                     width: 1.5,
                   ),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      _getStatusIcon(_order.status),
-                      color: statusColor,
-                      size: 48,
+                    Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            _getStatusIcon(_order.status),
+                            color: statusColor,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _getStatusText(_order.status),
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: statusColor,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${_formatDate(_order.createdAt)}  ·  ${_formatTime(_order.createdAt)}',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _getStatusText(_order.status),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: statusColor,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Pedido realizado el ${_formatDate(_order.createdAt)}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
+                    if (!(_order.status == OrderStatus.canceled || _order.status == OrderStatus.notDelivered)) ...[
+                      const SizedBox(height: 20),
+                      _buildDetailsStepTimeline(context, statusColor),
+                    ],
                   ],
                 ),
               ),
@@ -499,9 +615,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 icon: Icons.shopping_bag,
                 child: Column(
                   children: (_order.orderItems ?? []).map((item) {
-                    final unitPrice = (item.priceAtTimeOfOrder > 0)
-                        ? item.priceAtTimeOfOrder
-                        : (item.product?.price ?? 0.0);
+                    final unitPrice = item.effectiveUnitPrice;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Row(
@@ -753,7 +867,16 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               const SizedBox(height: 16),
             ],
           ),
+          ),
         ),
+          if (_isLoading)
+            const Positioned.fill(
+              child: ColoredBox(
+                color: Color(0x33000000),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ),
+        ],
       ),
     );
   }
