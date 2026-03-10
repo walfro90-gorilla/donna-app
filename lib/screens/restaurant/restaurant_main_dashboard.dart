@@ -54,6 +54,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
   String? _initialUserId;
   bool _emailCongratsShown = false; // Evita re-mostrar el modal en la sesión
   bool _welcomeMarked = false; // Marcar bienvenida como vista al mostrar por 1ra vez
+  int? _liveProfilePercentage; // Porcentaje calculado en vivo (reemplaza el valor stale del DB)
   bool _isRestaurantRole(String? role) {
     final r = (role ?? '').toLowerCase();
     return r == 'restaurante' || r == 'restaurant';
@@ -450,7 +451,23 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
         setState(() {
           isRestaurantOnline = _restaurant?.online ?? false;
         });
-        
+
+        // Calcular porcentaje en vivo y sincronizarlo al DB si cambió
+        try {
+          final liveStatus = await _computeRestaurantProfileStatus(_restaurant!);
+          final livePerc = liveStatus.percentage;
+          if (mounted) setState(() => _liveProfilePercentage = livePerc);
+          if (livePerc != _restaurant!.profileCompletionPercentage) {
+            await SupabaseConfig.client
+                .from('restaurants')
+                .update({'profile_completion_percentage': livePerc})
+                .eq('id', _restaurant!.id);
+            debugPrint('🔄 [LOAD] profile_completion_percentage actualizado: ${_restaurant!.profileCompletionPercentage} → $livePerc');
+          }
+        } catch (e) {
+          debugPrint('⚠️ [LOAD] No se pudo calcular perfil live: $e');
+        }
+
         await _loadOrderStats();
       } else {
         debugPrint('❌ [LOAD] No restaurant found for user ${currentUser.id}');
@@ -841,16 +858,17 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
         return;
       }
       
-      // Verificar completado del perfil
-      if (_restaurant!.profileCompletionPercentage < 70) {
+      // Verificar completado del perfil (usar porcentaje calculado en vivo)
+      final currentPerc = _liveProfilePercentage ?? _restaurant!.profileCompletionPercentage;
+      if (currentPerc < 70) {
         _showCannotGoOnlineDialog(
           '📝 Perfil Incompleto',
           'Completa tu perfil al menos un 70% para poder ponerte ONLINE y recibir pedidos.\n\n'
-          'Progreso actual: ${_restaurant!.profileCompletionPercentage}%\n\n'
+          'Progreso actual: $currentPerc%\n\n'
           'Completa:\n'
-          '• Información básica del restaurante\n'
+          '• Agrega al menos 1 producto al menú\n'
           '• Logo del restaurante\n'
-          '• Al menos 1 producto en el menú',
+          '• Información básica (tipo de cocina)',
           Icons.edit_note,
           Colors.orange,
         );

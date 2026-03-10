@@ -200,7 +200,6 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
         'facebook_url': _facebookController.text.trim().isEmpty ? null : _facebookController.text.trim(),
         'instagram_url': _instagramController.text.trim().isEmpty ? null : _instagramController.text.trim(),
         'website_url': _websiteController.text.trim().isEmpty ? null : _websiteController.text.trim(),
-        'status': 'pending', // Revertir a pendiente para revisión administrativa
         'updated_at': DateTime.now().toIso8601String(),
       };
 
@@ -219,7 +218,7 @@ class _RestaurantProfileEditScreenState extends State<RestaurantProfileEditScree
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Tus cambios fueron enviados a revisión. Tu restaurante quedará en estado Pendiente hasta aprobación (hasta 24 h).'),
+            content: const Text('¡Perfil actualizado correctamente!'),
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );

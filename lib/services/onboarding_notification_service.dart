@@ -274,7 +274,7 @@ class OnboardingNotificationService {
       final hasLogo = (restaurant.logoUrl ?? '').trim().isNotEmpty;
       final hasCover = (restaurant.coverImageUrl ?? restaurant.imageUrl ?? '').trim().isNotEmpty;
       final hasCuisine = (restaurant.cuisineType ?? '').toString().trim().isNotEmpty;
-      final hasMinProducts = productCount >= 3;
+      final hasMinProducts = productCount >= 1;
       final isApproved = restaurant.status == RestaurantStatus.approved;
 
       final tasks = <OnboardingTask>[
@@ -333,14 +333,13 @@ class OnboardingNotificationService {
           title: 'Agregar Productos al Menú',
           description: hasMinProducts
               ? 'Tienes $productCount productos activos'
-              : 'Agrega al menos 3 productos para empezar a vender',
+              : 'Agrega al menos 1 producto para empezar a vender',
           isCompleted: hasMinProducts,
           icon: hasMinProducts ? Icons.check_circle : Icons.restaurant_menu,
           actionLabel: hasMinProducts ? 'Completado' : 'Agregar Productos',
           actionRoute: '/restaurant/products',
           priority: 6,
         ),
-        // Aprobación del administrador (requisito)
         OnboardingTask(
           id: 'admin_approval',
           title: 'Aprobación del Administrador',
