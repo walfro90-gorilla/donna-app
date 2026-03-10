@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -192,22 +193,25 @@ class StorageService {
       throw StorageUploadException(msg);
     }
 
-    String inferContentType(String name) {
-      final lower = name.toLowerCase();
-      if (lower.endsWith('.png')) return 'image/png';
-      if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-      if (lower.endsWith('.webp')) return 'image/webp';
-      if (lower.endsWith('.gif')) return 'image/gif';
-      return 'image/jpeg'; // fallback seguro para imágenes
+    // Comprimir imágenes grandes antes de subir (máx 1920px, calidad 85%)
+    // Evita errores 413 por archivos demasiado grandes
+    final isSvg = file.name.toLowerCase().endsWith('.svg');
+    if (!isSvg) {
+      fileBytes = await _compressImage(fileBytes, file.name);
     }
 
-    final contentType = inferContentType(file.name);
+    debugPrint('📊 [STORAGE] Tamaño tras compresión: ${fileBytes.length} bytes');
+
+    // SVGs se sirven con su content-type; imágenes comprimidas siempre salen como JPEG
+    final contentType = isSvg ? 'image/svg+xml' : 'image/jpeg';
+    // El path siempre usa .jpg porque la compresión produce JPEG
+    final uploadPath = isSvg ? path.replaceAll(RegExp(r'\.\w+$'), '.svg') : path;
 
     try {
       final storageResponse = await SupabaseConfig.client.storage
           .from(bucket)
           .uploadBinary(
-            path,
+            uploadPath,
             fileBytes,
             fileOptions: FileOptions(
               upsert: true,
@@ -219,14 +223,40 @@ class StorageService {
 
       final publicUrl = SupabaseConfig.client.storage
           .from(bucket)
-          .getPublicUrl(path);
+          .getPublicUrl(uploadPath);
 
       debugPrint('🔗 [STORAGE] URL pública generada: $publicUrl');
       return publicUrl;
     } catch (e) {
       final msg = _friendlyStorageError(e);
-      debugPrint('❌ [STORAGE] Error al subir $bucket/$path: $e');
+      debugPrint('❌ [STORAGE] Error al subir $bucket/$uploadPath: $e');
       throw StorageUploadException(msg);
+    }
+  }
+
+  /// Comprime y redimensiona una imagen antes de subir.
+  /// Produce JPEG calidad 85, máx 1920px en el lado más largo.
+  /// En web usa compresión nativa del browser; en móvil usa codecs nativos.
+  static Future<Uint8List> _compressImage(Uint8List bytes, String filename) async {
+    try {
+      final originalKB = bytes.length ~/ 1024;
+      // Solo comprimir si supera 500 KB
+      if (bytes.length <= 500 * 1024) return bytes;
+
+      final compressed = await FlutterImageCompress.compressWithList(
+        bytes,
+        minWidth: 1920,
+        minHeight: 1920,
+        quality: 85,
+        format: CompressFormat.jpeg,
+      );
+
+      final compressedKB = compressed.length ~/ 1024;
+      debugPrint('🗜️ [STORAGE] Compresión: ${originalKB}KB → ${compressedKB}KB (${filename})');
+      return compressed;
+    } catch (e) {
+      debugPrint('⚠️ [STORAGE] Compresión fallida, usando original: $e');
+      return bytes;
     }
   }
 

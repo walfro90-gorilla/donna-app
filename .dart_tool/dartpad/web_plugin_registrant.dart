@@ -11,6 +11,7 @@ import 'package:audioplayers_web/audioplayers_web.dart';
 import 'package:connectivity_plus/src/connectivity_plus_web.dart';
 import 'package:file_picker/_internal/file_picker_web.dart';
 import 'package:firebase_core_web/firebase_core_web.dart';
+import 'package:flutter_image_compress_web/flutter_image_compress_web.dart';
 import 'package:geolocator_web/geolocator_web.dart';
 import 'package:google_maps_flutter_web/google_maps_flutter_web.dart';
 import 'package:shared_preferences_web/shared_preferences_web.dart';
@@ -24,6 +25,7 @@ void registerPlugins([final Registrar? pluginRegistrar]) {
   ConnectivityPlusWebPlugin.registerWith(registrar);
   FilePickerWeb.registerWith(registrar);
   FirebaseCoreWeb.registerWith(registrar);
+  FlutterImageCompressWeb.registerWith(registrar);
   GeolocatorPlugin.registerWith(registrar);
   GoogleMapsPlugin.registerWith(registrar);
   SharedPreferencesPlugin.registerWith(registrar);
