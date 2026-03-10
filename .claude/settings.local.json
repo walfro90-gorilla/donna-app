@@ -17,7 +17,12 @@
       "Bash(powershell -Command \"Set-Location ''x:\\\\Codes\\\\donna-app''; flutter pub get\")",
       "Read(//c/Users/$USER/AppData/Local/flutter/**)",
       "Read(//c/flutter/**)",
-      "Bash(find /c /d /e -name \"flutter.bat\")"
+      "Bash(find /c /d /e -name \"flutter.bat\")",
+      "Bash(grep -l \"rpc_find_nearby_restaurants\\\\|find_nearby_restaurants\" x:/Codes/donna-app/supabase_scripts/*.sql x:/Codes/donna-app/sql_migrations/*.sql)",
+      "Bash(flutter.bat analyze:*)",
+      "Bash(cmd.exe /c \"flutter analyze lib/screens/restaurants/restaurant_detail_screen.dart lib/models/doa_models.dart 2>&1\")",
+      "Bash(cmd.exe /c \"flutter analyze 2>&1\")",
+      "Bash(powershell.exe -Command \"flutter analyze\")"
     ]
   }
 }

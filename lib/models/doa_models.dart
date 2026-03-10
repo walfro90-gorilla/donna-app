@@ -548,7 +548,11 @@ class DoaRestaurant {
       // UI properties
       imageUrl: json['image_url'] ?? json['cover_image_url'] ?? json['logo_url'],
       rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
-      deliveryTime: json['delivery_time'] != null ? json['delivery_time'] as int : json['estimated_delivery_time_minutes'],
+      deliveryTime: json['delivery_time'] != null
+          ? json['delivery_time'] as int
+          : (json['delivery_time_min'] != null
+              ? json['delivery_time_min'] as int
+              : json['estimated_delivery_time_minutes'] as int?),
       deliveryFee: json['delivery_fee'] != null ? (json['delivery_fee'] as num).toDouble() : null,
       isOpen: json['is_open'] ?? true, // RPC returns "is_open"
       distanceMeters: json['distance_meters'] != null ? (json['distance_meters'] as num).toDouble() : null,

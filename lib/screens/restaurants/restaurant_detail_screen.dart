@@ -142,7 +142,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
             slivers: [
           // Header con imagen
           SliverAppBar(
-            expandedHeight: 220,
+            expandedHeight: 260,
             pinned: true,
             stretch: true,
             backgroundColor: Theme.of(context).colorScheme.primary,
@@ -150,15 +150,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  widget.restaurant.coverImageUrl != null
-                      ? Image.network(
-                          widget.restaurant.coverImageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _buildHeaderPlaceholder(),
-                        )
-                      : _buildHeaderPlaceholder(),
-                  // Gradiente para legibilidad de iconos superiores
+                  _buildCoverImage(),
+                  // Gradiente superior para legibilidad de iconos de navegación
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -166,6 +159,20 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
                         end: Alignment.center,
                         colors: [Colors.black54, Colors.transparent],
                       ),
+                    ),
+                  ),
+                  // Gradiente inferior para transición suave al contenido
+                  const Align(
+                    alignment: Alignment.bottomCenter,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [Colors.black38, Colors.transparent],
+                        ),
+                      ),
+                      child: SizedBox(height: 80, width: double.infinity),
                     ),
                   ),
                 ],
@@ -205,13 +212,15 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  padding: const EdgeInsets.fromLTRB(16, 45, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(16, 52, 16, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Espacio para el logo superpuesto
+                          const SizedBox(width: 96),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,6 +238,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
                                     style: TextStyle(
                                       color: Theme.of(context).colorScheme.primary,
                                       fontWeight: FontWeight.w600,
+                                      fontSize: 13,
                                     ),
                                   ),
                               ],
@@ -237,16 +247,19 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
                           _buildSocialIconsGrid(),
                         ],
                       ),
+
                       const SizedBox(height: 12),
-                      
-                      if (widget.restaurant.description != null)
+
+                      if (widget.restaurant.description != null &&
+                          widget.restaurant.description!.isNotEmpty)
                         Text(
                           widget.restaurant.description!,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Theme.of(context)
                                     .colorScheme
                                     .onSurface
-                                    .withOpacity(0.7),
+                                    .withValues(alpha: 0.7),
+                                height: 1.4,
                               ),
                         ),
 
@@ -254,30 +267,36 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
 
                       // Info de entrega
                       Wrap(
-                        spacing: 12,
+                        spacing: 8,
                         runSpacing: 8,
                         children: [
                           _InfoChip(
-                            icon: Icons.access_time,
+                            icon: Icons.access_time_outlined,
                             label:
                                 '${widget.restaurant.deliveryTime ?? 30}-${(widget.restaurant.deliveryTime ?? 30) + 15} min',
                           ),
                           _InfoChip(
-                            icon: Icons.delivery_dining,
+                            icon: Icons.delivery_dining_outlined,
                             label: widget.restaurant.deliveryFee != null &&
                                     widget.restaurant.deliveryFee! > 0
                                 ? '\$${widget.restaurant.deliveryFee!.toStringAsFixed(0)}'
-                                : 'Gratis',
-                            isHighlight: widget.restaurant.deliveryFee == null ||
-                                widget.restaurant.deliveryFee! == 0,
+                                : '\$35',
                           ),
                           _InfoChip(
-                            icon: Icons.circle,
+                            icon: widget.restaurant.isOpen
+                                ? Icons.check_circle_outline
+                                : Icons.cancel_outlined,
                             label: widget.restaurant.isOpen ? 'Abierto' : 'Cerrado',
                             color: widget.restaurant.isOpen
                                 ? Theme.of(context).colorScheme.secondary
                                 : Theme.of(context).colorScheme.error,
                           ),
+                          if (widget.restaurant.rating != null)
+                            _InfoChip(
+                              icon: Icons.star_outline_rounded,
+                              label: widget.restaurant.rating!.toStringAsFixed(1),
+                              color: Colors.amber.shade700,
+                            ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -286,29 +305,33 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
                 ),
                 // Logo Circular superpuesto
                 Positioned(
-                  top: -40,
+                  top: -44,
                   left: 16,
                   child: Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       color: Theme.of(context).scaffoldBackgroundColor,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
                     child: CircleAvatar(
-                      radius: 38,
-                      backgroundColor: Colors.grey.shade200,
+                      radius: 42,
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                       backgroundImage: widget.restaurant.logoUrl != null
                           ? NetworkImage(widget.restaurant.logoUrl!)
                           : null,
                       child: widget.restaurant.logoUrl == null
-                          ? const Icon(Icons.restaurant, size: 40, color: Colors.grey)
+                          ? Icon(
+                              Icons.restaurant,
+                              size: 40,
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                            )
                           : null,
                     ),
                   ),
@@ -555,36 +578,44 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
     );
   }
 
+  Widget _buildCoverImage() {
+    final coverUrl = widget.restaurant.coverImageUrl;
+    final logoUrl = widget.restaurant.logoUrl;
+    final fallbackUrl = coverUrl ?? logoUrl;
+
+    if (fallbackUrl != null) {
+      return Image.network(
+        fallbackUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildHeaderPlaceholder(),
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return _buildHeaderPlaceholder();
+        },
+      );
+    }
+    return _buildHeaderPlaceholder();
+  }
+
   Widget _buildHeaderPlaceholder() {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
             Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
             Theme.of(context).colorScheme.secondary,
           ],
         ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.restaurant,
-            size: 80,
-            color: Colors.white.withOpacity(0.8),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            widget.restaurant.name,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+      child: Center(
+        child: Icon(
+          Icons.restaurant,
+          size: 72,
+          color: Colors.white.withValues(alpha: 0.5),
+        ),
       ),
     );
   }
@@ -849,7 +880,7 @@ class ProductCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '\\\$${product.price.toStringAsFixed(2)}',
+                        '\$${product.price.toStringAsFixed(2)}',
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
                                   color: Theme.of(context).colorScheme.primary,
@@ -1065,7 +1096,7 @@ class CartBottomSheet extends StatelessWidget {
                                     ),
                               ),
                               Text(
-                                '\\\$${product.price.toStringAsFixed(2)} c/u',
+                                '\$${product.price.toStringAsFixed(2)} c/u',
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyMedium
@@ -1114,7 +1145,7 @@ class CartBottomSheet extends StatelessWidget {
                         const SizedBox(width: 8),
 
                         Text(
-                          '\\\$${(product.price * quantity).toStringAsFixed(2)}',
+                          '\$${(product.price * quantity).toStringAsFixed(2)}',
                           style:
                               Theme.of(context).textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.bold,
@@ -1138,7 +1169,7 @@ class CartBottomSheet extends StatelessWidget {
                           ),
                     ),
                     Text(
-                      '\\\$${_totalAmount.toStringAsFixed(2)}',
+                      '\$${_totalAmount.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.primary,
