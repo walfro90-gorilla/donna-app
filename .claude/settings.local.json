@@ -8,7 +8,9 @@
       "Bash(cmd /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze lib/models/doa_models.dart lib/screens/orders/order_details_screen.dart lib/widgets/active_order_tracker_v2.dart\")",
       "Bash(powershell -Command \"Set-Location ''x:\\\\Codes\\\\donna-app''; flutter analyze lib/models/doa_models.dart lib/screens/orders/order_details_screen.dart lib/widgets/active_order_tracker_v2.dart 2>&1\")",
       "Bash(where.exe flutter)",
-      "Bash(powershell -Command \"Get-Command flutter -ErrorAction SilentlyContinue; Get-ChildItem -Path ''C:\\\\'' -Filter ''flutter.bat'' -Recurse -ErrorAction SilentlyContinue -Depth 4 | Select-Object -First 3\")"
+      "Bash(powershell -Command \"Get-Command flutter -ErrorAction SilentlyContinue; Get-ChildItem -Path ''C:\\\\'' -Filter ''flutter.bat'' -Recurse -ErrorAction SilentlyContinue -Depth 4 | Select-Object -First 3\")",
+      "Bash(xargs grep -l \"rpc_create_settlement\\\\|rpc_confirm_settlement\\\\|rpc_initiate_restaurant_settlement\")",
+      "Bash(dir \"x:\\\\Codes\\\\donna-app\\\\supabase\" /b)"
     ]
   }
 }

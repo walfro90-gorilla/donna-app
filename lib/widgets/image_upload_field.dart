@@ -38,34 +38,22 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
     setState(() => _isLoading = true);
 
     try {
+      // FileType.image is more reliable on Android (avoids content:// URI issues)
+      // withData: true ensures bytes are loaded cross-platform
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: const ['png', 'jpg', 'jpeg', 'svg'],
+        type: FileType.image,
         allowMultiple: false,
-        withData: true, // Siempre cargar bytes para cross-platform support
+        withData: true,
       );
 
       if (result != null && result.files.isNotEmpty) {
         final picked = result.files.first;
-        final ext = (picked.extension ?? '').toLowerCase();
-        const allowed = ['png', 'jpg', 'jpeg', 'svg'];
-        if (!allowed.contains(ext)) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Formato no permitido. Usa PNG, JPG/JPEG o SVG.'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-          return;
-        }
         setState(() => _selectedFile = picked);
-        print('🖼️ Imagen seleccionada: ${_selectedFile?.name} (${_selectedFile?.bytes?.length} bytes)');
+        debugPrint('🖼️ [ImageUpload] Imagen seleccionada: ${picked.name} (${picked.bytes?.length} bytes)');
         widget.onImageSelected(_selectedFile);
       }
     } catch (e) {
-      print('❌ Error picking image: $e');
+      debugPrint('❌ [ImageUpload] Error picking image: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

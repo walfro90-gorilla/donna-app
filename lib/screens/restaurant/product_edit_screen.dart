@@ -69,7 +69,14 @@ class _ProductEditScreenState extends State<ProductEditScreen> {
         payload['created_at'] = DateTime.now().toIso8601String();
         await SupabaseConfig.client.from('products').insert(payload);
       } else {
-        await SupabaseConfig.client.from('products').update(payload).eq('id', widget.product!.id);
+        final updated = await SupabaseConfig.client
+            .from('products')
+            .update(payload)
+            .eq('id', widget.product!.id)
+            .select();
+        if (updated.isEmpty) {
+          throw Exception('No se pudo actualizar el producto. Verifica los permisos.');
+        }
       }
 
       if (mounted) Navigator.of(context).pop(true);
