@@ -47,6 +47,13 @@ class RealtimeNotificationService {
   StreamController<void> _couriersUpdatedController = StreamController<void>.broadcast();
   StreamController<List<DoaOrder>> _clientActiveOrdersController = StreamController<List<DoaOrder>>.broadcast();
 
+  // Cache local para detectar cambios reales sin depender de oldRecord
+  // (oldRecord es vacío cuando REPLICA IDENTITY no es FULL)
+  final Map<String, bool> _restaurantOnlineCache = {};
+  final Map<String, String?> _restaurantStatusCache = {};
+  final Map<String, String?> _courierStatusCache = {};
+  final Map<String, String?> _courierAccountStateCache = {};
+
   // Streams públicos con validación de apertura
   Stream<DoaOrder> get newOrders {
     _ensureStreamControllersOpen();
@@ -486,30 +493,28 @@ class RealtimeNotificationService {
     _isWebSocketConnected = true;
     
     try {
-      final oldRecord = payload.oldRecord;
       final newRecord = payload.newRecord;
       
-      // debugPrint('🏪 [REALTIME] ===== RESTAURANTE ACTUALIZADO =====');
-      // debugPrint('📱 [REALTIME] Restaurante ID: ${newRecord['id']}');
-      // debugPrint('🔄 [REALTIME] Online: ${oldRecord?['online']} -> ${newRecord['online']}');
-      // debugPrint('🔄 [REALTIME] Status: ${oldRecord?['status']} -> ${newRecord['status']}');
-      
-      // Detectar cambios significativos
-      final onlineChanged = oldRecord?['online'] != newRecord['online'];
-      final statusChanged = oldRecord?['status'] != newRecord['status'];
-      
+      // Comparar contra cache local (oldRecord es vacío si no hay REPLICA IDENTITY FULL)
+      final restaurantId = newRecord['id']?.toString() ?? '';
+      final newOnline = newRecord['online'] as bool?;
+      final newStatus = newRecord['status']?.toString();
+
+      final cachedOnline = _restaurantOnlineCache[restaurantId];
+      final cachedStatus = _restaurantStatusCache[restaurantId];
+
+      final onlineChanged = cachedOnline != null && cachedOnline != newOnline;
+      final statusChanged = cachedStatus != null && cachedStatus != newStatus;
+
+      // Actualizar cache con los valores más recientes
+      if (newOnline != null) _restaurantOnlineCache[restaurantId] = newOnline;
+      if (newStatus != null) _restaurantStatusCache[restaurantId] = newStatus;
+
       if (onlineChanged || statusChanged) {
-        // debugPrint('✅ [REALTIME] Cambio crítico detectado - Notificando dashboards');
-        
-        // Notificar inmediatamente para actualización de listas
+        debugPrint('🔔 [REALTIME] Restaurante $restaurantId: online=$cachedOnline→$newOnline, status=$cachedStatus→$newStatus');
         _restaurantsUpdatedController.add(null);
         _refreshDataController.add(null);
-        
-        // debugPrint('🔔 [REALTIME] 🎯 NOTIFICACIÓN CRÍTICA: Restaurantes actualizados');
-        // Señalar actividad de realtime al PollingService
         try { PollingService().notifyRealtimeActivity(); } catch (_) {}
-      } else {
-        debugPrint('ℹ️ [REALTIME] Cambio menor en restaurante - no crítico');
       }
       
     } catch (e) {
@@ -524,26 +529,28 @@ class RealtimeNotificationService {
     _isWebSocketConnected = true;
     
     try {
-      final oldRecord = payload.oldRecord;
       final newRecord = payload.newRecord;
       
-      // debugPrint('🚚 [REALTIME] ===== REPARTIDOR ACTUALIZADO =====');
-      // debugPrint('👤 [REALTIME] user_id: ${newRecord['user_id']}');
-      // debugPrint('🔄 [REALTIME] status: ${oldRecord?['status']} -> ${newRecord['status']}');
-      // debugPrint('🔄 [REALTIME] account_state: ${oldRecord?['account_state']} -> ${newRecord['account_state']}');
-      
-      final statusChanged = oldRecord?['status'] != newRecord['status'];
-      final stateChanged = oldRecord?['account_state'] != newRecord['account_state'];
-      
+      // Comparar contra cache local (oldRecord es vacío si no hay REPLICA IDENTITY FULL)
+      final courierId = newRecord['user_id']?.toString() ?? '';
+      final newStatus = newRecord['status']?.toString();
+      final newAccountState = newRecord['account_state']?.toString();
+
+      final cachedStatus = _courierStatusCache[courierId];
+      final cachedAccountState = _courierAccountStateCache[courierId];
+
+      final statusChanged = cachedStatus != null && cachedStatus != newStatus;
+      final stateChanged = cachedAccountState != null && cachedAccountState != newAccountState;
+
+      // Actualizar cache con los valores más recientes
+      if (newStatus != null) _courierStatusCache[courierId] = newStatus;
+      if (newAccountState != null) _courierAccountStateCache[courierId] = newAccountState;
+
       if (statusChanged || stateChanged) {
-        // Notificar a dashboards de cliente para reevaluar disponibilidad (RPC hasActiveCouriers)
+        debugPrint('🔔 [REALTIME] Repartidor $courierId: status=$cachedStatus→$newStatus, state=$cachedAccountState→$newAccountState');
         _couriersUpdatedController.add(null);
         _refreshDataController.add(null);
-        
-        // debugPrint('🔔 [REALTIME] 🎯 NOTIFICACIÓN CRÍTICA: Repartidores actualizados');
         try { PollingService().notifyRealtimeActivity(); } catch (_) {}
-      } else {
-        debugPrint('ℹ️ [REALTIME] Cambio menor en repartidor - no crítico');
       }
     } catch (e) {
       debugPrint('❌ [REALTIME] Error procesando actualización de repartidor: $e');
