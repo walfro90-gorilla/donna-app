@@ -204,15 +204,10 @@ class RestaurantCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         restaurant.deliveryFee != null && restaurant.deliveryFee! > 0
-                            ? '\\\$${restaurant.deliveryFee!.toStringAsFixed(0)}'
-                            : 'Gratis',
+                            ? '\$${restaurant.deliveryFee!.toStringAsFixed(0)}'
+                            : '\$35',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: restaurant.deliveryFee != null && restaurant.deliveryFee! > 0
-                              ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)
-                              : Theme.of(context).colorScheme.secondary,
-                          fontWeight: restaurant.deliveryFee == null || restaurant.deliveryFee! == 0
-                              ? FontWeight.w600
-                              : null,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                       

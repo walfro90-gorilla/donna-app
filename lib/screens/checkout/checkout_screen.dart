@@ -59,8 +59,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _placesSessionToken;
   String? _lastSelectedAddress;
   
-  // Fixed delivery fee - you can make this dynamic later
-  static const double _deliveryFee = 35.0;
+  // Tarifa de delivery tomada del restaurante; 35 como fallback de plataforma
+  double get _deliveryFee => widget.restaurant.deliveryFee ?? 35.0;
 
   @override
   void initState() {
