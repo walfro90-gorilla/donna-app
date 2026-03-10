@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
@@ -38,12 +39,12 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
     setState(() => _isLoading = true);
 
     try {
-      // FileType.image is more reliable on Android (avoids content:// URI issues)
-      // withData: true ensures bytes are loaded cross-platform
+      // withData only on web — on mobile the path is sufficient and loading
+      // bytes eagerly on Android causes the second pick to return null bytes.
       final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
         allowMultiple: false,
-        withData: true,
+        withData: kIsWeb,
       );
 
       if (result != null && result.files.isNotEmpty) {
@@ -196,18 +197,13 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
 
   Widget _buildSelectedImage() {
     if (_selectedFile?.bytes != null) {
-      return Image.memory(
-        _selectedFile!.bytes!,
-        fit: BoxFit.cover,
-      );
-    } else if (_selectedFile?.path != null) {
-      // En plataformas nativas usaríamos File(_selectedFile!.path!)
-      // pero como debe ser cross-platform, mostramos un placeholder
-      return const Center(
-        child: Icon(Icons.image, size: 64, color: Colors.grey),
-      );
+      // Web: bytes cargados directamente por file_picker
+      return Image.memory(_selectedFile!.bytes!, fit: BoxFit.cover);
+    } else if (!kIsWeb && _selectedFile?.path != null) {
+      // Móvil: usar el path del archivo temporal generado por file_picker
+      return Image.file(File(_selectedFile!.path!), fit: BoxFit.cover);
     }
-    return const SizedBox.shrink();
+    return const Center(child: Icon(Icons.image, size: 64, color: Colors.grey));
   }
 
   Widget _buildNetworkImage() {
