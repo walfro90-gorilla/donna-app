@@ -580,21 +580,17 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
 
   Widget _buildCoverImage() {
     final coverUrl = widget.restaurant.coverImageUrl;
-    final logoUrl = widget.restaurant.logoUrl;
-    final fallbackUrl = coverUrl ?? logoUrl;
+    if (coverUrl == null) return _buildHeaderPlaceholder();
 
-    if (fallbackUrl != null) {
-      return Image.network(
-        fallbackUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildHeaderPlaceholder(),
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return _buildHeaderPlaceholder();
-        },
-      );
-    }
-    return _buildHeaderPlaceholder();
+    return Image.network(
+      coverUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => _buildHeaderPlaceholder(),
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return _buildHeaderPlaceholder();
+      },
+    );
   }
 
   Widget _buildHeaderPlaceholder() {
