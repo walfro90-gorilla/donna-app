@@ -922,8 +922,15 @@ class DoaRepartosService {
     Map<String, dynamic>? addressStructured,
   }) async {
     try {
+      // Usar formatted_address de Google Maps si está disponible — es la fuente canónica
+      final formattedFromStructured = addressStructured?['formatted_address'] as String?;
+      final canonicalAddress = (formattedFromStructured != null && formattedFromStructured.trim().isNotEmpty)
+          ? formattedFromStructured.trim()
+          : address;
+
       debugPrint('🗺️ [updateClientDefaultAddress] INICIO - userId: $userId');
-      debugPrint('🗺️ [updateClientDefaultAddress] address: $address');
+      debugPrint('🗺️ [updateClientDefaultAddress] address (raw): $address');
+      debugPrint('🗺️ [updateClientDefaultAddress] address (canonical): $canonicalAddress');
       debugPrint('🗺️ [updateClientDefaultAddress] lat: $lat');
       debugPrint('🗺️ [updateClientDefaultAddress] lon: $lon');
       debugPrint('🗺️ [updateClientDefaultAddress] addressStructured: $addressStructured');
@@ -933,7 +940,7 @@ class DoaRepartosService {
         debugPrint('🔧 [updateClientDefaultAddress] Intentando RPC...');
         final rpcParams = {
           'p_user_id': userId,
-          'p_address': address,
+          'p_address': canonicalAddress,
           if (lat != null) 'p_lat': lat,
           if (lon != null) 'p_lon': lon,
           if (addressStructured != null) 'p_address_structured': addressStructured,
@@ -960,7 +967,7 @@ class DoaRepartosService {
       // 2) Direct upsert into client_profiles
       final payload = <String, dynamic>{
         'user_id': userId,
-        'address': address,
+        'address': canonicalAddress,
         'updated_at': DateTime.now().toIso8601String(),
         if (lat != null) 'lat': lat,
         if (lon != null) 'lon': lon,
@@ -1501,10 +1508,17 @@ class DoaRepartosService {
       // 2. Insertar items usando función RPC segura con JSON (no JSONB)
       if (items.isNotEmpty) {
         print('🎯 [SUPABASE] Insertando items usando RPC con JSON...');
-        
+
+        // El RPC lee 'price' del JSON — mapear unit_price/price_at_time_of_order → 'price'
+        final mappedItems = items.map((item) => {
+          'product_id': item['product_id'],
+          'quantity': item['quantity'],
+          'price': item['unit_price'] ?? item['price_at_time_of_order'] ?? item['price'],
+        }).toList();
+
         final itemsResult = await SupabaseConfig.client.rpc('insert_order_items_v2', params: {
-          'p_order_id': orderId,                          // UUID
-          'p_items': items,                               // JSON (not JSONB!)
+          'p_order_id': orderId,
+          'p_items': mappedItems,
         });
         
         print('🎯 [SUPABASE] Items RPC Response: $itemsResult');
@@ -1584,7 +1598,7 @@ class DoaRepartosService {
         final List<Map<String, dynamic>> itemsForRPC = items.map((item) => {
           'product_id': item['product_id'],
           'quantity': item['quantity'],
-          'unit_price': item['unit_price'],
+          'price': item['unit_price'] ?? item['price_at_time_of_order'],
         }).toList();
 
         print('🎯 [SUPABASE] Items for RPC: $itemsForRPC');

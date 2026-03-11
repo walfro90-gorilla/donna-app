@@ -23,6 +23,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
   List<DoaProduct> _products = [];
   bool _isLoading = true;
   String _selectedCategory = 'Todos';
+  String? _coverImageUrl; // cargado directo de restaurants table
 
   // Carrito temporal (reactivo para bottom sheet)
   final ValueNotifier<Map<String, int>> _cartVN = ValueNotifier(<String, int>{});
@@ -46,8 +47,10 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
     if (currentUser?.id == widget.restaurant.userId) {
       _isPreviewMode = true;
     }
+    _coverImageUrl = widget.restaurant.coverImageUrl;
     _tabController = TabController(length: 3, vsync: this);
     _loadProducts();
+    _loadCoverImage();
     _initCourierGate();
   }
 
@@ -74,6 +77,21 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
         }
       });
     }
+  }
+
+  Future<void> _loadCoverImage() async {
+    try {
+      final row = await SupabaseConfig.client
+          .from('restaurants')
+          .select('cover_image_url')
+          .eq('id', widget.restaurant.id)
+          .maybeSingle();
+      if (!mounted) return;
+      final url = row?['cover_image_url'] as String?;
+      if (url != null && url.isNotEmpty) {
+        setState(() => _coverImageUrl = url);
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadProducts() async {
@@ -175,6 +193,35 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
                       child: SizedBox(height: 80, width: double.infinity),
                     ),
                   ),
+                  // Avatar logo superpuesto en la esquina inferior izquierda del banner
+                  Positioned(
+                    bottom: 48, // justo sobre el TabBar
+                    left: 16,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 36,
+                        backgroundColor: Colors.grey.shade200,
+                        backgroundImage: widget.restaurant.logoUrl != null
+                            ? NetworkImage(widget.restaurant.logoUrl!)
+                            : null,
+                        child: widget.restaurant.logoUrl == null
+                            ? const Icon(Icons.restaurant, size: 32, color: Colors.grey)
+                            : null,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -206,21 +253,16 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
             ],
           ),
 
-          // Perfil Social (Logo superpuesto y nombre)
+          // Perfil Social (nombre y descripción)
           SliverToBoxAdapter(
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 52, 16, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Espacio para el logo superpuesto
-                          const SizedBox(width: 96),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,41 +344,6 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
                       const SizedBox(height: 16),
                     ],
                   ),
-                ),
-                // Logo Circular superpuesto
-                Positioned(
-                  top: -44,
-                  left: 16,
-                  child: Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 42,
-                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                      backgroundImage: widget.restaurant.logoUrl != null
-                          ? NetworkImage(widget.restaurant.logoUrl!)
-                          : null,
-                      child: widget.restaurant.logoUrl == null
-                          ? Icon(
-                              Icons.restaurant,
-                              size: 40,
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
-                            )
-                          : null,
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
 
@@ -579,8 +586,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
   }
 
   Widget _buildCoverImage() {
-    final coverUrl = widget.restaurant.coverImageUrl;
-    if (coverUrl == null) return _buildHeaderPlaceholder();
+    final coverUrl = _coverImageUrl;
+    if (coverUrl == null || coverUrl.isEmpty) return _buildHeaderPlaceholder();
 
     return Image.network(
       coverUrl,
