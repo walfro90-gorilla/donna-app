@@ -62,6 +62,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // Tarifa de delivery tomada del restaurante; 35 como fallback de plataforma
   double get _deliveryFee => widget.restaurant.deliveryFee ?? 35.0;
 
+  // Dirección canónica: formatted_address de Google Maps si está disponible, sino el texto del controller
+  String get _canonicalDeliveryAddress {
+    final formatted = _deliveryAddressStructured?['formatted_address'] as String?;
+    if (formatted != null && formatted.trim().isNotEmpty) return formatted.trim();
+    return _addressController.text.trim();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -402,7 +409,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'restaurant_id': widget.restaurant.id,
           'restaurant_name': widget.restaurant.name,
           'total_amount': _total,
-          'delivery_address': _addressController.text.trim(),
+          'delivery_address': _canonicalDeliveryAddress,
           'delivery_lat': _deliveryLat,
           'delivery_lon': _deliveryLon,
           'delivery_place_id': _deliveryPlaceId,
@@ -463,7 +470,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   restaurant: widget.restaurant,
                   cartItems: widget.cartItems,
                   products: widget.products,
-                  deliveryAddress: _addressController.text.trim(),
+                  deliveryAddress: _canonicalDeliveryAddress,
                   paymentMethod: _selectedPaymentMethod,
                   total: _total,
                 ),
@@ -497,7 +504,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           userId: user.id,
           restaurantId: widget.restaurant.id,
           totalAmount: _total,
-          deliveryAddress: _addressController.text.trim(),
+          deliveryAddress: _canonicalDeliveryAddress,
           items: orderItems,
           orderNotes: _notesController.text.trim(),
           paymentMethod: _selectedPaymentMethod.toString().split('.').last,
@@ -528,7 +535,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 restaurant: widget.restaurant,
                 cartItems: widget.cartItems,
                 products: widget.products,
-                deliveryAddress: _addressController.text.trim(),
+                deliveryAddress: _canonicalDeliveryAddress,
                 paymentMethod: _selectedPaymentMethod,
                 total: _total,
               ),
