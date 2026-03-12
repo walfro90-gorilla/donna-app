@@ -561,35 +561,17 @@ class RealtimeNotificationService {
   Future<DoaOrder?> _fetchCompleteOrderWithRetries(String orderId) async {
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
-        debugPrint('🔄 [REALTIME] Obteniendo orden completa via RPC (intento $attempt/3)...');
-        
-        // Delay progresivo para dar tiempo a la base de datos
         if (attempt > 1) {
           await Future.delayed(Duration(milliseconds: 300 * attempt));
         }
-        
-        // ✅ Usar RPC optimizado que devuelve JSON completo
         final response = await SupabaseConfig.client
             .rpc('get_order_full_details', params: {'order_id_param': orderId});
-
-        if (response == null) {
-          debugPrint('⚠️ [REALTIME] RPC devolvió null para orden $orderId');
-          continue;
-        }
-
-        // La nueva función devuelve directamente jsonb, convertir a Map
-        final jsonData = Map<String, dynamic>.from(response as Map);
-        final order = DoaOrder.fromJson(jsonData);
-        
-        debugPrint('✅ [REALTIME] Orden completa obtenida exitosamente via RPC en intento $attempt');
-        debugPrint('✅ [REALTIME] Delivery agent: ${order.deliveryAgent?.name ?? 'N/A'}');
+        if (response == null) continue;
+        final order = DoaOrder.fromJson(Map<String, dynamic>.from(response as Map));
         return order;
-        
       } catch (e) {
-        debugPrint('⚠️ [REALTIME] Error en intento $attempt: $e');
-        
         if (attempt == 3) {
-          debugPrint('❌ [REALTIME] FALLO FINAL: No se pudo obtener orden después de 3 intentos');
+          debugPrint('❌ [REALTIME] No se pudo obtener orden $orderId tras 3 intentos: $e');
           return null;
         }
       }
@@ -618,48 +600,27 @@ class RealtimeNotificationService {
           .rpc('get_client_active_orders', params: {'client_id_param': user.id});
 
       if (response == null) {
-        debugPrint('⚠️ [TRACKER] RPC devolvió null');
         _clientActiveOrdersController.add([]);
         return;
       }
 
-      // La nueva función devuelve jsonb (array de objetos completos)
-      final ordersJson = response as List;
-      final orders = ordersJson
+      final orders = (response as List)
           .map((json) => DoaOrder.fromJson(json as Map<String, dynamic>))
           .toList();
 
-      debugPrint('📊 [TRACKER] ✅ ${orders.length} órdenes activas encontradas via RPC');
-      
-      // Log delivery agents
-      for (final order in orders) {
-        if (order.deliveryAgentId != null) {
-          debugPrint('📋 [TRACKER] Orden ${order.id.substring(0, 8)}: Delivery=${order.deliveryAgent?.name ?? 'NULL'}');
-        }
-      }
-      
-      // Verificar que el stream controller esté abierto antes de emitir
       if (_clientActiveOrdersController.isClosed) {
-        debugPrint('❌ [TRACKER] CRÍTICO: Stream controller está cerrado, recreando...');
         _ensureStreamControllersOpen();
       }
-      
-      // Verificar de nuevo después de intentar recrear
-      if (_clientActiveOrdersController.isClosed) {
-        debugPrint('🚨 [TRACKER] STREAM SIGUE CERRADO - NO SE PUEDEN EMITIR DATOS');
-        return;
-      }
-      
-      // Emitir las órdenes al stream con manejo de errores
+      if (_clientActiveOrdersController.isClosed) return;
+
       try {
         _clientActiveOrdersController.add(orders);
       } catch (e) {
-        debugPrint('❌ [TRACKER] ERROR EMITIENDO AL STREAM: $e');
+        debugPrint('❌ [TRACKER] Error emitiendo órdenes activas: $e');
       }
-      
+
     } catch (e) {
-      debugPrint('❌ [TRACKER] ERROR CRÍTICO actualizando órdenes activas: $e');
-      debugPrint('❌ [TRACKER] Stack trace: ${StackTrace.current}');
+      debugPrint('❌ [TRACKER] Error actualizando órdenes activas: $e');
     }
   }
 

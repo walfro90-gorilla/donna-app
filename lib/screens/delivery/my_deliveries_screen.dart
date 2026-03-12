@@ -253,61 +253,40 @@ class _MyDeliveriesScreenState extends State<MyDeliveriesScreen> {
   
   /// Iniciar refresh periódico cada 30 segundos
   void _startPeriodicRefresh() {
-    debugPrint('🔥*-*-*-*-*-*-*-*-START PERIODIC REFRESH SETUP*-*-*-*-*-*-*-*🔥');
-    
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted && _isServiceInitialized) {
-        debugPrint('🔄 [DELIVERY] Auto-refresh periódico...');
         _loadMyDeliveries();
       }
     });
-    
-    debugPrint('✅ [DELIVERY] Timer de refresh periódico configurado exitosamente');
-    debugPrint('🔥*-*-*-*-*-*-END PERIODIC REFRESH SETUP*-*-*-*-*-*-🔥');
   }
 
   Future<void> _loadMyDeliveries() async {
-    debugPrint('🔥*-*-*-*-*-*-*-*-START LOAD DELIVERIES*-*-*-*-*-*-*-*🔥');
-    
     setState(() {
       isLoading = true;
       errorMessage = null;
     });
 
     try {
-      debugPrint('🚚 [DELIVERY] ===== CARGANDO ENTREGAS DEL REPARTIDOR =====');
-      
       final currentUser = SupabaseAuth.currentUser;
       if (currentUser == null) {
         debugPrint('❌ [DELIVERY] Usuario no autenticado');
         throw Exception('Usuario no autenticado');
       }
-      
-      debugPrint('👤 [DELIVERY] Cargando entregas para usuario: ${currentUser.email} (${currentUser.id})');
 
-      // ✅ VERIFICACIÓN DE SEGURIDAD: Solo si el usuario es repartidor (normalizado)
+      // ✅ VERIFICACIÓN DE SEGURIDAD: Solo si el usuario es repartidor
       final userData = await SupabaseConfig.client
           .from('users')
           .select('role')
           .eq('id', currentUser.id)
           .single();
-          
+
       final userRole = userData['role'] as String?;
       final enumRole = UserRole.fromString(userRole ?? '');
-      debugPrint('🔍 [DELIVERY] Verificando rol: $userRole -> enum=${enumRole.name}');
-      
+
       if (enumRole != UserRole.delivery_agent) {
-        debugPrint('❌ [DELIVERY] ACCESO DENEGADO: Usuario no es repartidor');
+        debugPrint('❌ [DELIVERY] Acceso denegado: usuario no es repartidor');
         throw Exception('Acceso denegado: Este dashboard es solo para repartidores');
       }
-      
-      // Debugging: ver todas las órdenes del usuario actual
-      final debugResponse = await SupabaseConfig.client
-          .from('orders')
-          .select('id, status, delivery_agent_id')
-          .eq('delivery_agent_id', currentUser.id);
-      
-      debugPrint('🔍 [DELIVERY] All orders for user ${currentUser.id}: $debugResponse');
       
       // Obtener todos los pedidos asignados a este repartidor (cualquier estado)
       final response = await SupabaseConfig.client
@@ -323,19 +302,11 @@ class _MyDeliveriesScreenState extends State<MyDeliveriesScreen> {
           .eq('delivery_agent_id', currentUser.id)
           .order('created_at', ascending: false);
 
-      debugPrint('📦 [DELIVERY] My deliveries response: $response');
-
       if (response is List) {
         setState(() {
           myDeliveries = List<Map<String, dynamic>>.from(response);
           isLoading = false;
         });
-        debugPrint('✅ [DELIVERY] Loaded ${myDeliveries.length} my deliveries');
-        
-        // Mostrar detalles de las entregas cargadas
-        for (var delivery in myDeliveries) {
-          debugPrint('📦 [DELIVERY] - Entrega #${delivery['id'].toString().substring(0, 8)}: ${delivery['status']}');
-        }
       }
     } catch (e) {
       debugPrint('❌ [DELIVERY] Error loading my deliveries: $e');
@@ -343,17 +314,11 @@ class _MyDeliveriesScreenState extends State<MyDeliveriesScreen> {
         errorMessage = 'Error al cargar entregas: $e';
         isLoading = false;
       });
-      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Error cargando entregas: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('❌ Error cargando entregas: $e'), backgroundColor: Colors.red),
         );
       }
-    } finally {
-      debugPrint('🔥*-*-*-*-*-*-END LOAD DELIVERIES*-*-*-*-*-*-🔥');
     }
   }
 

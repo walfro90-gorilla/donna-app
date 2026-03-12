@@ -517,24 +517,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _startOrderTracking() {
-    // Actualizar cada 10 segundos como respaldo más frecuente
-    _orderRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    // Respaldo cada 30s — el realtime WebSocket cubre cambios urgentes
+    _orderRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       try {
-        // SEGURIDAD: Verificar que el widget siga montado
         if (!mounted) {
-          debugPrint(
-              '⚠️ [HOME] Order refresh timer ejecutándose pero widget ya no mounted');
           _orderRefreshTimer?.cancel();
           return;
         }
-
-        print(
-            '⏰ [HOME] ========= TIMER PERIODIC CHECK VIA TIEMPO REAL =========');
-        // Usar el nuevo sistema de tiempo real
         final user = SupabaseConfig.client.auth.currentUser;
         if (user?.emailConfirmedAt != null) {
-          RealtimeNotificationService.forUser(user!.id)
-              .refreshClientActiveOrders();
+          RealtimeNotificationService.forUser(user!.id).refreshClientActiveOrders();
         }
       } catch (e) {
         debugPrint('❌ [HOME] Error en order refresh timer: $e');
@@ -692,32 +684,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Inicializar polling como respaldo adicional
     _initializePollingBackup();
 
-    // Timer de backup para forzar verificación de tracker cada 15 segundos
-    _trackerBackupTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+    // Timer de backup para verificación de tracker cada 60s (sin pedido activo)
+    _trackerBackupTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       try {
-        // SEGURIDAD: Verificar que el widget siga montado
         if (!mounted) {
-          debugPrint(
-              '⚠️ [HOME] Timer backup ejecutándose pero widget ya no mounted');
           _trackerBackupTimer?.cancel();
           return;
         }
-
-        debugPrint('⏰ [HOME] ===== TIMER BACKUP: VERIFICANDO TRACKER =====');
-        debugPrint(
-            '⏰ [HOME] _activeOrder actual: ${_activeOrder?.id ?? 'NULL'}');
-
         // Solo actualizar si no hay orden activa mostrada
         if (_activeOrder == null) {
-          debugPrint(
-              '⏰ [HOME] No hay tracker visible, forzando verificación...');
           final user = SupabaseConfig.client.auth.currentUser;
           if (user?.emailConfirmedAt != null) {
-            RealtimeNotificationService.forUser(user!.id)
-                .refreshClientActiveOrders();
+            RealtimeNotificationService.forUser(user!.id).refreshClientActiveOrders();
           }
-        } else {
-          debugPrint('⏰ [HOME] Tracker ya visible: ${_activeOrder!.id}');
         }
       } catch (e) {
         debugPrint('❌ [HOME] Error en backup timer periódico: $e');

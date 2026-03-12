@@ -235,19 +235,10 @@ class _DeliveryMainDashboardState extends State<DeliveryMainDashboard> {
 
   @override
   void dispose() {
-    debugPrint('🔥*-*-*-*-*-*-*-*-START DELIVERY DISPOSE*-*-*-*-*-*-*-*🔥');
-    debugPrint('🧹 [DELIVERY] Limpiando dashboard del repartidor...');
-    
-    final currentUser = SupabaseConfig.client.auth.currentUser;
-    debugPrint('🔥 [DELIVERY-DISPOSE] Usuario en dispose: ${currentUser?.email} (${currentUser?.id})');
-    
     _refreshTimer?.cancel();
     _refreshTimer = null;
-    debugPrint('✅ [DELIVERY-DISPOSE] Timer cancelado');
-    
     _authStateSubscription?.cancel();
     _authStateSubscription = null;
-    debugPrint('✅ [DELIVERY-DISPOSE] Auth listener cancelado');
 
     _orderUpdatesSubscription?.cancel();
     _orderUpdatesSubscription = null;
@@ -347,55 +338,15 @@ class _DeliveryMainDashboardState extends State<DeliveryMainDashboard> {
 
   /// Iniciar polling cada 10 segundos para dashboard principal
   void _startAutoRefresh() {
-    debugPrint('🔥*-*-*-*-*-*-*-*-START AUTO-REFRESH SETUP*-*-*-*-*-*-*-*🔥');
-    
-    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
-      if (mounted && _selectedIndex == 0) {
-        debugPrint('🔄 [DELIVERY MAIN] Auto-refresh en dashboard principal...');
-        
-        // ✅ PROTECCIÓN CRÍTICA: Verificar que el usuario siga siendo un repartidor ANTES de cada refresh
-        final currentUser = SupabaseConfig.client.auth.currentUser;
-        if (currentUser == null) {
-          debugPrint('❌ [DELIVERY-TIMER] No hay usuario logueado, cancelando timer');
-          timer.cancel();
-          return;
-        }
-        
-        debugPrint('🔥 [DELIVERY-TIMER] Usuario en timer: ${currentUser.email} (${currentUser.id})');
-        
-        try {
-          // Verificar rol rápidamente
-          final userData = await SupabaseConfig.client
-              .from('users')
-              .select('role')
-              .eq('id', currentUser.id)
-              .single();
-              
-          final userRole = userData['role'] as String?;
-          final enumRole = UserRole.fromString(userRole ?? '');
-          debugPrint('🔍 [DELIVERY-TIMER] Rol del usuario: $userRole -> enum=${enumRole.name}');
-          
-          if (enumRole != UserRole.delivery_agent) {
-            debugPrint('❌ [DELIVERY-TIMER] ===== TIMER CANCELADO: USUARIO NO ES REPARTIDOR =====');
-            debugPrint('❌ [DELIVERY-TIMER] Usuario role(raw): $userRole, role(normalizado): ${enumRole.name}, cancelando timer del repartidor');
-            timer.cancel();
-            _refreshTimer = null;
-            return;
-          }
-          
-          debugPrint('✅ [DELIVERY-TIMER] Usuario verificado como repartidor, continuando refresh');
-          _loadDeliveryAgentData(showLoading: false);
-          
-        } catch (e) {
-          debugPrint('❌ [DELIVERY-TIMER] Error verificando rol en timer: $e');
-          timer.cancel();
-          _refreshTimer = null;
-        }
-      }
+    // 60s: el realtime WebSocket cubre urgencias; el rol no cambia durante la sesión
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
+      if (!mounted) { timer.cancel(); return; }
+      if (_selectedIndex != 0) return;
+      // Verificar sesión en memoria (sin query a BD)
+      final currentUser = SupabaseConfig.client.auth.currentUser;
+      if (currentUser == null) { timer.cancel(); return; }
+      _loadDeliveryAgentData(showLoading: false);
     });
-    
-    debugPrint('✅ [DELIVERY] Timer de auto-refresh configurado exitosamente');
-    debugPrint('🔥*-*-*-*-*-*-END AUTO-REFRESH SETUP*-*-*-*-*-*-🔥');
   }
 
   /// Verificar si es la primera vez del usuario (delivery-specific)

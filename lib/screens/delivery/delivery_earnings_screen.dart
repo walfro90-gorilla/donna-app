@@ -29,21 +29,19 @@ class _DeliveryEarningsScreenState extends State<DeliveryEarningsScreen> {
     });
 
     try {
-      print('📊 [DELIVERY] Loading delivery statistics...');
-      
       final currentUser = SupabaseAuth.currentUser;
       if (currentUser == null) {
         throw Exception('Usuario no autenticado');
       }
 
-      // Obtener estadísticas de entregas
+      // Obtener estadísticas de entregas (máx 200 para cálculos locales)
       final response = await SupabaseConfig.client
           .from('orders')
-          .select('*')
+          .select('id, delivery_fee, delivery_time, created_at')
           .eq('delivery_agent_id', currentUser.id)
-          .eq('status', 'entregado');
-
-      print('📦 [DELIVERY] Stats response: $response');
+          .eq('status', 'entregado')
+          .order('created_at', ascending: false)
+          .limit(200);
 
       if (response is List) {
         final deliveries = List<Map<String, dynamic>>.from(response);
@@ -95,10 +93,9 @@ class _DeliveryEarningsScreenState extends State<DeliveryEarningsScreen> {
           isLoading = false;
         });
         
-        print('✅ [DELIVERY] Stats loaded successfully');
       }
     } catch (e) {
-      print('❌ [DELIVERY] Error loading stats: $e');
+      debugPrint('❌ [DELIVERY] Error loading stats: $e');
       setState(() {
         errorMessage = 'Error al cargar estadísticas: $e';
         isLoading = false;

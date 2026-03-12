@@ -87,7 +87,7 @@ class LocationTrackingService {
         return;
       }
 
-      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
       final lat = pos.latitude;
       final lng = pos.longitude;
 

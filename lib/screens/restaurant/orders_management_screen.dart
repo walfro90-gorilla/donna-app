@@ -43,11 +43,10 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
     super.dispose();
   }
 
-  /// Iniciar auto-refresh cada 8 segundos (más frecuente para garantizar tiempo real)
+  /// Iniciar auto-refresh cada 30 segundos (el realtime activo en esta pantalla cubre cambios urgentes)
   void _startAutoRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 8), (timer) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) {
-        debugPrint('🔄 [RESTAURANT] Auto-refresh ejecutándose...');
         _loadRestaurantAndOrders(showLoading: false);
       }
     });

@@ -348,11 +348,9 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
     }
   }
 
-  /// Iniciar polling cada 6 segundos para dashboard principal
+  /// Iniciar polling cada 30 segundos para dashboard principal (el realtime WebSocket cubre cambios urgentes)
   void _startAutoRefresh() {
-    debugPrint('🔥*-*-*-*-*-*-*-*-START AUTO-REFRESH SETUP*-*-*-*-*-*-*-*🔥');
-    
-    _refreshTimer = Timer.periodic(const Duration(seconds: 6), (timer) async {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
       if (mounted && _selectedIndex == 0) {
         debugPrint('🔄 [RESTAURANT MAIN] Auto-refresh en dashboard principal...');
         

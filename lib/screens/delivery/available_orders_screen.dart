@@ -166,13 +166,12 @@ class _AvailableOrdersScreenState extends State<AvailableOrdersScreen> {
     super.dispose();
   }
 
-  /// Iniciar auto-refresh cada 15 segundos (más frecuente para garantizar tiempo real)
+  /// Iniciar auto-refresh cada 60 segundos (el realtime WebSocket + DeliveryService 30s cubren los cambios urgentes)
   void _startAutoRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (timer) async {
       if (!mounted) return;
-      // Refrescar gate de onboarding de vez en cuando para reflejar aprobaciones del admin
+      // Refrescar gate de onboarding cada 2 ciclos (2 min) para reflejar aprobaciones del admin
       if (timer.tick % 2 == 0) {
-        // cada 30s
         await _loadOnboardingGate();
       }
       await _loadAvailableOrders();

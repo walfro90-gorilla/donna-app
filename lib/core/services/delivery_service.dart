@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:doa_repartos/core/services/base_service.dart';
 import 'package:doa_repartos/core/events/event_bus.dart';
 import 'package:doa_repartos/core/utils/order_status_helper.dart';
@@ -32,7 +33,6 @@ class DeliveryService extends BaseService {
 
   @override
   void onActivate() {
-    print('🚚 [DELIVERY] Repartidor activado: ${currentSession?.email}');
     
     // Emitir evento de activación
     emit(ServiceActivatedEvent(serviceName: serviceName, role: requiredRole));
@@ -49,7 +49,6 @@ class DeliveryService extends BaseService {
 
   @override
   void onDeactivate() {
-    print('🛑 [DELIVERY] Repartidor desactivado');
     
     // Emitir evento de desactivación
     emit(ServiceDeactivatedEvent(serviceName: serviceName, role: requiredRole));
@@ -69,8 +68,6 @@ class DeliveryService extends BaseService {
   void _loadInitialData() async {
     if (!hasAccess()) return;
     
-    print('📊 [DELIVERY] Cargando datos iniciales...');
-    
     try {
       // Cargar órdenes disponibles
       await loadAvailableOrders();
@@ -85,7 +82,7 @@ class DeliveryService extends BaseService {
       await loadEarnings();
       
     } catch (e) {
-      print('❌ [DELIVERY] Error cargando datos iniciales: $e');
+      debugPrint('❌ [DELIVERY] Error cargando datos iniciales: $e');
     }
   }
 
@@ -94,21 +91,10 @@ class DeliveryService extends BaseService {
     if (!hasAccess()) return;
     
     try {
-      print('📋 [DELIVERY] Cargando órdenes disponibles...');
-
-      // Unificar lógica con SupabaseConfig.getAvailableOrdersForDelivery()
-      // Estados válidos: confirmed, in_preparation, ready_for_pickup
       final response = await DoaRepartosService.getAvailableOrdersForDelivery();
-
-      final orders = (response)
-          .map((json) => DoaOrder.fromJson(json))
-          .toList();
-
-      print('✅ [DELIVERY] ${orders.length} órdenes disponibles (confirmed/in_preparation/ready_for_pickup)');
-      _availableOrdersController.add(orders);
-      
+      _availableOrdersController.add(response.map((json) => DoaOrder.fromJson(json)).toList());
     } catch (e) {
-      print('❌ [DELIVERY] Error cargando órdenes disponibles: $e');
+      debugPrint('❌ [DELIVERY] Error cargando órdenes disponibles: $e');
       _availableOrdersController.add([]);
     }
   }
@@ -116,32 +102,16 @@ class DeliveryService extends BaseService {
   /// 🚚 Cargar mis entregas
   Future<void> loadMyDeliveries() async {
     if (!hasAccess() || currentSession?.userId == null) return;
-    
     try {
-      print('🚚 [DELIVERY] Cargando mis entregas asignadas...');
-      
       final response = await SupabaseConfig.client
           .from('orders')
-          .select('*, restaurants(*)')
+          .select('id, status, total_amount, delivery_address, delivery_fee, created_at, updated_at, delivery_time, restaurant_id, user_id, delivery_agent_id, order_notes, payment_method, restaurants(id, name, address, phone)')
           .eq('delivery_agent_id', currentSession!.userId!)
           .order('created_at', ascending: false)
-          .limit(50);
-      
-      final orders = (response as List)
-          .map((json) => DoaOrder.fromJson(json))
-          .toList();
-      
-      print('✅ [DELIVERY] ${orders.length} entregas asignadas cargadas');
-      
-      // Debug: mostrar estados de las órdenes
-      for (var order in orders) {
-        print('📦 [DELIVERY] Orden ${order.id.substring(0, 8)}: ${order.status}');
-      }
-      
-      _myDeliveriesController.add(orders);
-      
+          .limit(30);
+      _myDeliveriesController.add((response as List).map((json) => DoaOrder.fromJson(json)).toList());
     } catch (e) {
-      print('❌ [DELIVERY] Error cargando mis entregas: $e');
+      debugPrint('❌ [DELIVERY] Error cargando mis entregas: $e');
       _myDeliveriesController.add([]);
     }
   }
@@ -149,29 +119,21 @@ class DeliveryService extends BaseService {
   /// 🎯 Verificar entrega activa
   Future<void> checkActiveDelivery() async {
     if (!hasAccess() || currentSession?.userId == null) return;
-    
     try {
-      print('🎯 [DELIVERY] Verificando entrega activa...');
-      
       final response = await SupabaseConfig.client
           .from('orders')
-          .select('*, restaurants(*)')
+          .select('id, status, total_amount, delivery_address, delivery_fee, created_at, restaurant_id, user_id, delivery_agent_id, restaurants(id, name, address, phone)')
           .eq('delivery_agent_id', currentSession!.userId!)
           .inFilter('status', ['in_delivery'])
           .order('created_at', ascending: false)
           .limit(1);
-      
       if (response.isNotEmpty) {
-        final activeDelivery = DoaOrder.fromJson(response.first);
-        print('🎯 [DELIVERY] Entrega activa encontrada: ${activeDelivery.id}');
-        _activeDeliveryController.add(activeDelivery);
+        _activeDeliveryController.add(DoaOrder.fromJson(response.first));
       } else {
-        print('📭 [DELIVERY] No hay entregas activas');
         _activeDeliveryController.add(null);
       }
-      
     } catch (e) {
-      print('❌ [DELIVERY] Error verificando entrega activa: $e');
+      debugPrint('❌ [DELIVERY] Error verificando entrega activa: $e');
       _activeDeliveryController.add(null);
     }
   }
@@ -181,7 +143,6 @@ class DeliveryService extends BaseService {
     if (!hasAccess() || currentSession?.userId == null) return;
     
     try {
-      print('💰 [DELIVERY] Cargando ganancias...');
       
       // Ganancias de hoy
       final todayStart = DateTime.now().copyWith(hour: 0, minute: 0, second: 0);
@@ -222,11 +183,9 @@ class DeliveryService extends BaseService {
         'last_updated': DateTime.now().toIso8601String(),
       };
       
-      print('✅ [DELIVERY] Ganancias cargadas: ${earnings['today_deliveries']} entregas hoy');
       _earningsController.add(earnings);
-      
     } catch (e) {
-      print('❌ [DELIVERY] Error cargando ganancias: $e');
+      debugPrint('❌ [DELIVERY] Error cargando ganancias: $e');
       _earningsController.add({});
     }
   }
@@ -236,15 +195,11 @@ class DeliveryService extends BaseService {
     if (!hasAccess() || currentSession?.userId == null) return false;
     
     try {
-      print('✋ [DELIVERY] Tomando orden: $orderId');
-      // RPC asegura asignación y cambio de estado atomicos respetando RLS
       final ok = await DoaRepartosService.acceptOrder(orderId);
       if (!ok) {
-        print('❌ [DELIVERY] La orden no pudo ser asignada (quizá ya no está disponible)');
+        debugPrint('❌ [DELIVERY] Orden no pudo ser asignada: $orderId');
         return false;
       }
-      
-      print('✅ [DELIVERY] Orden tomada exitosamente');
       
       // Actualizar streams
       await loadAvailableOrders();
@@ -254,7 +209,7 @@ class DeliveryService extends BaseService {
       return true;
       
     } catch (e) {
-      print('❌ [DELIVERY] Error tomando orden: $e');
+      debugPrint('❌ [DELIVERY] Error tomando orden: $e');
       return false;
     }
   }
@@ -264,15 +219,7 @@ class DeliveryService extends BaseService {
     if (!hasAccess()) return false;
     
     try {
-      print('✅ [DELIVERY] Marcando como entregada: $orderId');
-      // Un solo update atómico usando el helper (actualiza delivery_time según schema)
-      await OrderStatusHelper.updateOrderStatus(
-        orderId,
-        'delivered',
-        currentSession?.userId,
-      );
-      
-      print('✅ [DELIVERY] Orden marcada como entregada');
+      await OrderStatusHelper.updateOrderStatus(orderId, 'delivered', currentSession?.userId);
       
       // Actualizar streams
       await loadMyDeliveries();
@@ -282,7 +229,7 @@ class DeliveryService extends BaseService {
       return true;
       
     } catch (e) {
-      print('❌ [DELIVERY] Error marcando como entregada: $e');
+      debugPrint('❌ [DELIVERY] Error marcando como entregada: $e');
       return false;
     }
   }
@@ -295,7 +242,6 @@ class DeliveryService extends BaseService {
         return;
       }
       
-      print('🔄 [DELIVERY] Auto-refresh ejecutándose...');
       loadAvailableOrders();
       checkActiveDelivery();
     });
@@ -305,10 +251,7 @@ class DeliveryService extends BaseService {
   void _listenToEvents() {
     // Escuchar órdenes listas para entrega
     on<OrderReadyEvent>().listen((event) {
-      if (hasAccess()) {
-        print('📡 [DELIVERY] Orden lista para entrega: ${event.orderId}');
-        loadAvailableOrders();
-      }
+      if (hasAccess()) loadAvailableOrders();
     });
   }
 

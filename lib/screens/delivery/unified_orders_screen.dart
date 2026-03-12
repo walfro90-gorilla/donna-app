@@ -176,7 +176,8 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
   }
 
   void _startPeriodicRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+    // 60s: el realtime + my_deliveries timer 30s ya cubren actualizaciones urgentes
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
       if (mounted && _isServiceInitialized) {
         _loadAllOrders();
       }
