@@ -6,6 +6,7 @@ import 'package:doa_repartos/widgets/image_upload_field.dart';
 import 'package:doa_repartos/services/storage_service.dart';
 import 'package:doa_repartos/screens/restaurant/product_edit_screen.dart';
 import 'package:doa_repartos/screens/restaurant/combo_edit_screen.dart';
+import 'package:doa_repartos/screens/restaurant/menu_scanner_screen.dart';
 
 /// Pantalla para gestionar productos del restaurante
 class ProductsManagementScreen extends StatefulWidget {
@@ -492,6 +493,23 @@ class _ProductsManagementScreenState extends State<ProductsManagementScreen> {
                 Navigator.pop(context);
                 final ok = await Navigator.of(context).push<bool>(
                   MaterialPageRoute(builder: (_) => ComboEditScreen(restaurant: _restaurant!)),
+                );
+                if (ok == true) await _loadRestaurantAndProducts(reset: true);
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildAddOption(
+              context,
+              icon: Icons.auto_awesome_rounded,
+              title: 'Escanear menú con IA',
+              subtitle: 'Sube una foto y la IA detecta los platillos',
+              color: Colors.purple,
+              onTap: () async {
+                Navigator.pop(context);
+                final ok = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => MenuScannerScreen(restaurantId: _restaurant!.id),
+                  ),
                 );
                 if (ok == true) await _loadRestaurantAndProducts(reset: true);
               },

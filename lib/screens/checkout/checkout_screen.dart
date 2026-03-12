@@ -333,9 +333,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   double get _subtotal {
+    final commissionRate = 1 + widget.restaurant.commissionBps / 10000;
     return widget.cartItems.entries.fold(0.0, (sum, entry) {
       final product = widget.products.firstWhere((p) => p.id == entry.key);
-      return sum + (product.price * entry.value);
+      return sum + (product.price * commissionRate * entry.value);
     });
   }
 
@@ -417,12 +418,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'order_notes': _notesController.text.trim(),
           'items': widget.cartItems.entries.map((entry) {
             final product = widget.products.firstWhere((p) => p.id == entry.key);
+            final clientPrice = widget.restaurant.clientPrice(product.price);
             return {
               'product_id': entry.key,
               'product_name': product.name,
               'quantity': entry.value,
-              'unit_price': product.price,
-              'price_at_time_of_order': product.price,
+              'unit_price': clientPrice,
+              'price_at_time_of_order': clientPrice,
             };
           }).toList(),
         };
@@ -484,11 +486,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         
         final orderItems = widget.cartItems.entries.map((entry) {
           final product = widget.products.firstWhere((p) => p.id == entry.key);
+          final clientPrice = widget.restaurant.clientPrice(product.price);
           return {
             'product_id': entry.key,
             'quantity': entry.value,
-            'unit_price': product.price,
-            'price_at_time_of_order': product.price,
+            'unit_price': clientPrice,
+            'price_at_time_of_order': clientPrice,
             'created_at': DateTime.now().toIso8601String(),
           };
         }).toList();
@@ -717,7 +720,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 16),
             ..._cartProducts.map((product) {
               final quantity = widget.cartItems[product.id]!;
-              final itemTotal = product.price * quantity;
+              final clientPrice = widget.restaurant.clientPrice(product.price);
+              final itemTotal = clientPrice * quantity;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
@@ -740,7 +744,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(product.name, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-                          Text('${quantity} × \$${product.price.toStringAsFixed(2)} MXN',
+                          Text('${quantity} × \$${clientPrice.toStringAsFixed(2)} MXN',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Theme.of(context).colorScheme.onSurface,
                               )),

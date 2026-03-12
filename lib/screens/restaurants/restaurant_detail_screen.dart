@@ -444,6 +444,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
                                         product: product,
                                         quantity: _cartVN.value[product.id] ?? 0,
                                         orderingEnabled: _hasActiveCouriers,
+                                        commissionBps: widget.restaurant.commissionBps,
                                         onAdd: _hasActiveCouriers
                                             ? () => _addToCart(product.id)
                                             : null,
@@ -761,6 +762,8 @@ class ProductCard extends StatelessWidget {
   final bool orderingEnabled;
   // Optional map to resolve combo item names from product_id
   final Map<String, String>? productNameById;
+  // Commission in basis points (1500 = 15%). Used to calculate client-facing price.
+  final int commissionBps;
 
   const ProductCard({
     super.key,
@@ -770,6 +773,7 @@ class ProductCard extends StatelessWidget {
     required this.onRemove,
     this.orderingEnabled = true,
     this.productNameById,
+    this.commissionBps = 1500,
   });
 
   @override
@@ -883,7 +887,7 @@ class ProductCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '\$${product.price.toStringAsFixed(2)}',
+                        '\$${(product.price * (1 + commissionBps / 10000)).toStringAsFixed(2)}',
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
                                   color: Theme.of(context).colorScheme.primary,
@@ -1030,9 +1034,10 @@ class CartBottomSheet extends StatelessWidget {
   });
 
   double _computeTotal(Map<String, int> items) {
+    final commissionRate = 1 + restaurant.commissionBps / 10000;
     return items.entries.fold(0.0, (sum, entry) {
       final product = products.firstWhere((p) => p.id == entry.key);
-      return sum + (product.price * entry.value);
+      return sum + (product.price * commissionRate * entry.value);
     });
   }
 
@@ -1099,7 +1104,7 @@ class CartBottomSheet extends StatelessWidget {
                                     ),
                               ),
                               Text(
-                                '\$${product.price.toStringAsFixed(2)} c/u',
+                                '\$${(product.price * (1 + restaurant.commissionBps / 10000)).toStringAsFixed(2)} c/u',
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyMedium

@@ -738,6 +738,15 @@ class DoaRestaurant {
       profileCompletionPercentage: profileCompletionPercentage ?? this.profileCompletionPercentage,
     );
   }
+
+  /// Calcula el precio al cliente aplicando la comisión del restaurante.
+  /// [kitchenPrice] es el precio del menú físico del restaurante.
+  /// Retorna kitchenPrice × (1 + commissionBps / 10000).
+  /// Ejemplo: kitchenPrice=$80, commissionBps=1500 → $80 × 1.15 = $92.
+  double clientPrice(double kitchenPrice) => kitchenPrice * (1 + commissionBps / 10000);
+
+  /// Tasa de comisión como decimal (ej: 1500 bps → 0.15)
+  double get commissionRate => commissionBps / 10000;
 }
 
 enum RestaurantStatus {
