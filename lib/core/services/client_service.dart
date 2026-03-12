@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:doa_repartos/core/services/base_service.dart';
 import 'package:doa_repartos/core/events/event_bus.dart';
 import 'package:doa_repartos/core/utils/order_status_helper.dart';
@@ -30,7 +31,6 @@ class ClientService extends BaseService {
 
   @override
   void onActivate() {
-    print('🛍️ [CLIENT] Cliente activado: ${currentSession?.email}');
     
     // Emitir evento de activación
     emit(ServiceActivatedEvent(serviceName: serviceName, role: requiredRole));
@@ -47,7 +47,6 @@ class ClientService extends BaseService {
 
   @override
   void onDeactivate() {
-    print('🛑 [CLIENT] Cliente desactivado');
     
     // Emitir evento de desactivación
     emit(ServiceDeactivatedEvent(serviceName: serviceName, role: requiredRole));
@@ -66,20 +65,12 @@ class ClientService extends BaseService {
   void _loadInitialData() async {
     if (!hasAccess()) return;
     
-    print('📊 [CLIENT] Cargando datos iniciales...');
-    
     try {
-      // Cargar restaurantes
       await loadRestaurants();
-      
-      // Cargar órdenes del cliente
       await loadUserOrders();
-      
-      // Verificar orden activa
       await checkActiveOrder();
-      
     } catch (e) {
-      print('❌ [CLIENT] Error cargando datos iniciales: $e');
+      debugPrint('❌ [CLIENT] Error cargando datos iniciales: $e');
     }
   }
 
@@ -89,22 +80,13 @@ class ClientService extends BaseService {
     if (!hasAccess()) return;
     
     try {
-      print('🏪 [CLIENT] Cargando restaurantes...');
-      
       final response = await SupabaseConfig.client
           .from('restaurants')
-          .select('*')
+          .select('id, name, description, logo_url, cover_image_url, cuisine_type, address, phone, online, status, average_rating, total_reviews, estimated_delivery_time_minutes, delivery_fee, location_lat, location_lon')
           .eq('is_active', true);
-      
-      final restaurants = (response as List)
-          .map((json) => DoaRestaurant.fromJson(json))
-          .toList();
-      
-      print('✅ [CLIENT] ${restaurants.length} restaurantes cargados');
-      _restaurantsController.add(restaurants);
-      
+      _restaurantsController.add((response as List).map((json) => DoaRestaurant.fromJson(json)).toList());
     } catch (e) {
-      print('❌ [CLIENT] Error cargando restaurantes: $e');
+      debugPrint('❌ [CLIENT] Error cargando restaurantes: $e');
       _restaurantsController.add([]);
     }
   }
@@ -119,7 +101,6 @@ class ClientService extends BaseService {
     if (!hasAccess()) return [];
 
     try {
-      print('🔍 [CLIENT] Buscando restaurantes cerca de $lat, $lon ...');
       
       final params = {
         'p_lat': lat,
@@ -135,9 +116,7 @@ class ClientService extends BaseService {
           .map((json) => DoaRestaurant.fromJson(json))
           .toList();
       
-      print('✅ [CLIENT] ${restaurants.length} restaurantes encontrados');
-      
-      // Opcional: Actualizar el stream principal si es una búsqueda general
+      // Actualizar el stream principal si es una búsqueda general
       if (query == null || query.isEmpty) {
         _restaurantsController.add(restaurants);
       }
@@ -145,7 +124,7 @@ class ClientService extends BaseService {
       return restaurants;
       
     } catch (e) {
-      print('❌ [CLIENT] Error buscando restaurantes: $e');
+      debugPrint('❌ [CLIENT] Error buscando restaurantes: $e');
       return [];
     }
   }
@@ -155,29 +134,19 @@ class ClientService extends BaseService {
     if (!hasAccess() || currentSession?.userId == null) return;
     
     try {
-      print('📝 [CLIENT] Cargando órdenes del usuario...');
-      
       final response = await SupabaseConfig.client
           .from('orders')
           .select('''
-            *,
-            user:users!orders_user_id_fkey(*, client_profiles(*)),
-            restaurant:restaurants(*),
-            delivery_agent:users!orders_delivery_agent_id_fkey(*)
+            id, status, total_amount, delivery_address, delivery_fee, created_at, updated_at, delivery_time, order_notes, payment_method, restaurant_id, user_id, delivery_agent_id,
+            restaurant:restaurants(id, name, logo_url, address, phone),
+            delivery_agent:users!orders_delivery_agent_id_fkey(id, name, phone)
           ''')
           .eq('user_id', currentSession!.userId!)
           .order('created_at', ascending: false)
           .limit(20);
-      
-      final orders = (response as List)
-          .map((json) => DoaOrder.fromJson(json))
-          .toList();
-      
-      print('✅ [CLIENT] ${orders.length} órdenes cargadas');
-      _ordersController.add(orders);
-      
+      _ordersController.add((response as List).map((json) => DoaOrder.fromJson(json)).toList());
     } catch (e) {
-      print('❌ [CLIENT] Error cargando órdenes: $e');
+      debugPrint('❌ [CLIENT] Error cargando órdenes: $e');
       _ordersController.add([]);
     }
   }
@@ -187,32 +156,20 @@ class ClientService extends BaseService {
     if (!hasAccess() || currentSession?.userId == null) return;
     
     try {
-      print('🚚 [CLIENT] Verificando orden activa...');
-      
       final response = await SupabaseConfig.client
           .from('orders')
           .select('''
-            *,
-            user:users!orders_user_id_fkey(*, client_profiles(*)),
-            restaurant:restaurants(*),
-            delivery_agent:users!orders_delivery_agent_id_fkey(*)
+            id, status, total_amount, delivery_address, delivery_fee, created_at, order_notes, payment_method, restaurant_id, user_id, delivery_agent_id,
+            restaurant:restaurants(id, name, logo_url, address, phone),
+            delivery_agent:users!orders_delivery_agent_id_fkey(id, name, phone)
           ''')
           .eq('user_id', currentSession!.userId!)
           .inFilter('status', ['pending', 'confirmed', 'in_preparation', 'ready_for_pickup', 'assigned', 'on_the_way'])
           .order('created_at', ascending: false)
           .limit(1);
-      
-      if (response.isNotEmpty) {
-        final activeOrder = DoaOrder.fromJson(response.first);
-        print('🎯 [CLIENT] Orden activa encontrada: ${activeOrder.id}');
-        _activeOrderController.add(activeOrder);
-      } else {
-        print('📭 [CLIENT] No hay órdenes activas');
-        _activeOrderController.add(null);
-      }
-      
+      _activeOrderController.add(response.isNotEmpty ? DoaOrder.fromJson(response.first) : null);
     } catch (e) {
-      print('❌ [CLIENT] Error verificando orden activa: $e');
+      debugPrint('❌ [CLIENT] Error verificando orden activa: $e');
       _activeOrderController.add(null);
     }
   }
@@ -228,7 +185,6 @@ class ClientService extends BaseService {
     if (!hasAccess() || currentSession?.userId == null) return null;
     
     try {
-      print('🛒 [CLIENT] Creando nueva orden...');
       
       final orderData = {
         'user_id': currentSession!.userId,
@@ -248,7 +204,6 @@ class ClientService extends BaseService {
           .single();
       
       final newOrder = DoaOrder.fromJson(response);
-      print('✅ [CLIENT] Orden creada: ${newOrder.id}');
       
       // Actualizar streams
       await loadUserOrders();
@@ -257,7 +212,7 @@ class ClientService extends BaseService {
       return newOrder;
       
     } catch (e) {
-      print('❌ [CLIENT] Error creando orden: $e');
+      debugPrint('❌ [CLIENT] Error creando orden: $e');
       return null;
     }
   }
@@ -267,21 +222,12 @@ class ClientService extends BaseService {
     if (!hasAccess()) return false;
     
     try {
-      print('❌ [CLIENT] Cancelando orden: $orderId');
-      
-      // 🎯 Usar helper estático (con tracking automático)
       await OrderStatusHelper.updateOrderStatus(orderId, 'cancelled', currentSession?.userId);
-      
-      print('✅ [CLIENT] Orden cancelada exitosamente');
-      
-      // Actualizar streams
       await loadUserOrders();
       await checkActiveOrder();
-      
       return true;
-      
     } catch (e) {
-      print('❌ [CLIENT] Error cancelando orden: $e');
+      debugPrint('❌ [CLIENT] Error cancelando orden: $e');
       return false;
     }
   }
@@ -294,7 +240,6 @@ class ClientService extends BaseService {
         return;
       }
       
-      print('🔄 [CLIENT] Auto-refresh ejecutándose...');
       _loadInitialData();
     });
   }
@@ -304,9 +249,9 @@ class ClientService extends BaseService {
     // Escuchar cambios de órdenes en tiempo real
     on<OrderStatusChangedEvent>().listen((event) {
       if (hasAccess() && event.orderUserId == currentSession?.userId) {
-        print('📡 [CLIENT] Orden actualizada: ${event.orderId} -> ${event.newStatus}');
-        loadUserOrders();
+        // Una sola query consolida tanto las órdenes del historial como la activa
         checkActiveOrder();
+        loadUserOrders();
       }
     });
   }

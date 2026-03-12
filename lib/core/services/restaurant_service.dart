@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:doa_repartos/core/registry/service_registry.dart';
 import 'package:doa_repartos/core/events/event_bus.dart';
@@ -25,7 +26,6 @@ class RestaurantService extends BaseService implements RealtimeService {
   
   RestaurantService({required String userId, required UserRole role}) 
       : super(userId: userId, role: role) {
-    print('🏪 [RESTAURANT_SERVICE] Creating service for user: $userId');
   }
 
   // ===== GETTERS =====
@@ -41,7 +41,6 @@ class RestaurantService extends BaseService implements RealtimeService {
   // ===== INICIALIZACIÓN =====
   @override
   Future<void> startListening() async {
-    print('🎯 [RESTAURANT_SERVICE] Starting realtime listening for user: $userId');
     
     try {
       // Cargar datos iniciales
@@ -52,17 +51,14 @@ class RestaurantService extends BaseService implements RealtimeService {
       // Configurar suscripciones en tiempo real
       await _setupRealtimeSubscriptions();
       
-      print('✅ [RESTAURANT_SERVICE] Realtime listening started successfully');
-      
     } catch (e) {
-      print('❌ [RESTAURANT_SERVICE] Error starting realtime: $e');
+      debugPrint('❌ [RESTAURANT_SERVICE] Error starting realtime: $e');
       publishError('Failed to start restaurant service', 'RestaurantService.startListening', e);
     }
   }
 
   @override
   Future<void> stopListening() async {
-    print('🛑 [RESTAURANT_SERVICE] Stopping realtime listening for user: $userId');
     
     await _ordersSubscription?.cancel();
     await _productsSubscription?.cancel();
@@ -70,62 +66,46 @@ class RestaurantService extends BaseService implements RealtimeService {
     _ordersSubscription = null;
     _productsSubscription = null;
     
-    print('✅ [RESTAURANT_SERVICE] Realtime listening stopped');
   }
 
   // ===== CARGA DE DATOS =====
   Future<void> _loadRestaurantData() async {
-    print('🔄 [RESTAURANT_SERVICE] Loading restaurant data for owner: $userId');
-    
     try {
       final response = await _supabase
           .from('restaurants')
-          .select()
+          .select('id, name, description, logo_url, cover_image_url, cuisine_type, address, phone, online, status, profile_completion_percentage, delivery_fee, estimated_delivery_time_minutes')
           .eq('owner_id', userId)
           .single();
-      
       _currentRestaurant = DoaRestaurant.fromJson(response);
-      print('✅ [RESTAURANT_SERVICE] Restaurant loaded: ${_currentRestaurant?.name}');
-      
     } catch (e) {
-      print('⚠️ [RESTAURANT_SERVICE] No restaurant found for user: $userId');
       _currentRestaurant = null;
     }
   }
 
   Future<void> _loadOrders() async {
     if (_currentRestaurant == null) return;
-    
-    print('🔄 [RESTAURANT_SERVICE] Loading orders for restaurant: ${_currentRestaurant!.id}');
-    
     try {
       final response = await _supabase
           .from('orders')
-          .select('*, order_items(*)')
+          .select('id, status, total_amount, delivery_address, delivery_fee, created_at, updated_at, user_id, delivery_agent_id, order_notes, payment_method, order_items(id, product_id, quantity, unit_price, price_at_time_of_order)')
           .eq('restaurant_id', _currentRestaurant!.id)
-          .order('created_at', ascending: false);
-      
+          .order('created_at', ascending: false)
+          .limit(50);
       _currentOrders = response.map((data) => DoaOrder.fromJson(data)).toList();
       _ordersController.add(_currentOrders);
-      
       publishDataUpdate('orders', {'count': _currentOrders.length});
-      print('✅ [RESTAURANT_SERVICE] Loaded ${_currentOrders.length} orders');
-      
     } catch (e) {
-      print('❌ [RESTAURANT_SERVICE] Error loading orders: $e');
+      debugPrint('❌ [RESTAURANT_SERVICE] Error loading orders: $e');
       publishError('Failed to load orders', 'RestaurantService._loadOrders', e);
     }
   }
 
   Future<void> _loadProducts() async {
     if (_currentRestaurant == null) return;
-    
-    print('🔄 [RESTAURANT_SERVICE] Loading products for restaurant: ${_currentRestaurant!.id}');
-    
     try {
       final response = await _supabase
           .from('products')
-          .select()
+          .select('id, name, description, price, image_url, category, is_active, restaurant_id')
           .eq('restaurant_id', _currentRestaurant!.id)
           .eq('is_active', true)
           .order('name', ascending: true);
@@ -134,10 +114,9 @@ class RestaurantService extends BaseService implements RealtimeService {
       _productsController.add(_currentProducts);
       
       publishDataUpdate('products', {'count': _currentProducts.length});
-      print('✅ [RESTAURANT_SERVICE] Loaded ${_currentProducts.length} products');
       
     } catch (e) {
-      print('❌ [RESTAURANT_SERVICE] Error loading products: $e');
+      debugPrint('❌ [RESTAURANT_SERVICE] Error loading products: $e');
       publishError('Failed to load products', 'RestaurantService._loadProducts', e);
     }
   }
@@ -146,7 +125,6 @@ class RestaurantService extends BaseService implements RealtimeService {
   Future<void> _setupRealtimeSubscriptions() async {
     if (_currentRestaurant == null) return;
     
-    print('📡 [RESTAURANT_SERVICE] Setting up realtime subscriptions...');
     
     // Suscripción a órdenes
     _ordersSubscription = _supabase
@@ -162,11 +140,9 @@ class RestaurantService extends BaseService implements RealtimeService {
         .eq('restaurant_id', _currentRestaurant!.id)
         .listen(_onProductsChanged);
     
-    print('✅ [RESTAURANT_SERVICE] Realtime subscriptions configured');
   }
 
   void _onOrdersChanged(List<Map<String, dynamic>> data) {
-    print('📨 [RESTAURANT_SERVICE] Orders updated - ${data.length} records');
     
     try {
       _currentOrders = data.map((item) => DoaOrder.fromJson(item)).toList();
@@ -178,12 +154,11 @@ class RestaurantService extends BaseService implements RealtimeService {
       });
       
     } catch (e) {
-      print('❌ [RESTAURANT_SERVICE] Error processing orders update: $e');
+      debugPrint('❌ [RESTAURANT_SERVICE] Error processing orders update: $e');
     }
   }
 
   void _onProductsChanged(List<Map<String, dynamic>> data) {
-    print('📦 [RESTAURANT_SERVICE] Products updated - ${data.length} records');
     
     try {
       _currentProducts = data.map((item) => DoaProduct.fromJson(item)).toList();
@@ -195,13 +170,12 @@ class RestaurantService extends BaseService implements RealtimeService {
       });
       
     } catch (e) {
-      print('❌ [RESTAURANT_SERVICE] Error processing products update: $e');
+      debugPrint('❌ [RESTAURANT_SERVICE] Error processing products update: $e');
     }
   }
 
   // ===== OPERACIONES CRUD =====
   Future<bool> updateOrderStatus(String orderId, OrderStatus newStatus) async {
-    print('🔄 [RESTAURANT_SERVICE] Updating order $orderId to ${newStatus.toString()}');
     
     try {
       // 🎯 Usar helper estático (con tracking automático)
@@ -212,33 +186,29 @@ class RestaurantService extends BaseService implements RealtimeService {
       );
       
       if (success) {
-        print('✅ [RESTAURANT_SERVICE] Order status updated successfully');
         return true;
       } else {
-        print('❌ [RESTAURANT_SERVICE] Failed to update order status');
         return false;
       }
       
     } catch (e) {
-      print('❌ [RESTAURANT_SERVICE] Error updating order status: $e');
+      debugPrint('❌ [RESTAURANT_SERVICE] Error updating order status: $e');
       publishError('Failed to update order status', 'RestaurantService.updateOrderStatus', e);
       return false;
     }
   }
 
   Future<bool> createProduct(DoaProduct product) async {
-    print('🔄 [RESTAURANT_SERVICE] Creating new product: ${product.name}');
     
     try {
       await _supabase
           .from('products')
           .insert(product.toJson());
       
-      print('✅ [RESTAURANT_SERVICE] Product created successfully');
       return true;
       
     } catch (e) {
-      print('❌ [RESTAURANT_SERVICE] Error creating product: $e');
+      debugPrint('❌ [RESTAURANT_SERVICE] Error creating product: $e');
       publishError('Failed to create product', 'RestaurantService.createProduct', e);
       return false;
     }
@@ -247,7 +217,6 @@ class RestaurantService extends BaseService implements RealtimeService {
   // ===== CLEANUP =====
   @override
   Future<void> dispose() async {
-    print('🗑️ [RESTAURANT_SERVICE] Disposing restaurant service for user: $userId');
     
     await stopListening();
     
@@ -260,7 +229,6 @@ class RestaurantService extends BaseService implements RealtimeService {
     _currentProducts.clear();
     
     await super.dispose();
-    print('✅ [RESTAURANT_SERVICE] Restaurant service disposed');
   }
 }
 

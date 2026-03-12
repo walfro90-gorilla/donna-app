@@ -46,8 +46,6 @@ class PollingService {
 
   /// Inicializar servicio de polling inteligente
   Future<void> initialize(String userId, UserRole userRole) async {
-    debugPrint('🎯 [POLLING] ===== INICIALIZANDO POLLING INTELIGENTE =====');
-    
     _currentUserId = userId;
     _currentUserRole = userRole;
     _isActive = true;
@@ -67,9 +65,6 @@ class PollingService {
     // Iniciar polling con estrategia inteligente
     _startIntelligentPolling();
     
-    debugPrint('✅ [POLLING] Servicio inteligente inicializado');
-    debugPrint('👤 [POLLING] Usuario: $userId, Rol: $userRole');
-    debugPrint('⏱️ [POLLING] Intervalo inicial: ${_currentInterval}s');
   }
   
   /// Iniciar polling con estrategia inteligente
@@ -94,7 +89,6 @@ class PollingService {
       }
     });
     
-    debugPrint('🎯 [POLLING] Timer iniciado con intervalo ${_currentInterval}s');
   }
   
   /// Evaluar si necesitamos activar modo respaldo
@@ -114,14 +108,7 @@ class PollingService {
     
     if (shouldActivateBackup != _isBackupMode) {
       _isBackupMode = shouldActivateBackup;
-      
-      if (_isBackupMode) {
-        debugPrint('🆘 [POLLING] ===== MODO RESPALDO ACTIVADO =====');
-        debugPrint('🔄 [POLLING] Realtime inactivo - Polling tomará control');
-      } else {
-        debugPrint('✅ [POLLING] ===== VOLVIENDO A MODO NORMAL =====');
-        debugPrint('📡 [POLLING] Realtime funcionando - Polling en modo pasivo');
-      }
+      debugPrint(_isBackupMode ? '🆘 [POLLING] Modo respaldo activado' : '✅ [POLLING] Modo normal restaurado');
     }
   }
   
@@ -145,7 +132,6 @@ class PollingService {
     }
     
     if (newInterval != _currentInterval) {
-      debugPrint('⏱️ [POLLING] Ajustando intervalo: ${_currentInterval}s → ${newInterval}s');
       _currentInterval = newInterval;
     }
   }
@@ -161,7 +147,6 @@ class PollingService {
   
   /// Reiniciar el timer con nuevo intervalo
   void _restartPollingTimer() {
-    debugPrint('🔄 [POLLING] Reiniciando timer con intervalo ${_currentInterval}s');
     _pollingTimer?.cancel();
     _startIntelligentPolling();
   }
@@ -170,9 +155,7 @@ class PollingService {
   void notifyRealtimeActivity() {
     _lastRealtimeEvent = DateTime.now();
     
-    // Si estábamos en modo respaldo, volver a normal
     if (_isBackupMode) {
-      debugPrint('📡 [POLLING] Realtime activo detectado - Desactivando respaldo');
       _isBackupMode = false;
     }
   }
@@ -180,23 +163,8 @@ class PollingService {
   /// Verificar todos los cambios (método unificado)
   Future<void> _checkForChanges() async {
     try {
-      final stopwatch = Stopwatch()..start();
-      
-      if (_isBackupMode) {
-        debugPrint('🆘 [POLLING] Verificando cambios (MODO RESPALDO)');
-      } else {
-        debugPrint('🔍 [POLLING] Verificando cambios (modo normal)');
-      }
-      
-      // Verificar órdenes
       await _checkForOrderChanges();
-      
-      // Verificar restaurantes
       await _checkForRestaurantChanges();
-      
-      stopwatch.stop();
-      debugPrint('⏱️ [POLLING] Verificación completada en ${stopwatch.elapsedMilliseconds}ms');
-      
     } catch (e) {
       debugPrint('❌ [POLLING] Error en verificación: $e');
     }
@@ -205,15 +173,13 @@ class PollingService {
   /// Cargar órdenes iniciales para establecer baseline
   Future<void> _loadInitialOrders() async {
     try {
-      debugPrint('📊 [POLLING] Cargando órdenes iniciales...');
-      
+        
       final orders = await _fetchOrdersForUser();
       _cachedOrders = orders;
       _cachedOrderStatuses = {
         for (var order in orders) order.id: order.status
       };
       
-      debugPrint('✅ [POLLING] ${orders.length} órdenes cargadas en cache inicial');
     } catch (e) {
       debugPrint('❌ [POLLING] Error cargando órdenes iniciales: $e');
     }
@@ -237,9 +203,7 @@ class PollingService {
         // Detectar actualizaciones de estado
         await _detectOrderUpdates(currentOrders);
 
-        // Notificar refresh si hay cambios
         if (_hasOrderChanges(currentOrders)) {
-          debugPrint('🔄 [POLLING] Cambios detectados - Enviando refresh');
           _refreshDataController.add(null);
         }
 
@@ -280,26 +244,14 @@ class PollingService {
     final newOrders = currentOrders.where((order) => !cachedIds.contains(order.id)).toList();
     
     for (var newOrder in newOrders) {
-      debugPrint('🆕 [POLLING] NUEVA ORDEN DETECTADA: ${newOrder.id.substring(0, 8)}');
-      debugPrint('🏪 [POLLING] Restaurante: ${newOrder.restaurantId}');
-      debugPrint('👤 [POLLING] Cliente: ${newOrder.user?.name}');
-      debugPrint('💰 [POLLING] Total: \$${newOrder.totalAmount}');
-      
-      // Enviar notificación de nueva orden
       _newOrdersController.add(newOrder);
       
       // Si es para restaurantes y la orden está pendiente
       if (_currentUserRole == UserRole.restaurant && newOrder.status == OrderStatus.pending) {
-        debugPrint('🔔 [POLLING] Enviando notificación de nuevo pedido a restaurante');
-        // Sonido de alerta para restaurante
         unawaited(AlertSoundService.instance.playRestaurantNewOrder());
       }
-      
-      // Si es para repartidores y la orden está confirmada
       if (_currentUserRole == UserRole.delivery_agent && newOrder.status == OrderStatus.confirmed) {
-        debugPrint('🚚 [POLLING] Enviando notificación de orden confirmada a repartidor');
         _confirmedOrdersController.add(newOrder);
-        // Sonido de alerta para repartidor
         unawaited(AlertSoundService.instance.playDeliveryNewOrder());
       }
     }
@@ -311,16 +263,11 @@ class PollingService {
       final previousStatus = _cachedOrderStatuses[currentOrder.id];
       
       if (previousStatus != null && previousStatus != currentOrder.status) {
-        debugPrint('🔄 [POLLING] CAMBIO DE ESTADO DETECTADO: ${currentOrder.id.substring(0, 8)}');
-        debugPrint('📊 [POLLING] Status: $previousStatus -> ${currentOrder.status}');
-        
-        // Enviar notificación de actualización
         _orderUpdatesController.add(currentOrder);
         
         // Si cambió de pending a confirmed, notificar a repartidores
-        if (previousStatus == OrderStatus.pending && 
+        if (previousStatus == OrderStatus.pending &&
             currentOrder.status == OrderStatus.confirmed) {
-          debugPrint('🚚 [POLLING] Orden confirmada, notificando a repartidores');
           _confirmedOrdersController.add(currentOrder);
         }
       }
@@ -469,8 +416,6 @@ class PollingService {
   /// Cargar restaurantes iniciales para establecer baseline
   Future<void> _loadInitialRestaurants() async {
     try {
-      debugPrint('🏪 [POLLING] Cargando restaurantes iniciales...');
-      
       // CRÍTICO: Obtener TODOS los restaurantes aprobados (online Y offline)
       // para poder detectar cambios de estado correctamente
       final restaurants = await DoaRepartosService.getRestaurants(status: 'approved');
@@ -478,9 +423,6 @@ class PollingService {
       _cachedRestaurantOnlineStatus = {
         for (var restaurant in restaurants) restaurant.id: restaurant.online
       };
-      
-      debugPrint('✅ [POLLING] ${restaurants.length} restaurantes cargados en cache inicial');
-      debugPrint('📊 [POLLING] Online: ${restaurants.where((r) => r.online).length}, Offline: ${restaurants.where((r) => !r.online).length}');
     } catch (e) {
       debugPrint('❌ [POLLING] Error cargando restaurantes iniciales: $e');
     }
@@ -497,17 +439,10 @@ class PollingService {
       // CRÍTICO: Obtener TODOS los restaurantes aprobados (online Y offline)
       final currentRestaurants = await DoaRepartosService.getRestaurants(status: 'approved');
 
-      // Solo procesar cambios si estamos en modo respaldo o es verificación inicial
       if (_isBackupMode || _cachedRestaurants.isEmpty) {
-        debugPrint('🏪 [POLLING] Verificando restaurantes (${_isBackupMode ? 'RESPALDO' : 'inicial'})');
-        debugPrint('📊 [POLLING] Total: ${currentRestaurants.length}, Online: ${currentRestaurants.where((r) => r.online).length}');
-
-        // Detectar cambios de estado
         final hasChanges = await _detectRestaurantStatusChanges(currentRestaurants);
 
-        // Notificar solo si hay cambios
         if (hasChanges) {
-          debugPrint('🔔 [POLLING] Cambios en restaurantes - Enviando notificación');
           _restaurantsUpdatedController.add(null);
         }
 
@@ -530,43 +465,24 @@ class PollingService {
       final previousStatus = _cachedRestaurantOnlineStatus[currentRestaurant.id];
       
       if (previousStatus != null && previousStatus != currentRestaurant.online) {
-        debugPrint('🔄 [POLLING] ===== CAMBIO CRÍTICO DETECTADO =====');
-        debugPrint('🏪 [POLLING] Restaurante: ${currentRestaurant.name}');
-        debugPrint('📊 [POLLING] Estado: $previousStatus → ${currentRestaurant.online}');
-        
         hasChanges = true;
-        
-        if (currentRestaurant.online) {
-          debugPrint('✅ [POLLING] 🟢 ${currentRestaurant.name} → ONLINE');
-        } else {
-          debugPrint('❌ [POLLING] 🔴 ${currentRestaurant.name} → OFFLINE');
-        }
       }
     }
-    
-    if (!hasChanges && _isBackupMode) {
-      debugPrint('🔍 [POLLING] Sin cambios en restaurantes (${currentRestaurants.length} verificados)');
-    }
-    
+
     return hasChanges;
   }
 
   /// Detener el servicio de polling
   void stop() {
-    debugPrint('🛑 [POLLING] Deteniendo servicio inteligente...');
     _isActive = false;
     _isBackupMode = false;
     _pollingTimer?.cancel();
     _pollingTimer = null;
     _lastRealtimeEvent = null;
-    
-    // Limpiar cache
     _cachedOrders.clear();
     _cachedOrderStatuses.clear();
     _cachedRestaurants.clear();
     _cachedRestaurantOnlineStatus.clear();
-    
-    debugPrint('✅ [POLLING] Servicio inteligente detenido');
   }
 
   /// Verificar si el servicio está activo
