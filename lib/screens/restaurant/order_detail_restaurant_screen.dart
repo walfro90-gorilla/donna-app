@@ -918,11 +918,11 @@ class _OrderDetailRestaurantScreenState
       final deliveryFee = _currentOrder!.deliveryFee ?? 0.0;
       final newTotal = newSubtotal + deliveryFee;
 
-      // 3. Actualizar orders.total_amount y orders.subtotal
+      // 3. Actualizar orders.total_amount
+      // (subtotal es columna generada: GREATEST(total_amount - delivery_fee, 0), no se puede escribir)
       await SupabaseConfig.client
           .from('orders')
-          .update({'total_amount': newTotal, 'subtotal': newSubtotal}).eq(
-              'id', widget.order.id);
+          .update({'total_amount': newTotal}).eq('id', widget.order.id);
 
       // 4. Actualizar estado local
       setState(() {
