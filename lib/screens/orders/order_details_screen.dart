@@ -364,8 +364,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(_order.status);
-    // Calcular totales usando unit_price (precio canónico por unidad)
+    // Calcular totales usando solo ítems activos (excluir quitados por la cocina)
     final itemsTotal = (_order.orderItems ?? [])
+        .where((it) => !it.isRemoved)
         .fold<double>(0.0, (sum, it) => sum + (it.effectiveUnitPrice * it.quantity));
     final deliveryFee = _order.deliveryFee
         ?? _order.restaurant?.deliveryFee
@@ -613,67 +614,143 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               _SectionCard(
                 title: 'Productos',
                 icon: Icons.shopping_bag,
-                child: Column(
-                  children: (_order.orderItems ?? []).map((item) {
-                    final unitPrice = item.effectiveUnitPrice;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Center(
+                child: Builder(builder: (context) {
+                  final allItems = _order.orderItems ?? [];
+                  final removedItems = allItems.where((i) => i.isRemoved).toList();
+                  final activeItems = allItems.where((i) => !i.isRemoved).toList();
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Banner si hay ítems quitados por la cocina
+                      if (removedItems.isNotEmpty) ...[
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.orange.shade300),
+                          ),
+                          child: Row(children: [
+                            Icon(Icons.info_outline,
+                                color: Colors.orange.shade700, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
                               child: Text(
-                                '${item.quantity}x',
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
+                                removedItems.length == 1
+                                    ? 'Un platillo fue quitado por el restaurante. Tu total fue ajustado.'
+                                    : '${removedItems.length} platillos fueron quitados por el restaurante. Tu total fue ajustado.',
+                                style: TextStyle(
+                                    color: Colors.orange.shade800,
+                                    fontSize: 13,
+                                    height: 1.3),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.product?.name ?? 'Producto no disponible',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
+                          ]),
+                        ),
+                      ],
+
+                      // Lista de ítems activos
+                      ...activeItems.map((item) {
+                        final unitPrice = item.effectiveUnitPrice;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${item.quantity}x',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                        ),
                                   ),
                                 ),
-                                if (item.product?.description != null) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    item.product?.description ?? '',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.product?.name ??
+                                          'Producto no disponible',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w600),
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ],
-                            ),
+                                    if (item.product?.description != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        item.product?.description ?? '',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.7),
+                                            ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '\$${(item.quantity * unitPrice).toStringAsFixed(2)}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
+                                    ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            '\$${(item.quantity * unitPrice).toStringAsFixed(2)}',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+                        );
+                      }),
+
+                      // Nota al pie si hay quitados
+                      if (removedItems.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '+ ${removedItems.length} ${removedItems.length == 1 ? "platillo quitado" : "platillos quitados"}',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                                fontStyle: FontStyle.italic),
                           ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
+                        ),
+                    ],
+                  );
+                }),
               ),
 
               const SizedBox(height: 16),

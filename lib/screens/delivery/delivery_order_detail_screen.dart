@@ -67,6 +67,7 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
               quantity,
               price,
               product_id,
+              is_removed,
               product:products (
                 name,
                 description,
@@ -522,6 +523,11 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
   }
 
   Widget _buildProductsCard(List<dynamic> items) {
+    final removedCount =
+        items.where((i) => i['is_removed'] == true).length;
+    final activeItems =
+        items.where((i) => i['is_removed'] != true).toList();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -546,19 +552,69 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          ...items.map((item) {
+          const SizedBox(height: 12),
+
+          // Banner ORDEN PARCIAL — visible para el repartidor
+          if (removedCount > 0) ...[
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 14),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.shade300),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      color: Colors.red.shade600, size: 22),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '⚠️ ORDEN PARCIAL',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red.shade700,
+                              fontSize: 13),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          removedCount == 1
+                              ? '1 platillo fue quitado por la cocina. Entrega solo lo que aparece abajo.'
+                              : '$removedCount platillos fueron quitados por la cocina. Entrega solo lo que aparece abajo.',
+                          style: TextStyle(
+                              color: Colors.red.shade600,
+                              fontSize: 12,
+                              height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // Solo ítems activos
+          ...activeItems.map((item) {
             final product = item['product'] ?? {};
             final quantity = item['quantity'] ?? 1;
             final price = (item['price'] ?? 0.0).toDouble();
-            
+
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                border:
+                    Border.all(color: Colors.grey.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
@@ -569,7 +625,8 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
                       color: Colors.orange.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.restaurant, color: Colors.orange, size: 20),
+                    child: Icon(Icons.restaurant,
+                        color: Colors.orange, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

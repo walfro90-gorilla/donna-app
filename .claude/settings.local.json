@@ -23,7 +23,13 @@
       "Bash(cmd.exe /c \"flutter analyze lib/screens/restaurants/restaurant_detail_screen.dart lib/models/doa_models.dart 2>&1\")",
       "Bash(cmd.exe /c \"flutter analyze 2>&1\")",
       "Bash(powershell.exe -Command \"flutter analyze\")",
-      "Bash(cmd.exe /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze\")"
+      "Bash(cmd.exe /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze\")",
+      "Bash(cmd.exe /c \"supabase --version\")",
+      "Bash(cmd.exe /c \"where supabase && supabase --version\")",
+      "Bash(cmd.exe /c \"supabase.exe --version 2>&1 || npx supabase --version 2>&1\")",
+      "Bash(cmd.exe /c \"supabase --version && echo OK\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(cmd.exe /c \"dir C:\\\\ProgramData\\\\chocolatey\\\\bin\\\\supabase* 2>&1 & dir C:\\\\Users\\\\walfr\\\\scoop\\\\shims\\\\supabase* 2>&1 & where.exe supabase 2>&1\")"
     ]
   }
 }

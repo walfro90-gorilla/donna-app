@@ -64,10 +64,14 @@ class _OrderDetailRestaurantScreenState
       final items = rawList.map((item) => DoaOrderItem.fromJson(item)).toList();
 
       // Cargar IDs de ítems ya quitados en DB
-      final removedIds = rawList
-          .where((r) => r['is_removed'] == true)
-          .map((r) => r['id'].toString())
-          .toSet();
+      // Comparación defensiva: el campo puede llegar como bool true o string 'true'
+      final removedIds = <String>{};
+      for (final raw in rawList) {
+        final val = raw['is_removed'];
+        if (val == true || val == 'true') {
+          removedIds.add(raw['id'].toString());
+        }
+      }
 
       if (mounted) {
         setState(() {

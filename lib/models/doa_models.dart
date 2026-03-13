@@ -1328,6 +1328,7 @@ class DoaOrderItem {
   final int quantity;
   final double priceAtTimeOfOrder;
   final double unitPrice;
+  final bool isRemoved;
   final DateTime createdAt;
   final DoaProduct? product;
 
@@ -1338,6 +1339,7 @@ class DoaOrderItem {
     required this.quantity,
     required this.priceAtTimeOfOrder,
     double? unitPrice,
+    this.isRemoved = false,
     required this.createdAt,
     this.product,
   }) : unitPrice = unitPrice ?? priceAtTimeOfOrder;
@@ -1363,6 +1365,7 @@ class DoaOrderItem {
         quantity: json['quantity'] ?? 0,
         priceAtTimeOfOrder: priceAtOrder,
         unitPrice: unitPriceRaw ?? priceAtOrder,
+        isRemoved: json['is_removed'] as bool? ?? false,
         createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
