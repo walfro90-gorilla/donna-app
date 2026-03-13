@@ -13,6 +13,7 @@ import 'package:doa_repartos/screens/restaurant/restaurant_balance_screen.dart';
 import 'package:doa_repartos/screens/profile/profile_screen.dart';
 import 'package:doa_repartos/widgets/profile_completion_card.dart';
 import 'package:doa_repartos/widgets/welcome_onboarding_card.dart';
+import 'package:doa_repartos/core/utils/business_hours_helper.dart';
 import 'package:doa_repartos/services/onboarding_notification_service.dart';
 import 'package:doa_repartos/core/theme/app_theme_controller.dart';
 
@@ -874,6 +875,26 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
       }
     }
     
+    // Verificar si el horario automático está activo
+    if (_restaurant!.businessHoursEnabled) {
+      final decision = await _showAutoModeWarningDialog(newOnlineStatus);
+      if (decision == null) return; // Canceló
+      if (decision == true) {
+        // Desactivar auto-mode antes del toggle manual
+        try {
+          await SupabaseConfig.client
+              .from('restaurants')
+              .update({'business_hours_enabled': false})
+              .eq('id', _restaurant!.id);
+          _restaurant = _restaurant!.copyWith(businessHoursEnabled: false);
+          debugPrint('✅ [TOGGLE] Horario automático desactivado');
+        } catch (e) {
+          debugPrint('❌ [TOGGLE] Error desactivando horario: $e');
+        }
+      }
+      // decision == false = "solo esta vez": continúa con toggle normal
+    }
+
     // Mostrar modal de confirmación
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1044,6 +1065,125 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
         ),
       );
     }
+  }
+
+  /// Banner que muestra el estado del horario automático activo
+  Widget _buildScheduleStatusBanner() {
+    final hours  = _restaurant?.businessHours;
+    final tz     = _restaurant?.timezone ?? 'America/Mexico_City';
+    final isOpen = BusinessHoursHelper.isCurrentlyOpen(hours, tz);
+    final label  = BusinessHoursHelper.nextEventLabel(hours, tz);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: (isOpen ? Colors.green : Colors.orange).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: (isOpen ? Colors.green : Colors.orange).withValues(alpha: 0.4),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.schedule,
+            color: isOpen ? Colors.green.shade700 : Colors.orange.shade700,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Horario Automático Activo',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isOpen ? Colors.green.shade800 : Colors.orange.shade800,
+                    fontSize: 13,
+                  ),
+                ),
+                if (label != null)
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isOpen ? Colors.green.shade700 : Colors.orange.shade700,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => _onItemTapped(4),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Editar', style: TextStyle(fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Diálogo de advertencia cuando se intenta hacer toggle manual con horario activo.
+  /// Retorna:
+  ///   true  = desactivar horario automático y aplicar toggle manual
+  ///   false = "solo esta vez" — aplicar toggle pero mantener horario activo
+  ///   null  = cancelado
+  Future<bool?> _showAutoModeWarningDialog(bool newStatus) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Horario Automático Activo',
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Tu restaurante está controlado por un horario automático.\n\n'
+          'Si cambias el estado manualmente, el horario podría revertirlo '
+          'en los próximos 5 minutos.\n\n'
+          '¿Qué deseas hacer?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Solo esta vez'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text(
+              'Desactivar Horario',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Helper para items de confirmación
@@ -1404,6 +1544,12 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
                   },
                 ),
               
+              // Banner de horario automático
+              if (_restaurant != null && _restaurant!.businessHoursEnabled) ...[
+                _buildScheduleStatusBanner(),
+                const SizedBox(height: 16),
+              ],
+
               const SizedBox(height: 16),
 
               // Métricas en Tiempo Real (Relocalizada arriba)

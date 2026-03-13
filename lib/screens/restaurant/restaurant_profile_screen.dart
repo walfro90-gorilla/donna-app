@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:doa_repartos/models/doa_models.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
+import 'package:doa_repartos/widgets/business_hours_editor.dart';
 import 'package:doa_repartos/widgets/address_picker_modal.dart';
 import 'package:doa_repartos/widgets/image_upload_field.dart';
 import 'package:doa_repartos/widgets/phone_dial_input.dart';
@@ -89,8 +90,10 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
   OnboardingStatus? _onboardingStatus;
   bool _loadingChecklist = false;
   
-  // Horario de negocio (simplificado por ahora)
+  // Horario de negocio
   Map<String, dynamic>? _businessHours;
+  bool _businessHoursEnabled = false;
+  String _timezone = 'America/Mexico_City';
 
   @override
   void initState() {
@@ -167,6 +170,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
         
         // Horario de negocio
         _businessHours = _restaurant!.businessHours;
+        _businessHoursEnabled = _restaurant!.businessHoursEnabled;
+        _timezone = _restaurant!.timezone;
 
         // Calcular checklist/porcentaje igual que en el dashboard principal
         _loadingChecklist = true;
@@ -397,6 +402,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
             : _cuisineTypeController.text.trim(),
         'online': _isOnline,
         'business_hours': _businessHours,
+        'business_hours_enabled': _businessHoursEnabled,
+        'timezone': _timezone,
         'status': 'pending', // Nuevo restaurante siempre pending
         'updated_at': DateTime.now().toIso8601String(),
       };
@@ -1196,16 +1203,17 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
     );
   }
 
-  /// Sección: Toggle Online/Offline
+  /// Sección: Toggle Online/Offline + Horario Automático
   Widget _buildToggleOnlineSection() {
     return _buildSection(
-      title: 'Estado de Operación',
+      title: 'Estado de Operación y Horario',
       icon: Icons.power_settings_new,
       children: [
+        // Toggle manual de online/offline (siempre disponible)
         SwitchListTile(
           title: const Text('Restaurante en Línea'),
-          subtitle: Text(_isOnline 
-              ? 'Aceptando pedidos' 
+          subtitle: Text(_isOnline
+              ? 'Aceptando pedidos'
               : 'No aceptando pedidos'),
           value: _isOnline,
           onChanged: (value) => setState(() => _isOnline = value),
@@ -1215,6 +1223,24 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
             color: _isOnline ? Colors.green : Colors.grey,
           ),
         ),
+        const Divider(height: 24),
+        // Editor de horario automático
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: BusinessHoursEditorWidget(
+            initialHours: _businessHours,
+            initialEnabled: _businessHoursEnabled,
+            initialTimezone: _timezone,
+            onChanged: (hours, enabled, tz) {
+              setState(() {
+                _businessHours = hours;
+                _businessHoursEnabled = enabled;
+                _timezone = tz;
+              });
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
       ],
     );
   }

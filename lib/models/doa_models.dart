@@ -427,6 +427,8 @@ class DoaRestaurant {
   // Business details
   final String? cuisineType;
   final Map<String, dynamic>? businessHours;
+  final bool businessHoursEnabled;
+  final String timezone;
   final double? deliveryRadiusKm;
   final double? minOrderAmount;
   final int? estimatedDeliveryTimeMinutes;
@@ -479,6 +481,8 @@ class DoaRestaurant {
     this.healthPermitUrl,
     this.cuisineType,
     this.businessHours,
+    this.businessHoursEnabled = false,
+    this.timezone = 'America/Mexico_City',
     this.deliveryRadiusKm,
     this.minOrderAmount,
     this.estimatedDeliveryTimeMinutes,
@@ -539,6 +543,8 @@ class DoaRestaurant {
       healthPermitUrl: json['health_permit_url'],
       cuisineType: json['cuisine_type'],
       businessHours: json['business_hours'] != null ? Map<String, dynamic>.from(json['business_hours']) : null,
+      businessHoursEnabled: json['business_hours_enabled'] ?? false,
+      timezone: json['timezone'] ?? 'America/Mexico_City',
       deliveryRadiusKm: json['delivery_radius_km'] != null ? (json['delivery_radius_km'] as num).toDouble() : null,
       minOrderAmount: json['min_order_amount'] != null ? (json['min_order_amount'] as num).toDouble() : null,
       estimatedDeliveryTimeMinutes: json['estimated_delivery_time_minutes'],
@@ -587,6 +593,8 @@ class DoaRestaurant {
       'health_permit_url': healthPermitUrl,
       'cuisine_type': cuisineType,
       'business_hours': businessHours,
+      'business_hours_enabled': businessHoursEnabled,
+      'timezone': timezone,
       'delivery_radius_km': deliveryRadiusKm,
       'min_order_amount': minOrderAmount,
       'estimated_delivery_time_minutes': estimatedDeliveryTimeMinutes,
@@ -680,6 +688,8 @@ class DoaRestaurant {
     String? healthPermitUrl,
     String? cuisineType,
     Map<String, dynamic>? businessHours,
+    bool? businessHoursEnabled,
+    String? timezone,
     double? deliveryRadiusKm,
     double? minOrderAmount,
     int? estimatedDeliveryTimeMinutes,
@@ -721,6 +731,8 @@ class DoaRestaurant {
       healthPermitUrl: healthPermitUrl ?? this.healthPermitUrl,
       cuisineType: cuisineType ?? this.cuisineType,
       businessHours: businessHours ?? this.businessHours,
+      businessHoursEnabled: businessHoursEnabled ?? this.businessHoursEnabled,
+      timezone: timezone ?? this.timezone,
       deliveryRadiusKm: deliveryRadiusKm ?? this.deliveryRadiusKm,
       minOrderAmount: minOrderAmount ?? this.minOrderAmount,
       estimatedDeliveryTimeMinutes: estimatedDeliveryTimeMinutes ?? this.estimatedDeliveryTimeMinutes,

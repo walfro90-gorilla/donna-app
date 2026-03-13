@@ -1190,6 +1190,31 @@ class DoaRepartosService {
     }
   }
 
+  /// Update restaurant business hours schedule settings atomically.
+  static Future<void> updateRestaurantSchedule(
+    String restaurantId, {
+    required Map<String, dynamic> businessHours,
+    required bool businessHoursEnabled,
+    required String timezone,
+  }) async {
+    try {
+      debugPrint('🔄 [SCHEDULE] Actualizando horario restaurante $restaurantId');
+      await SupabaseConfig.client
+          .from('restaurants')
+          .update({
+            'business_hours': businessHours,
+            'business_hours_enabled': businessHoursEnabled,
+            'timezone': timezone,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', restaurantId);
+      debugPrint('✅ [SCHEDULE] Horario actualizado correctamente');
+    } catch (e) {
+      debugPrint('❌ [SCHEDULE] Error actualizando horario: $e');
+      throw 'Error actualizando horario: ${e.toString()}';
+    }
+  }
+
   /// Get restaurant by user ID
   static Future<Map<String, dynamic>?> getRestaurantByUserId(String userId) async {
     try {

@@ -4,6 +4,7 @@ import 'package:doa_repartos/models/doa_models.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
 import 'package:doa_repartos/screens/orders/order_details_screen.dart';
 import 'package:doa_repartos/screens/admin/admin_account_ledger_screen.dart';
+import 'package:doa_repartos/widgets/business_hours_editor.dart';
 import 'package:intl/intl.dart';
 
 /// Admin view: Full restaurant details page with comprehensive data
@@ -193,6 +194,7 @@ class _AdminRestaurantDetailScreenState extends State<AdminRestaurantDetailScree
               if (r.status == RestaurantStatus.pending)
                 const PopupMenuItem(value: 'reject', child: Row(children: [Icon(Icons.close, color: Colors.red), SizedBox(width: 8), Text('Rechazar')])),
               const PopupMenuItem(value: 'edit_commission', child: Row(children: [Icon(Icons.percent), SizedBox(width: 8), Text('Editar comisión')])),
+              const PopupMenuItem(value: 'edit_schedule', child: Row(children: [Icon(Icons.schedule), SizedBox(width: 8), Text('Editar horario')])),
               const PopupMenuItem(value: 'toggle_online', child: Row(children: [Icon(Icons.toggle_on), SizedBox(width: 8), Text('Cambiar estado online')])),
               const PopupMenuItem(value: 'contact_owner', child: Row(children: [Icon(Icons.email), SizedBox(width: 8), Text('Contactar propietario')])),
             ],
@@ -338,6 +340,9 @@ class _AdminRestaurantDetailScreenState extends State<AdminRestaurantDetailScree
       case 'edit_commission':
         await _editCommission(r);
         break;
+      case 'edit_schedule':
+        await _editSchedule(r);
+        break;
       case 'toggle_online':
         await _toggleOnline(r);
         break;
@@ -435,14 +440,90 @@ class _AdminRestaurantDetailScreenState extends State<AdminRestaurantDetailScree
     }
   }
 
+  Future<void> _editSchedule(DoaRestaurant r) async {
+    Map<String, dynamic> editedHours = r.businessHours != null
+        ? Map<String, dynamic>.from(r.businessHours!)
+        : {};
+    bool editedEnabled  = r.businessHoursEnabled;
+    String editedTz     = r.timezone;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.schedule, color: Colors.orange),
+            SizedBox(width: 10),
+            Text('Editar Horario del Restaurante'),
+          ],
+        ),
+        content: SizedBox(
+          width: 480,
+          child: SingleChildScrollView(
+            child: BusinessHoursEditorWidget(
+              initialHours: r.businessHours,
+              initialEnabled: r.businessHoursEnabled,
+              initialTimezone: r.timezone,
+              onChanged: (hours, enabled, tz) {
+                editedHours   = hours;
+                editedEnabled = enabled;
+                editedTz      = tz;
+              },
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await SupabaseConfig.client.from('restaurants').update({
+          'business_hours': editedHours,
+          'business_hours_enabled': editedEnabled,
+          'timezone': editedTz,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', r.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('✅ Horario actualizado')),
+          );
+        }
+        _loadAll();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e')),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _toggleOnline(DoaRestaurant r) async {
     try {
+      final newStatus = !r.online;
+      final payload = <String, dynamic>{'online': newStatus};
+      // Admin override: if restaurant has auto-schedule, disable it to avoid cron reverting the change
+      if (r.businessHoursEnabled) {
+        payload['business_hours_enabled'] = false;
+      }
       await SupabaseConfig.client
           .from('restaurants')
-          .update({'online': !r.online})
+          .update(payload)
           .eq('id', r.id);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(r.online ? '⚫ Restaurante offline' : '🟢 Restaurante online')),
+        SnackBar(content: Text(newStatus ? '🟢 Restaurante online' : '⚫ Restaurante offline')),
       );
       _loadAll();
     } catch (e) {
@@ -621,7 +702,25 @@ class _AdminRestaurantDetailScreenState extends State<AdminRestaurantDetailScree
             _infoRow(Icons.attach_money, 'Pedido mínimo', _formatCurrency(r.minOrderAmount ?? 0)),
             const SizedBox(height: 12),
             if (r.businessHours != null) _buildBusinessHours(r.businessHours!),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            // Horario automático: estado
+            _infoRow(
+              Icons.schedule,
+              'Horario Automático',
+              r.businessHoursEnabled
+                  ? 'Activo — ${r.timezone}'
+                  : 'Desactivado (manual)',
+            ),
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                icon: const Icon(Icons.edit_calendar, size: 16),
+                label: const Text('Editar Horario', style: TextStyle(fontSize: 13)),
+                onPressed: () => _editSchedule(r),
+              ),
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(child: _buildImagePreview('Logo', r.logoUrl)),

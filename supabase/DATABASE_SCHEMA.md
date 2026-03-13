@@ -157,6 +157,16 @@ CREATE TABLE public.courier_locations_latest (
   CONSTRAINT courier_locations_latest_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT courier_locations_latest_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
 );
+CREATE TABLE public.coverage_zones (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  center_lat double precision NOT NULL,
+  center_lon double precision NOT NULL,
+  radius_km double precision NOT NULL DEFAULT 2.0,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT coverage_zones_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.debug_logs (
   id bigint NOT NULL DEFAULT nextval('debug_logs_id_seq'::regclass),
   ts timestamp with time zone DEFAULT now(),
@@ -240,6 +250,7 @@ CREATE TABLE public.order_items (
   price_at_time_of_order numeric NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   unit_price numeric NOT NULL DEFAULT 0.00,
+  is_removed boolean NOT NULL DEFAULT false,
   CONSTRAINT order_items_pkey PRIMARY KEY (id),
   CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
   CONSTRAINT order_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
@@ -309,6 +320,14 @@ CREATE TABLE public.payments (
   order_data jsonb,
   CONSTRAINT payments_pkey PRIMARY KEY (id),
   CONSTRAINT payments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
+);
+CREATE TABLE public.platform_settings (
+  key text NOT NULL,
+  value text NOT NULL,
+  updated_at timestamp with time zone DEFAULT now(),
+  updated_by uuid,
+  CONSTRAINT platform_settings_pkey PRIMARY KEY (key),
+  CONSTRAINT platform_settings_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.users(id)
 );
 CREATE TABLE public.product_combo_items (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -381,6 +400,7 @@ CREATE TABLE public.restaurants (
   facebook_url text,
   instagram_url text,
   website_url text,
+  delivery_fee double precision NOT NULL DEFAULT 35.0,
   CONSTRAINT restaurants_pkey PRIMARY KEY (id),
   CONSTRAINT restaurants_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );

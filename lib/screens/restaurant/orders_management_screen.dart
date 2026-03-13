@@ -980,30 +980,37 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
   /// Toggle disponibilidad del restaurante
   Future<void> _toggleAvailability() async {
     if (_restaurant == null) return;
-    
+
+    // Advertir si el horario automático está activo
+    if (_restaurant!.businessHoursEnabled) {
+      final decision = await _showAutoModeWarningDialog();
+      if (decision == null) return; // canceló
+      if (decision == true) {
+        // Desactivar horario automático antes del toggle manual
+        try {
+          await SupabaseConfig.client
+              .from('restaurants')
+              .update({'business_hours_enabled': false})
+              .eq('id', _restaurant!.id);
+          setState(() {
+            _restaurant = _restaurant!.copyWith(businessHoursEnabled: false);
+          });
+        } catch (e) {
+          debugPrint('❌ [ORDERS] Error desactivando horario: $e');
+        }
+      }
+    }
+
     try {
       final newOnlineStatus = !(_restaurant!.online);
-      
-      // Usar el nuevo método del servicio para actualizar el estado online
+
       await DoaRepartosService.updateRestaurantOnlineStatus(_restaurant!.id, newOnlineStatus);
-      
+
       setState(() {
-        _restaurant = DoaRestaurant(
-          id: _restaurant!.id,
-          userId: _restaurant!.userId,
-          name: _restaurant!.name,
-          description: _restaurant!.description,
-          logoUrl: _restaurant!.logoUrl,
-          status: _restaurant!.status,
-          online: newOnlineStatus, // Usar el campo online de la base de datos
-          createdAt: _restaurant!.createdAt,
+        _restaurant = _restaurant!.copyWith(
+          online: newOnlineStatus,
+          isOpen: newOnlineStatus,
           updatedAt: DateTime.now(),
-          user: _restaurant!.user,
-          imageUrl: _restaurant!.imageUrl,
-          rating: _restaurant!.rating,
-          deliveryTime: _restaurant!.deliveryTime,
-          deliveryFee: _restaurant!.deliveryFee,
-          isOpen: newOnlineStatus, // Mantener sincronizado con online
         );
       });
       
@@ -1032,6 +1039,56 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
     }
   }
   
+  /// Advertencia al intentar toggle manual mientras el horario automático está activo.
+  /// Retorna: true = desactivar auto, false = solo esta vez, null = cancelar
+  Future<bool?> _showAutoModeWarningDialog() {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 26),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Horario Automático Activo',
+                style: TextStyle(
+                    color: Colors.orange,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'El restaurante tiene un horario automático activo.\n\n'
+          'El horario podría revertir el cambio en los próximos 5 minutos.\n\n'
+          '¿Qué deseas hacer?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Solo esta vez'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Desactivar Horario'),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Agregar datos de prueba (solo para desarrollo)
   Future<void> _addTestData() async {
     try {
