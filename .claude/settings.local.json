@@ -22,7 +22,8 @@
       "Bash(flutter.bat analyze:*)",
       "Bash(cmd.exe /c \"flutter analyze lib/screens/restaurants/restaurant_detail_screen.dart lib/models/doa_models.dart 2>&1\")",
       "Bash(cmd.exe /c \"flutter analyze 2>&1\")",
-      "Bash(powershell.exe -Command \"flutter analyze\")"
+      "Bash(powershell.exe -Command \"flutter analyze\")",
+      "Bash(cmd.exe /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze\")"
     ]
   }
 }

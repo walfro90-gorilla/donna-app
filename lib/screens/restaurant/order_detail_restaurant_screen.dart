@@ -22,10 +22,13 @@ class _OrderDetailRestaurantScreenState
     extends State<OrderDetailRestaurantScreen> {
   bool _isLoading = false;
   bool _isLoadingItems = true;
+  bool _isRemovingItem = false;
   DoaOrder? _currentOrder;
   List<DoaOrderItem> _orderItems = [];
   // unit_price por item_id (el modelo solo expone price_at_time_of_order)
   final Map<String, double> _unitPrices = {};
+  // IDs de ítems quitados por la cocina
+  final Set<String> _removedItemIds = {};
 
   @override
   void initState() {
@@ -60,10 +63,17 @@ class _OrderDetailRestaurantScreenState
 
       final items = rawList.map((item) => DoaOrderItem.fromJson(item)).toList();
 
+      // Cargar IDs de ítems ya quitados en DB
+      final removedIds = rawList
+          .where((r) => r['is_removed'] == true)
+          .map((r) => r['id'].toString())
+          .toSet();
+
       if (mounted) {
         setState(() {
           _orderItems = items;
           _unitPrices.addAll(unitPrices);
+          _removedItemIds.addAll(removedIds);
           _isLoadingItems = false;
         });
       }
@@ -317,14 +327,23 @@ class _OrderDetailRestaurantScreenState
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
-                      '${_orderItems.length} ${_orderItems.length == 1 ? 'platillo' : 'platillos'}',
-                      style: TextStyle(
-                        color: Colors.orange.shade700,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
+                    child: Builder(builder: (_) {
+                      final active = _orderItems
+                          .where((i) => !_removedItemIds.contains(i.id))
+                          .length;
+                      final total = _orderItems.length;
+                      final label = _removedItemIds.isEmpty
+                          ? '$total ${total == 1 ? 'platillo' : 'platillos'}'
+                          : '$active de $total platillos';
+                      return Text(
+                        label,
+                        style: TextStyle(
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      );
+                    }),
                   ),
               ],
             ),
@@ -369,102 +388,151 @@ class _OrderDetailRestaurantScreenState
   }
 
   Widget _buildKitchenItem(DoaOrderItem item, int number) {
+    final isRemoved = _removedItemIds.contains(item.id);
     final productName = item.product?.name ?? 'Platillo #${item.productId.substring(0, 6)}';
     // Usar unit_price del DB (precio por pieza), no price_at_time_of_order
     final unitPrice = _unitPrices[item.id] ?? item.priceAtTimeOfOrder;
     final totalLine = unitPrice * item.quantity;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Cantidad — grande y visible
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: Colors.orange.shade600,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${item.quantity}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    height: 1,
-                  ),
-                ),
-                const Text(
-                  'pzas',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 14),
-
-          // Nombre del platillo
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  productName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1A1A),
-                  ),
-                ),
-                if (item.product?.description != null &&
-                    item.product!.description!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Text(
-                      item.product!.description!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+    return Opacity(
+      opacity: isRemoved ? 0.45 : 1.0,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Cantidad — grande y visible
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: isRemoved ? Colors.grey.shade400 : Colors.orange.shade600,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${item.quantity}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      height: 1,
                     ),
                   ),
-                const SizedBox(height: 4),
-                Text(
-                  '\$${unitPrice.toStringAsFixed(2)} c/u',
+                  const Text(
+                    'pzas',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 14),
+
+            // Nombre del platillo
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    productName,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isRemoved ? Colors.grey.shade500 : const Color(0xFF1A1A1A),
+                      decoration: isRemoved ? TextDecoration.lineThrough : null,
+                      decorationColor: Colors.grey.shade500,
+                    ),
+                  ),
+                  if (item.product?.description != null &&
+                      item.product!.description!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(
+                        item.product!.description!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade400,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '\$${unitPrice.toStringAsFixed(2)} c/u',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            // Precio total de la línea
+            Text(
+              '\$${totalLine.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: isRemoved ? Colors.grey.shade400 : Colors.green.shade700,
+                decoration: isRemoved ? TextDecoration.lineThrough : null,
+                decorationColor: Colors.grey.shade400,
+              ),
+            ),
+
+            const SizedBox(width: 4),
+
+            // Botón quitar (solo en órdenes activas y si no está ya quitado)
+            if (!isRemoved && _canRemoveItems())
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline,
+                    color: Colors.red, size: 26),
+                tooltip: 'Quitar del pedido',
+                onPressed: _isRemovingItem
+                    ? null
+                    : () => _showRemoveItemDialog(item),
+              ),
+
+            // Badge QUITADO si ya fue removido
+            if (isRemoved)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'QUITADO',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
                     color: Colors.grey.shade500,
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 8),
-
-          // Precio total de la línea
-          Text(
-            '\$${totalLine.toStringAsFixed(2)}',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: Colors.green.shade700,
-            ),
-          ),
-        ],
+              ),
+          ],
+        ),
       ),
     );
+  }
+
+  /// La cocina puede quitar ítems mientras la orden esté activa (no entregada/cancelada)
+  bool _canRemoveItems() {
+    final s = _currentOrder?.status;
+    return s == OrderStatus.pending ||
+        s == OrderStatus.confirmed ||
+        s == OrderStatus.inPreparation ||
+        s == OrderStatus.assigned;
   }
 
   // ─────────────────────────────────────────────
@@ -824,6 +892,159 @@ class _OrderDetailRestaurantScreenState
                       ),
                     )
                   : const SizedBox.shrink(),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  //  QUITAR ÍTEM DE LA ORDEN
+  // ─────────────────────────────────────────────
+
+  /// Marca el ítem como quitado en DB y recalcula el total del pedido
+  Future<void> _removeOrderItem(DoaOrderItem item) async {
+    setState(() => _isRemovingItem = true);
+    try {
+      // 1. Marcar is_removed = true en order_items
+      await SupabaseConfig.client
+          .from('order_items')
+          .update({'is_removed': true}).eq('id', item.id);
+
+      // 2. Recalcular subtotal con los ítems activos restantes
+      final activeItems = _orderItems.where(
+          (i) => !_removedItemIds.contains(i.id) && i.id != item.id);
+      final newSubtotal = activeItems.fold(0.0, (sum, i) {
+        final price = _unitPrices[i.id] ?? i.priceAtTimeOfOrder;
+        return sum + (price * i.quantity);
+      });
+      final deliveryFee = _currentOrder!.deliveryFee ?? 0.0;
+      final newTotal = newSubtotal + deliveryFee;
+
+      // 3. Actualizar orders.total_amount y orders.subtotal
+      await SupabaseConfig.client
+          .from('orders')
+          .update({'total_amount': newTotal, 'subtotal': newSubtotal}).eq(
+              'id', widget.order.id);
+
+      // 4. Actualizar estado local
+      setState(() {
+        _removedItemIds.add(item.id);
+        _currentOrder = _currentOrder!.copyWith(totalAmount: newTotal);
+      });
+
+      // 5. Ofrecer pausar el producto
+      if (mounted) _showPauseProductDialog(item);
+    } catch (e) {
+      debugPrint('❌ [ORDER_DETAIL] Error quitando ítem: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Error al quitar el ítem. Inténtalo de nuevo.'),
+              backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() => _isRemovingItem = false);
+    }
+  }
+
+  /// Pausa el producto (is_available = false) para que no se pueda pedir
+  Future<void> _pauseProduct(String productId, String productName) async {
+    try {
+      await SupabaseConfig.client
+          .from('products')
+          .update({'is_available': false}).eq('id', productId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$productName pausado — ya no aparece en el menú'),
+            backgroundColor: Colors.orange.shade700,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ [ORDER_DETAIL] Error pausando producto: $e');
+    }
+  }
+
+  /// Dialog 1: Confirmar quitar el ítem del pedido
+  void _showRemoveItemDialog(DoaOrderItem item) {
+    final name = item.product?.name ?? 'este ítem';
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.remove_circle_outline, color: Colors.red),
+            SizedBox(width: 8),
+            Text('¿Quitar del pedido?'),
+          ],
+        ),
+        content: Text(
+          '¿Seguro que quieres quitar "$name"?\n\nEl cliente recibirá el pedido sin este ítem.',
+          style: const TextStyle(fontSize: 15, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _removeOrderItem(item);
+            },
+            child: const Text('Quitar ítem'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Dialog 2: Ofrecer pausar el producto tras quitarlo
+  void _showPauseProductDialog(DoaOrderItem item) {
+    final name = item.product?.name ?? 'este producto';
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.pause_circle_outline, color: Colors.orange.shade700),
+            const SizedBox(width: 8),
+            const Text('¿Pausar producto?'),
+          ],
+        ),
+        content: Text(
+          '"$name" fue quitado del pedido.\n\n¿Quieres pausarlo para que los clientes no puedan pedirlo mientras no está disponible?',
+          style: const TextStyle(fontSize: 15, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Ítem "$name" quitado del pedido'),
+                  backgroundColor: Colors.grey.shade700,
+                ),
+              );
+            },
+            child: const Text('No, solo quitar'),
+          ),
+          FilledButton.icon(
+            style:
+                FilledButton.styleFrom(backgroundColor: Colors.orange.shade700),
+            icon: const Icon(Icons.pause_circle),
+            label: const Text('Sí, pausar'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _pauseProduct(item.productId, name);
+            },
+          ),
+        ],
+      ),
     );
   }
 
