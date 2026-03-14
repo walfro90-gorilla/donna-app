@@ -5,7 +5,17 @@
       "Bash(powershell -Command \"Set-Location ''X:\\\\Codes\\\\donna-app''; flutter analyze 2>&1\")",
       "Bash(powershell -Command \"Set-Location ''X:\\\\Codes\\\\donna-app''; & ''C:\\\\Users\\\\walfr\\\\flutter\\\\bin\\\\flutter.bat'' analyze 2>&1\")",
       "Bash(powershell -Command \"Get-ChildItem ''C:\\\\Users\\\\walfr'' -Filter ''flutter*'' -Recurse -Depth 3 -ErrorAction SilentlyContinue | Select-Object -First 5 FullName\")",
-      "Bash(powershell -Command \"where.exe flutter 2>&1\")"
+      "Bash(powershell -Command \"where.exe flutter 2>&1\")",
+      "Bash(ls \"x:/Codes/donna-app/android/\"*.jks)",
+      "Bash(where java:*)",
+      "Read(//c/Program Files/**)",
+      "Read(//x/Codes/donna-app/$HOME/AppData/Local/**)",
+      "Read(//x/Codes/flutter/**)",
+      "Bash(flutter doctor:*)",
+      "Bash(\"/c/Users/walfr/AppData/Local/Android/sdk/cmdline-tools/latest/bin/sdkmanager.bat\" --version)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Bash(/dev/null ls:*)",
+      "Read(//dev/**)"
     ]
   }
 }
