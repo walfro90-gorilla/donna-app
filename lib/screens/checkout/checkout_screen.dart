@@ -390,6 +390,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
+    // Validar monto mínimo de pedido
+    const double _minOrderAmount = 100.0;
+    if (_subtotal < _minOrderAmount) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('El pedido mínimo es \$${_minOrderAmount.toStringAsFixed(0)} MXN (subtotal actual: \$${_subtotal.toStringAsFixed(2)})')),
+      );
+      return;
+    }
+
     // Validar monto de efectivo si corresponde
     if (_selectedPaymentMethod == PaymentMethod.cash) {
       if (_cashAmount == null) {
@@ -717,7 +726,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: (_isProcessingOrder || !_hasActiveCouriers) ? null : _placeOrder,
+                  onPressed: (_isProcessingOrder || !_hasActiveCouriers || _subtotal < 100.0) ? null : _placeOrder,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
@@ -732,7 +741,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : Text(
-                          'Place Order - MXN ${_total.toStringAsFixed(2)}',
+                          _subtotal < 100.0
+                              ? 'Mínimo \$100 (faltan \$${(100.0 - _subtotal).toStringAsFixed(0)})'
+                              : 'Place Order - MXN ${_total.toStringAsFixed(2)}',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),

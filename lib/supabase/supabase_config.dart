@@ -1496,12 +1496,13 @@ class DoaRepartosService {
       
       // Verificar si la respuesta es directamente el UUID
       String? orderId;
-      if (orderResult is String) {
+      if (orderResult is Map) {
+        if (orderResult['success'] == false) {
+          throw Exception(orderResult['error'] ?? 'Error al crear orden');
+        }
+        orderId = orderResult['order_id']?.toString() ?? orderResult['id']?.toString();
+      } else if (orderResult is String) {
         orderId = orderResult;
-      } else if (orderResult is Map && orderResult['id'] != null) {
-        orderId = orderResult['id'].toString();
-      } else if (orderResult != null) {
-        orderId = orderResult.toString();
       }
       
       if (orderId == null || orderId.isEmpty) {

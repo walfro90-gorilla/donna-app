@@ -295,6 +295,7 @@ CREATE TABLE public.orders (
   delivery_place_id text,
   delivery_address_structured jsonb,
   payment_status text DEFAULT 'pending'::text CHECK (payment_status = ANY (ARRAY['pending'::text, 'paid'::text, 'failed'::text, 'refunded'::text])),
+  cash_amount numeric,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id),
@@ -401,6 +402,8 @@ CREATE TABLE public.restaurants (
   instagram_url text,
   website_url text,
   delivery_fee double precision NOT NULL DEFAULT 35.0,
+  business_hours_enabled boolean NOT NULL DEFAULT false,
+  timezone text NOT NULL DEFAULT 'America/Mexico_City'::text,
   CONSTRAINT restaurants_pkey PRIMARY KEY (id),
   CONSTRAINT restaurants_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );

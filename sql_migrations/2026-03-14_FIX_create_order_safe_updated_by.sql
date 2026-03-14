@@ -1,25 +1,12 @@
 -- ============================================================================
--- ADD: cash_amount a orders + actualizar create_order_safe
--- Date: 2026-03-14
--- ============================================================================
--- cash_amount = monto con el que el cliente pagará en efectivo
--- NULL  → pago con tarjeta/SPEI o el campo no fue capturado
--- = total_amount → pago exacto, sin cambio
--- > total_amount → necesita cambio (cash_amount - total_amount)
--- ============================================================================
-
-ALTER TABLE public.orders
-  ADD COLUMN IF NOT EXISTS cash_amount numeric DEFAULT NULL;
-
-COMMENT ON COLUMN public.orders.cash_amount IS
-  'Monto en efectivo con el que pagará el cliente. NULL=no aplica (tarjeta/SPEI). = total_amount → exacto. > total_amount → dar cambio.';
-
--- ============================================================================
--- Actualizar create_order_safe para aceptar p_cash_amount (opcional)
+-- FIX: create_order_safe usaba columna 'updated_by' (no existe)
+--      debe ser 'updated_by_user_id' según DATABASE_SCHEMA
+-- Ejecutar en Supabase Dashboard → SQL Editor
 -- ============================================================================
 
 DROP FUNCTION IF EXISTS public.create_order_safe(
-  uuid, uuid, double precision, double precision, text, text, double precision, double precision, text
+  uuid, uuid, double precision, double precision, text, text,
+  double precision, double precision, text, double precision
 );
 
 CREATE OR REPLACE FUNCTION public.create_order_safe(
@@ -32,7 +19,7 @@ CREATE OR REPLACE FUNCTION public.create_order_safe(
   p_delivery_lat     double precision DEFAULT NULL,
   p_delivery_lon     double precision DEFAULT NULL,
   p_order_notes      text             DEFAULT NULL,
-  p_cash_amount      double precision DEFAULT NULL   -- NUEVO: monto con el que paga el cliente
+  p_cash_amount      double precision DEFAULT NULL
 ) RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -55,7 +42,7 @@ BEGIN
     v_pickup_code, p_order_notes, p_cash_amount, now(), now()
   ) RETURNING id INTO v_order_id;
 
-  -- Insert initial status update (id is bigint autoincrement, omit it)
+  -- Insert initial status update (FIX: updated_by_user_id, not updated_by; id is bigint autoincrement)
   INSERT INTO public.order_status_updates (
     order_id, status, updated_by_user_id, created_at
   ) VALUES (
@@ -77,13 +64,3 @@ GRANT EXECUTE ON FUNCTION public.create_order_safe(
   uuid, uuid, double precision, double precision, text, text,
   double precision, double precision, text, double precision
 ) TO authenticated;
-
--- ============================================================================
--- Verificación
--- ============================================================================
--- SELECT column_name, data_type FROM information_schema.columns
--- WHERE table_name = 'orders' AND column_name = 'cash_amount';
--- → debe devolver: cash_amount | numeric
---
--- SELECT pg_get_functiondef(oid) FROM pg_proc WHERE proname = 'create_order_safe';
--- → debe incluir p_cash_amount
