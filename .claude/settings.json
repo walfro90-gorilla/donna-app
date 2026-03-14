@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd /c \"cd /d X:\\\\Codes\\\\donna-app && flutter analyze 2>&1\")",
+      "Bash(powershell -Command \"Set-Location ''X:\\\\Codes\\\\donna-app''; flutter analyze 2>&1\")",
+      "Bash(powershell -Command \"Set-Location ''X:\\\\Codes\\\\donna-app''; & ''C:\\\\Users\\\\walfr\\\\flutter\\\\bin\\\\flutter.bat'' analyze 2>&1\")",
+      "Bash(powershell -Command \"Get-ChildItem ''C:\\\\Users\\\\walfr'' -Filter ''flutter*'' -Recurse -Depth 3 -ErrorAction SilentlyContinue | Select-Object -First 5 FullName\")",
+      "Bash(powershell -Command \"where.exe flutter 2>&1\")"
+    ]
+  }
+}

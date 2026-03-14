@@ -172,7 +172,13 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
             _buildProductsCard(items),
             
             const SizedBox(height: 24),
-            
+
+            // Card de cobro en efectivo (si aplica)
+            if (order['payment_method'] == 'cash') ...[
+              _buildCashCollectionCard(order),
+              const SizedBox(height: 16),
+            ],
+
             // Botones de acción
             _buildActionButtons(status),
             const SizedBox(height: 12),
@@ -661,6 +667,92 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
               ),
             );
           }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCashCollectionCard(Map<String, dynamic> order) {
+    final totalAmount = (order['total_amount'] ?? 0.0).toDouble();
+    final cashAmount = order['cash_amount'] != null
+        ? (order['cash_amount'] as num).toDouble()
+        : null;
+    final change = (cashAmount != null && cashAmount > totalAmount)
+        ? cashAmount - totalAmount
+        : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.shade300, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(Icons.payments, color: Colors.green.shade700, size: 20),
+            const SizedBox(width: 8),
+            Text('Cobro en Efectivo',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade800,
+                    fontSize: 15)),
+          ]),
+          const SizedBox(height: 12),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text('Total del pedido:', style: TextStyle(color: Colors.grey.shade700)),
+            Text('\$${totalAmount.toStringAsFixed(2)}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ]),
+          if (cashAmount != null) ...[
+            const Divider(height: 16),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text('Cliente paga con:', style: TextStyle(color: Colors.grey.shade700)),
+              Text('\$${cashAmount.toStringAsFixed(2)}',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: Colors.green.shade800)),
+            ]),
+            if (change != null && change > 0) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Row(children: [
+                  Icon(Icons.change_circle, color: Colors.orange.shade700, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Da cambio de:',
+                      style: TextStyle(color: Colors.orange.shade800)),
+                  const Spacer(),
+                  Text('\$${change.toStringAsFixed(2)}',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.orange.shade800)),
+                ]),
+              ),
+            ] else ...[
+              const SizedBox(height: 8),
+              Row(children: [
+                Icon(Icons.check_circle, color: Colors.green.shade600, size: 16),
+                const SizedBox(width: 6),
+                Text('Pago exacto — sin cambio',
+                    style: TextStyle(color: Colors.green.shade700, fontSize: 13)),
+              ]),
+            ],
+          ] else ...[
+            const SizedBox(height: 8),
+            Text('Cobra el total exacto al cliente.',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+          ],
         ],
       ),
     );

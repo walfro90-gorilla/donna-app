@@ -38,7 +38,12 @@
       "Bash(find /x/Codes/donna-app/supabase/functions -name *.ts -o -name *.js)",
       "Bash(~/.flutter/bin/flutter analyze:*)",
       "Bash(where flutter:*)",
-      "Read(//c/Users/walfr/**)"
+      "Read(//c/Users/walfr/**)",
+      "Bash(cmd.exe /c \"where flutter 2>nul\")",
+      "Bash(cmd.exe /c \"flutter analyze lib/core/config/payment_config.dart lib/models/doa_models.dart lib/screens/checkout/checkout_screen.dart 2>&1 | tail -15\")",
+      "Bash(cmd.exe /c \"flutter analyze lib/core/config/payment_config.dart lib/models/doa_models.dart lib/screens/checkout/checkout_screen.dart 2>&1\")",
+      "Bash(find /x/Codes/donna-app -name *.sql -type f)",
+      "Bash(export PATH=\"$PATH:/c/Users/walfr/flutter/bin\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\walfr\\.claude"

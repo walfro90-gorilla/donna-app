@@ -54,6 +54,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _phoneErrorText; // Texto de error visible bajo el campo
   bool _isPhoneUnique = true; // Para bloquear el pedido cuando esté en uso
 
+  // Cash amount — monto con el que pagará el cliente
+  double? _cashAmount;
+  bool _cashAmountFreeInput = false;
+  final _cashAmountController = TextEditingController();
+
   // Google Places selected data
   String? _deliveryPlaceId;
   double? _deliveryLat;
@@ -385,6 +390,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
+    // Validar monto de efectivo si corresponde
+    if (_selectedPaymentMethod == PaymentMethod.cash) {
+      if (_cashAmount == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Por favor indica con cuánto pagarás')),
+        );
+        return;
+      }
+      if (_cashAmount! < _total) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('El monto debe ser mayor o igual al total (\$${_total.toStringAsFixed(2)})')),
+        );
+        return;
+      }
+    }
+
     final user = SupabaseAuth.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -529,6 +550,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           deliveryLon: _deliveryLon,
           deliveryPlaceId: _deliveryPlaceId,
           deliveryAddressStructured: _deliveryAddressStructured,
+          cashAmount: _cashAmount,
         );
 
         if (result['success'] != true) {
@@ -555,6 +577,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 deliveryAddress: _canonicalDeliveryAddress,
                 paymentMethod: _selectedPaymentMethod,
                 total: _total,
+                cashAmount: _cashAmount,
               ),
             ),
           );
@@ -648,6 +671,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               _buildDeliveryAddressCard(),
               const SizedBox(height: 24),
               _buildPaymentMethodCard(),
+              if (_selectedPaymentMethod == PaymentMethod.cash) ...[
+                const SizedBox(height: 16),
+                _buildCashAmountSection(),
+              ],
               const SizedBox(height: 24),
               _buildOrderNotesCard(),
               const SizedBox(height: 24),
@@ -990,6 +1017,119 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
+  List<double> _billsForTotal(double total) {
+    const bills = [50.0, 100.0, 200.0, 500.0, 1000.0];
+    return bills.where((b) => b >= total).toList();
+  }
+
+  Widget _buildCashAmountSection() {
+    final total = _total;
+    final bills = _billsForTotal(total);
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final changeAmount = (_cashAmount != null && _cashAmount! > total)
+        ? _cashAmount! - total
+        : null;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.payments_outlined, color: colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Text('¿Con cuánto pagarás?',
+                  style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            ]),
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              // Exacto
+              ChoiceChip(
+                label: Text('Exacto\n\$${total.toStringAsFixed(0)}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12)),
+                selected: _cashAmount == total && !_cashAmountFreeInput,
+                onSelected: (_) => setState(() {
+                  _cashAmount = total;
+                  _cashAmountFreeInput = false;
+                }),
+              ),
+              // Billetes
+              ...bills.map((bill) => ChoiceChip(
+                label: Text('\$${bill.toStringAsFixed(0)}',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                selected: _cashAmount == bill && !_cashAmountFreeInput,
+                onSelected: (_) => setState(() {
+                  _cashAmount = bill;
+                  _cashAmountFreeInput = false;
+                }),
+              )),
+              // Otra cantidad
+              ChoiceChip(
+                label: const Text('Otra cantidad'),
+                selected: _cashAmountFreeInput,
+                onSelected: (_) => setState(() {
+                  _cashAmountFreeInput = true;
+                  _cashAmount = null;
+                }),
+              ),
+            ]),
+            if (_cashAmountFreeInput) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _cashAmountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  prefixText: '\$',
+                  labelText: 'Cantidad exacta',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (v) {
+                  final parsed = double.tryParse(v);
+                  setState(() => _cashAmount = (parsed != null && parsed >= total) ? parsed : null);
+                },
+              ),
+            ],
+            if (_cashAmount != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: changeAmount != null
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : colorScheme.primaryContainer.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(children: [
+                  Icon(
+                    changeAmount != null
+                        ? Icons.change_circle_outlined
+                        : Icons.check_circle_outline,
+                    size: 16,
+                    color: changeAmount != null ? Colors.green.shade700 : colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    changeAmount != null
+                        ? 'Tu cambio aproximado: \$${changeAmount.toStringAsFixed(2)}'
+                        : 'Sin cambio — pago exacto',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: changeAmount != null ? Colors.green.shade800 : colorScheme.primary,
+                    ),
+                  ),
+                ]),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildOrderNotesCard() {
     return Card(
       child: Padding(
@@ -1064,6 +1204,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _addressController.dispose();
     _phoneController.dispose();
     _notesController.dispose();
+    _cashAmountController.dispose();
     _couriersUpdatesSubscription?.cancel();
     _phoneDebounce?.cancel();
     super.dispose();

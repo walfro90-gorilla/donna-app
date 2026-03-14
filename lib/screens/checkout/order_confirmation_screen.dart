@@ -12,6 +12,7 @@ class OrderConfirmationScreen extends StatelessWidget {
   final String deliveryAddress;
   final PaymentMethod paymentMethod;
   final double total;
+  final double? cashAmount;
 
   const OrderConfirmationScreen({
     super.key,
@@ -22,6 +23,7 @@ class OrderConfirmationScreen extends StatelessWidget {
     required this.deliveryAddress,
     required this.paymentMethod,
     required this.total,
+    this.cashAmount,
   });
 
   List<DoaProduct> get _cartProducts {
@@ -275,7 +277,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    paymentMethod == PaymentMethod.cash ? 'Pending' : 'Paid',
+                    paymentMethod == PaymentMethod.cash ? 'Pendiente' : 'Pagado',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: paymentMethod == PaymentMethod.cash
                           ? Colors.orange.shade700
@@ -286,6 +288,27 @@ class OrderConfirmationScreen extends StatelessWidget {
                 ),
               ],
             ),
+            if (paymentMethod == PaymentMethod.cash && cashAmount != null) ...[
+              const SizedBox(height: 8),
+              Row(children: [
+                Icon(Icons.payments_outlined, size: 14, color: Colors.grey.shade600),
+                const SizedBox(width: 6),
+                Text('Pagarás con: \$${cashAmount!.toStringAsFixed(2)}',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+              ]),
+              if (cashAmount! > total) ...[
+                const SizedBox(height: 4),
+                Row(children: [
+                  Icon(Icons.change_circle_outlined, size: 14, color: Colors.green.shade600),
+                  const SizedBox(width: 6),
+                  Text('Tu cambio: ~\$${(cashAmount! - total).toStringAsFixed(2)}',
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.w500)),
+                ]),
+              ],
+            ],
           ],
         ),
       ),

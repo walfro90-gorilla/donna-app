@@ -999,6 +999,7 @@ class DoaOrder {
   final String? confirmCode; // Código de 3 dígitos para confirmar entrega
   final String? pickupCode; // Código de 4 dígitos para recoger en restaurante
   final String? orderNotes; // Notas del pedido (opcional)
+  final double? cashAmount; // Monto con el que paga el cliente (null = no efectivo)
   final DoaUser? user;
   final DoaRestaurant? restaurant;
   final DoaUser? deliveryAgent;
@@ -1025,6 +1026,7 @@ class DoaOrder {
     this.confirmCode, // Código de confirmación opcional
     this.pickupCode, // Código de recogida opcional
     this.orderNotes, // Notas del pedido opcionales
+    this.cashAmount, // Monto con el que pagará el cliente (opcional)
     this.user,
     this.restaurant,
     this.deliveryAgent,
@@ -1033,6 +1035,13 @@ class DoaOrder {
 
   // Getter de conveniencia para acceder a los items del pedido
   List<DoaOrderItem>? get items => orderItems;
+
+  // Monto de cambio a devolver al cliente (null si paga exacto o no aplica)
+  double? get changeAmount {
+    if (cashAmount == null) return null;
+    final change = cashAmount! - totalAmount;
+    return change > 0 ? change : null;
+  }
 
   factory DoaOrder.fromJson(Map<String, dynamic> json) {
     // Debugging: Log de datos recibidos para identificar problemas
@@ -1067,6 +1076,7 @@ class DoaOrder {
         confirmCode: json['confirm_code']?.toString(),
         pickupCode: json['pickup_code']?.toString(),
         orderNotes: json['order_notes']?.toString(),
+        cashAmount: (json['cash_amount'] as num?)?.toDouble(),
         user: json['user'] != null ? DoaUser.fromJson(json['user']) : null,
         restaurant: json['restaurant'] != null ? DoaRestaurant.fromJson(json['restaurant']) : null,
         deliveryAgent: () {
@@ -1127,6 +1137,7 @@ class DoaOrder {
       'confirm_code': confirmCode,
       'pickup_code': pickupCode,
       'order_notes': orderNotes,
+      'cash_amount': cashAmount,
     };
   }
 
@@ -1151,6 +1162,7 @@ class DoaOrder {
     String? confirmCode,
     String? pickupCode,
     String? orderNotes,
+    double? cashAmount,
     DoaUser? user,
     DoaRestaurant? restaurant,
     DoaUser? deliveryAgent,
@@ -1177,6 +1189,7 @@ class DoaOrder {
       confirmCode: confirmCode ?? this.confirmCode,
       pickupCode: pickupCode ?? this.pickupCode,
       orderNotes: orderNotes ?? this.orderNotes,
+      cashAmount: cashAmount ?? this.cashAmount,
       user: user ?? this.user,
       restaurant: restaurant ?? this.restaurant,
       deliveryAgent: deliveryAgent ?? this.deliveryAgent,

@@ -839,6 +839,40 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                         ),
                       ],
                     ),
+                    if (_order.paymentMethod != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Método de pago:', style: Theme.of(context).textTheme.bodyMedium),
+                          Text(_order.paymentMethod!.displayName,
+                              style: Theme.of(context).textTheme.bodyMedium),
+                        ],
+                      ),
+                    ],
+                    if (_order.paymentMethod == PaymentMethod.cash && _order.cashAmount != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Pagarás con:', style: Theme.of(context).textTheme.bodyMedium),
+                          Text('\$${_order.cashAmount!.toStringAsFixed(2)}',
+                              style: Theme.of(context).textTheme.bodyMedium),
+                        ],
+                      ),
+                      if (_order.changeAmount != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Cambio estimado:', style: Theme.of(context).textTheme.bodyMedium),
+                            Text('\$${_order.changeAmount!.toStringAsFixed(2)}',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.green.shade700, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ],
+                    ],
                   ],
                 ),
               ),

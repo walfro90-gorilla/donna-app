@@ -1464,6 +1464,7 @@ class DoaRepartosService {
     double? deliveryLon,
     String? deliveryPlaceId,
     Map<String, dynamic>? deliveryAddressStructured,
+    double? cashAmount,
   }) async {
     try {
       print('🎯 [SUPABASE] Wrapper: Creating order using SAFE RPC method...');
@@ -1488,6 +1489,7 @@ class DoaRepartosService {
         'p_delivery_fee': 35.0,                          // NUMERIC (not INTEGER!)
         'p_order_notes': orderNotes,                     // TEXT (default)
         'p_payment_method': paymentMethod,               // TEXT (default)
+        'p_cash_amount': cashAmount,                     // NUMERIC (null if not cash)
       });
       
       print('🎯 [SUPABASE] RPC Response: $orderResult');
