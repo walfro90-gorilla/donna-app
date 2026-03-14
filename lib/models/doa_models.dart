@@ -1319,14 +1319,23 @@ extension OrderStatusUI on OrderStatus {
 }
 
 enum PaymentMethod {
+  cash,
   card,
-  cash;
+  spei_codi; // SPEI / CoDi — infraestructura lista, pendiente activación
 
   static PaymentMethod fromString(String method) {
     return PaymentMethod.values.firstWhere(
       (m) => m.name == method,
       orElse: () => PaymentMethod.cash,
     );
+  }
+
+  String get displayName {
+    switch (this) {
+      case PaymentMethod.cash:      return 'Efectivo';
+      case PaymentMethod.card:      return 'Tarjeta (MercadoPago)';
+      case PaymentMethod.spei_codi: return 'SPEI / CoDi';
+    }
   }
 
   @override

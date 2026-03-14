@@ -12,6 +12,7 @@ import 'dart:convert';
 import 'package:doa_repartos/core/supabase/supabase_rpc.dart';
 import 'package:doa_repartos/core/supabase/rpc_names.dart';
 import 'package:doa_repartos/widgets/phone_dial_input.dart';
+import 'package:doa_repartos/core/config/payment_config.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final DoaRestaurant restaurant;
@@ -35,7 +36,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _phoneController = TextEditingController();
   final _notesController = TextEditingController();
   
-  PaymentMethod _selectedPaymentMethod = PaymentMethod.cash;
+  PaymentMethod _selectedPaymentMethod = PaymentConfig.enabledMethods.isNotEmpty
+      ? PaymentConfig.enabledMethods.first
+      : PaymentMethod.cash;
   bool _isProcessingOrder = false;
   bool _hasActiveCouriers = true;
   StreamSubscription<void>? _couriersUpdatesSubscription;
@@ -136,8 +139,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         setState(() {
           _clientTotalDebt = debt;
           _isLoadingDebt = false;
-          // Si tiene deuda, forzar pago con tarjeta
-          if (_clientTotalDebt > 0) {
+          // Si tiene deuda y la tarjeta está habilitada, forzar pago con tarjeta
+          if (_clientTotalDebt > 0 && PaymentConfig.isEnabled(PaymentMethod.card)) {
             _selectedPaymentMethod = PaymentMethod.card;
             debugPrint('⚠️ [CHECKOUT._loadClientDebt] Cliente con adeudo: forzando pago con tarjeta');
           }
@@ -399,8 +402,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       debugPrint('💾 [CHECKOUT._placeOrder] Guardando datos del usuario...');
       await _updateUserData();
 
-      // **FLUJO BIFURCADO**: Efectivo vs Tarjeta
-      if (_selectedPaymentMethod == PaymentMethod.card) {
+      // Verificar que el método seleccionado siga habilitado
+      if (!PaymentConfig.isEnabled(_selectedPaymentMethod)) {
+        throw Exception('Método de pago no disponible');
+      }
+
+      // **FLUJO BIFURCADO**: Efectivo / Tarjeta / SPEI-CoDi
+      if (_selectedPaymentMethod == PaymentMethod.spei_codi) {
+        // TODO: Implementar flujo SPEI/CoDi
+        // 1. Llamar Edge Function 'create-spei-reference' → obtener CLABE + referencia numérica
+        // 2. Navegar a SpeiPaymentScreen (muestra QR CoDi + datos bancarios + timer)
+        // 3. Webhook 'spei-webhook' confirma pago → crea orden automáticamente
+        throw Exception('SPEI/CoDi próximamente disponible');
+      } else if (_selectedPaymentMethod == PaymentMethod.card) {
         debugPrint('💳 [CHECKOUT] Método de pago: TARJETA');
         debugPrint('💳 [CHECKOUT] NO se crea la orden aún - MercadoPago la creará tras pago exitoso');
         
@@ -917,39 +931,63 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ],
                 ),
               ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Radio<PaymentMethod>(
-                value: PaymentMethod.cash,
-                groupValue: _selectedPaymentMethod,
-                onChanged: _clientTotalDebt > 0 ? null : (value) => setState(() => _selectedPaymentMethod = value!),
-              ),
-              title: Text('Cash on Delivery', 
-                style: TextStyle(color: _clientTotalDebt > 0 ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4) : null)),
-              subtitle: Text(
-                _clientTotalDebt > 0 
-                  ? 'No disponible (tienes adeudo pendiente)'
-                  : 'Pay with cash when your order arrives',
-                style: TextStyle(color: _clientTotalDebt > 0 ? Theme.of(context).colorScheme.error : null),
-              ),
-              trailing: Icon(Icons.money, color: _clientTotalDebt > 0 ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4) : null),
-              enabled: _clientTotalDebt == 0,
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Radio<PaymentMethod>(
-                value: PaymentMethod.card,
-                groupValue: _selectedPaymentMethod,
-                onChanged: (value) => setState(() => _selectedPaymentMethod = value!),
-              ),
-              title: const Text('Credit/Debit Card'),
-              subtitle: const Text('Pay with credit or debit card (via Mercado Pago)'),
-              trailing: const Icon(Icons.credit_card),
-            ),
+            ...PaymentConfig.enabledMethods.map((method) {
+              final isCash = method == PaymentMethod.cash;
+              final disabledByDebt = isCash && _clientTotalDebt > 0;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Radio<PaymentMethod>(
+                  value: method,
+                  groupValue: _selectedPaymentMethod,
+                  onChanged: disabledByDebt
+                      ? null
+                      : (value) => setState(() => _selectedPaymentMethod = value!),
+                ),
+                title: Text(
+                  method.displayName,
+                  style: TextStyle(
+                    color: disabledByDebt
+                        ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)
+                        : null,
+                  ),
+                ),
+                subtitle: Text(
+                  disabledByDebt
+                      ? 'No disponible (tienes adeudo pendiente)'
+                      : _paymentSubtitle(method),
+                  style: TextStyle(
+                    color: disabledByDebt ? Theme.of(context).colorScheme.error : null,
+                  ),
+                ),
+                trailing: Icon(
+                  _paymentIcon(method),
+                  color: disabledByDebt
+                      ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)
+                      : null,
+                ),
+                enabled: !disabledByDebt,
+              );
+            }),
           ],
         ),
       ),
     );
+  }
+
+  String _paymentSubtitle(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.cash:      return 'Paga con efectivo al recibir tu pedido';
+      case PaymentMethod.card:      return 'Paga con tarjeta de crédito o débito';
+      case PaymentMethod.spei_codi: return 'Transferencia bancaria (SPEI) o escanea CoDi';
+    }
+  }
+
+  IconData _paymentIcon(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.cash:      return Icons.money;
+      case PaymentMethod.card:      return Icons.credit_card;
+      case PaymentMethod.spei_codi: return Icons.account_balance;
+    }
   }
 
   Widget _buildOrderNotesCard() {

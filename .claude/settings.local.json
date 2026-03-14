@@ -30,7 +30,15 @@
       "Bash(cmd.exe /c \"supabase --version && echo OK\")",
       "Bash(echo \"exit: $?\")",
       "Bash(cmd.exe /c \"dir C:\\\\ProgramData\\\\chocolatey\\\\bin\\\\supabase* 2>&1 & dir C:\\\\Users\\\\walfr\\\\scoop\\\\shims\\\\supabase* 2>&1 & where.exe supabase 2>&1\")",
-      "Read(//c/Users/walfr/.claude/**)"
+      "Read(//c/Users/walfr/.claude/**)",
+      "Read(//x/Codes/donna-website/app/admin/**)",
+      "Read(//x/Codes/donna-website/**)",
+      "Bash(ls x:/Codes/donna-website/app/admin/restaurants/[id]/)",
+      "Bash(cat x:/Codes/donna-website/app/admin/restaurants/[id]/page.tsx)",
+      "Bash(find /x/Codes/donna-app/supabase/functions -name *.ts -o -name *.js)",
+      "Bash(~/.flutter/bin/flutter analyze:*)",
+      "Bash(where flutter:*)",
+      "Read(//c/Users/walfr/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\walfr\\.claude"

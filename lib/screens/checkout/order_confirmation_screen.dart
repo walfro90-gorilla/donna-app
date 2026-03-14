@@ -251,16 +251,18 @@ class OrderConfirmationScreen extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  paymentMethod == PaymentMethod.cash ? Icons.money : Icons.credit_card,
+                  paymentMethod == PaymentMethod.cash
+                      ? Icons.money
+                      : paymentMethod == PaymentMethod.spei_codi
+                          ? Icons.account_balance
+                          : Icons.credit_card,
                   size: 20,
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    paymentMethod == PaymentMethod.cash 
-                        ? 'Cash on Delivery' 
-                        : 'Credit/Debit Card',
+                    paymentMethod.displayName,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
