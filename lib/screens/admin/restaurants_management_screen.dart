@@ -505,12 +505,11 @@ class _RestaurantsManagementScreenState extends State<RestaurantsManagementScree
 
     return InkWell(
       onTap: () {
-        // Navigate to full admin detail page
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => AdminRestaurantDetailScreen(restaurant: restaurant),
           ),
-        );
+        ).then((_) => _loadRestaurants());
       },
       child: Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -588,6 +587,27 @@ class _RestaurantsManagementScreenState extends State<RestaurantsManagementScree
                               ),
                             ],
                           ),
+                          // Auto-schedule badge
+                          if (restaurant.businessHoursEnabled)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.schedule, size: 11, color: Colors.green.shade700),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Auto-horario',
+                                    style: TextStyle(fontSize: 11, color: Colors.green.shade700, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
                           // Email verification badge
                           if (restaurant.user != null)
                             Container(
@@ -681,7 +701,7 @@ class _RestaurantsManagementScreenState extends State<RestaurantsManagementScree
                       MaterialPageRoute(
                         builder: (_) => AdminRestaurantDetailScreen(restaurant: restaurant),
                       ),
-                    );
+                    ).then((_) => _loadRestaurants());
                   },
                   icon: const Icon(Icons.open_in_new, color: Colors.blue),
                   label: const Text('Ver detalle'),

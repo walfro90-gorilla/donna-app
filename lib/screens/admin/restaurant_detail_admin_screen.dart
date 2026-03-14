@@ -5,6 +5,7 @@ import 'package:doa_repartos/supabase/supabase_config.dart';
 import 'package:doa_repartos/screens/orders/order_details_screen.dart';
 import 'package:doa_repartos/screens/admin/admin_account_ledger_screen.dart';
 import 'package:doa_repartos/widgets/business_hours_editor.dart';
+import 'package:doa_repartos/core/utils/business_hours_helper.dart';
 import 'package:intl/intl.dart';
 
 /// Admin view: Full restaurant details page with comprehensive data
@@ -751,20 +752,46 @@ class _AdminRestaurantDetailScreenState extends State<AdminRestaurantDetailScree
   }
 
   Widget _buildBusinessHours(Map<String, dynamic> hours) {
+    final orderedEntries = BusinessHoursHelper.orderedDayKeys
+        .where((key) => hours.containsKey(key))
+        .map((key) => MapEntry(key, hours[key] as Map<String, dynamic>? ?? {}));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Horario:', style: TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        ...hours.entries.map((e) => Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Row(
-            children: [
-              SizedBox(width: 80, child: Text(e.key, style: TextStyle(color: Colors.grey.shade700))),
-              Text(e.value.toString()),
-            ],
-          ),
-        )),
+        ...orderedEntries.map((e) {
+          final dayData = e.value;
+          final enabled = dayData['enabled'] == true;
+          final label = BusinessHoursHelper.dayLabel(e.key);
+          final dayName = label[0].toUpperCase() + label.substring(1);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 84,
+                  child: Text(
+                    dayName,
+                    style: TextStyle(
+                      color: enabled ? Colors.grey.shade800 : Colors.grey.shade400,
+                      fontWeight: enabled ? FontWeight.w500 : FontWeight.normal,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                if (enabled)
+                  Text(
+                    '${dayData['open'] ?? '?'} – ${dayData['close'] ?? '?'}',
+                    style: const TextStyle(fontSize: 13),
+                  )
+                else
+                  Text('Cerrado', style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
+              ],
+            ),
+          );
+        }),
       ],
     );
   }
