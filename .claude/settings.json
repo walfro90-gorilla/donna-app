@@ -16,7 +16,9 @@
       "Read(//c/Program Files \\(x86\\)/**)",
       "Bash(/dev/null ls:*)",
       "Read(//dev/**)",
-      "Bash(head -3 find X:/Codes/flutter -name *.gradle)"
+      "Bash(head -3 find X:/Codes/flutter -name *.gradle)",
+      "Bash(head -20 grep -n \"cash_amount\\\\|cashAmount\\\\|payment_method\\\\|paymentMethod\" \"x:/Codes/donna-app/lib/models/doa_models.dart\")",
+      "Bash(grep -n \"Entregar en\\\\|delivery_address\\\\|deliveryAddress\\\\|totalAmount\\\\|total_amount\\\\|$397\\\\|order\\\\.total\\\\|order\\\\.cash\" \"x:/Codes/donna-app/lib/screens/delivery/delivery_main_dashboard.dart\")"
     ]
   }
 }

@@ -925,9 +925,47 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
                         ),
                       ],
                     ),
-                  
+
+                  // Pago en efectivo: mostrar monto y cambio
+                  if (isMine && order['payment_method'] == 'cash') ...[
+                    const SizedBox(height: 8),
+                    Builder(builder: (context) {
+                      final cashAmount = (order['cash_amount'] as num?)?.toDouble();
+                      final change = cashAmount != null ? cashAmount - totalAmount : null;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade900.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green.shade600, width: 1),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.payments_outlined, color: Colors.greenAccent, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Pago en efectivo', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
+                                  if (cashAmount != null)
+                                    Text(
+                                      'Paga con: \$${cashAmount.toStringAsFixed(2)}  →  Cambio: \$${change!.toStringAsFixed(2)}',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                                    )
+                                  else
+                                    const Text('Monto exacto no especificado', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+
                   const SizedBox(height: 12),
-                  
+
                   // Botones de acción
                   _buildActionButtons(order, status, isMine),
                 ],
