@@ -48,5 +48,9 @@
     "additionalDirectories": [
       "C:\\Users\\walfr\\.claude"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
+  "enableAllProjectMcpServers": true
 }

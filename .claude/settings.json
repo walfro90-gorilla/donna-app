@@ -29,7 +29,23 @@
       "Bash(grep -r \"rpc_initiate\\\\|rpc_confirm\" /x/Codes/donna-app/supabase/*.sql)",
       "Bash(grep -r \"rpc_initiate_restaurant_settlement\\\\|rpc_create_settlement\\\\|rpc_confirm_settlement\" /x/Codes/donna-app/supabase_scripts/*.sql)",
       "Bash(find /x/Codes/donna-app/supabase_scripts -type f -name *.sql -exec grep -l \"rpc_initiate\\\\|rpc_confirm\\\\|initiate.*restaurant\\\\|confirm.*settlement\" {})",
-      "Bash(2)"
+      "Bash(2)",
+      "Bash(python -m json.tool)",
+      "WebFetch(domain:supabase.com)",
+      "Bash(npm list:*)",
+      "Bash(npm config:*)",
+      "Bash(echo $PATH)",
+      "Read(//c/ProgramData/chocolatey/bin//**)",
+      "Bash(for dir:*)",
+      "Bash(do echo:*)",
+      "Read(//x/Codes/donna-app/**)",
+      "Bash(done)",
+      "Bash(do ls:*)",
+      "Bash(echo \"  ^ found in $dir\")",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__apply_migration",
+      "Bash(npm --version)",
+      "Bash(1)"
     ]
   }
 }
