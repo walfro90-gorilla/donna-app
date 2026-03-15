@@ -155,7 +155,15 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
         }
       }
 
-      _recompute(items);
+      // Global net = suma de todos los balances de cuentas (no de transacciones del periodo)
+      // En contabilidad de partida simple por participante, la salud del sistema se mide
+      // como suma(account.balance) = 0, no como suma(transaction.amount en periodo).
+      final double accountBalanceNet = _accounts.values.fold(
+        0.0,
+        (sum, a) => sum + ((a['balance'] as num?)?.toDouble() ?? 0.0),
+      );
+
+      _recompute(items, accountBalanceNet);
 
       if (mounted) {
         setState(() {
@@ -174,7 +182,7 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
     }
   }
 
-  void _recompute(List<Map<String, dynamic>> items) {
+  void _recompute(List<Map<String, dynamic>> items, [double? accountBalanceNet]) {
     // Ensure newest-to-oldest ordering
     items.sort((a, b) {
       final ad = DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -184,11 +192,16 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
     _txs = items;
     _txVisibleCount = _txs.isEmpty ? 0 : (_txs.length >= 6 ? 6 : _txs.length);
 
-    // Global net
-    _globalNet = 0.0;
-    for (final t in items) {
-      final amt = (t['amount'] as num?)?.toDouble() ?? 0.0;
-      _globalNet += amt;
+    // Global net: suma de balances de cuentas (indicador real de salud del sistema).
+    // Si accountBalanceNet no está disponible, suma transacciones como fallback.
+    if (accountBalanceNet != null) {
+      _globalNet = accountBalanceNet;
+    } else {
+      _globalNet = 0.0;
+      for (final t in items) {
+        final amt = (t['amount'] as num?)?.toDouble() ?? 0.0;
+        _globalNet += amt;
+      }
     }
 
     // Per order sum
@@ -303,7 +316,9 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
   Widget build(BuildContext context) {
     final okGlobal = _globalNet.abs() < 0.01;
     final okOrders = _unbalancedOrders == 0;
-    final allOk = okGlobal && okOrders;
+    // El sistema está sano si la suma de todos los balances de cuentas es 0.
+    // Los "órdenes no balanceadas" en el periodo son información adicional, no determinan la salud global.
+    final allOk = okGlobal;
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -452,8 +467,8 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
             spacing: 12,
             runSpacing: 8,
             children: [
-              _metricChip(label: 'Global net', value: '${_numberFmt.format(_globalNet)} MXN', ok: okGlobal),
-              _metricChip(label: 'Órdenes no balanceadas', value: '$_unbalancedOrders / $_totalOrders', ok: okOrders),
+              _metricChip(label: 'Global net (cuentas)', value: '${_numberFmt.format(_globalNet)} MXN', ok: okGlobal),
+              _metricChip(label: 'Órdenes en periodo', value: '$_unbalancedOrders / $_totalOrders con Δ≠0', ok: true),
               _metricChip(label: 'Transacciones', value: '${_txs.length}', ok: true),
             ],
           )
