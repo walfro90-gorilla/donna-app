@@ -15,7 +15,8 @@
       "Bash(\"/c/Users/walfr/AppData/Local/Android/sdk/cmdline-tools/latest/bin/sdkmanager.bat\" --version)",
       "Read(//c/Program Files \\(x86\\)/**)",
       "Bash(/dev/null ls:*)",
-      "Read(//dev/**)"
+      "Read(//dev/**)",
+      "Bash(head -3 find X:/Codes/flutter -name *.gradle)"
     ]
   }
 }

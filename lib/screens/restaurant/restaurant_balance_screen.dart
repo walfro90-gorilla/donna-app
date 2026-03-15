@@ -800,9 +800,6 @@ class _RestaurantBalanceScreenState extends State<RestaurantBalanceScreen> with 
               if (res == null) throw Exception('No se pudo iniciar la liquidación');
               if (mounted) {
                 Navigator.of(context).pop();
-                // Limpiar controladores del diálogo
-                amountController.dispose();
-                notesController.dispose();
               }
               if (!mounted) return;
               // Mostrar código
@@ -883,8 +880,6 @@ debugPrint('🧾 [RESTAURANT] settlement created -> id=${res['settlementId']} c
   onPressed: submitting
       ? null
       : () {
-          amountController.dispose();
-          notesController.dispose();
           Navigator.of(context).pop();
         },
   child: const Text('Cancelar'),
