@@ -9,11 +9,12 @@
 --   • Sin registro contable en el sistema principal
 --
 -- Este fix:
---   1. Agrega INSERTs en account_transactions (mismo patrón que process_order_delivery_v3)
+--   1. Agrega INSERTs en account_transactions con Balance 0 correcto:
+--        ORDER_REVENUE = -total (plataforma absorbe, no cobró nada)
+--        RESTAURANT_PAYABLE + DELIVERY_EARNING + COMMISSION + MARGIN = +total → suma $0
 --   2. Crea settlements pendientes (platform_payables → restaurant / delivery_agent)
 --   3. Corrige bug: delivery agent recibía 100% del delivery_fee, ahora recibe 85%
---   4. Mantiene los INSERTs en financial_transactions para compatibilidad con la UI
---   5. Mantiene todo el sistema de client_debts y suspensiones intacto
+--   4. Mantiene todo el sistema de client_debts y suspensiones intacto
 --
 -- A QUIÉN SE LE CARGA:
 --   • RESTAURANTE: siempre cobra (preparó la comida de buena fe)
@@ -116,9 +117,9 @@ BEGIN
   INSERT INTO public.client_debts (
     client_id, order_id, amount, reason, status, photo_url, delivery_notes
   ) VALUES (
-    v_order_record.client_id,
+    v_order_record.user_id,            -- orders.user_id is the client
     p_order_id,
-    v_total_amount + v_delivery_fee,   -- Full amount client owes
+    v_total_amount,                    -- total_amount already includes delivery_fee
     p_reason,
     'pending',
     p_photo_url,
@@ -151,14 +152,17 @@ BEGIN
   -- Only proceed if core accounts exist (graceful degradation: won't fail if missing)
   IF v_platform_revenue_account_id IS NOT NULL AND v_platform_payables_account_id IS NOT NULL THEN
 
-    -- 6a. ORDER_REVENUE — platform receives the order amount (same as delivered)
+    -- 6a. ORDER_REVENUE — platform ABSORBS the cost (negative: no cash collected, no card charged)
+    -- Delivered orders: ORDER_REVENUE = +total (platform received money)
+    -- Not-delivered:    ORDER_REVENUE = -total (platform absorbs the loss)
+    -- This is what makes the 5-transaction set balance to $0 without CLIENT_DEBT.
     INSERT INTO public.account_transactions(account_id, type, amount, order_id, description, metadata)
     VALUES (
       v_platform_payables_account_id,
       'ORDER_REVENUE',
-      v_total_amount,
+      -v_total_amount,               -- NEGATIVE: platform absorbs, didn't receive payment
       p_order_id,
-      'Orden no entregada #' || v_short_order,
+      'Orden no entregada #' || v_short_order || ' (plataforma absorbe)',
       jsonb_build_object(
         'not_delivered', true,
         'reason', p_reason,
@@ -278,61 +282,13 @@ BEGIN
 
   END IF; -- end account_transactions block
 
-  -- ── 8. financial_transactions (ledger simple — compatibilidad con UI) ──────
-  -- Restaurant credit (fixed: now uses v_restaurant_net from commission_bps)
-  INSERT INTO public.financial_transactions (
-    user_id, order_id, transaction_type, amount, balance_after, description, metadata
-  )
-  SELECT
-    v_order_record.restaurant_owner_id,
-    p_order_id,
-    'order_completed',
-    v_restaurant_net,
-    COALESCE(
-      (SELECT balance_after FROM public.financial_transactions
-       WHERE user_id = v_order_record.restaurant_owner_id
-       ORDER BY created_at DESC LIMIT 1),
-      0
-    ) + v_restaurant_net,
-    'Pago orden no entregada #' || p_order_id || ' (plataforma absorbe)',
-    jsonb_build_object(
-      'debt_id', v_debt_id,
-      'paid_by_platform', true,
-      'reason', p_reason,
-      'not_delivered', true
-    );
-
-  -- Delivery agent credit (FIXED: 85% of delivery_fee, not 100%)
-  INSERT INTO public.financial_transactions (
-    user_id, order_id, transaction_type, amount, balance_after, description, metadata
-  )
-  SELECT
-    p_delivery_agent_id,
-    p_order_id,
-    'delivery_completed',
-    v_delivery_earning,
-    COALESCE(
-      (SELECT balance_after FROM public.financial_transactions
-       WHERE user_id = p_delivery_agent_id
-       ORDER BY created_at DESC LIMIT 1),
-      0
-    ) + v_delivery_earning,
-    'Viaje no completado #' || p_order_id || ' (plataforma absorbe)',
-    jsonb_build_object(
-      'debt_id', v_debt_id,
-      'paid_by_platform', true,
-      'reason', p_reason,
-      'delivery_percentage', 0.85,
-      'not_delivered', true
-    );
-
   -- ── 9. client_debts_transactions (audit trail) ────────────────────────────
   INSERT INTO public.client_debts_transactions (
     debt_id, client_id, amount, transaction_type, description
   ) VALUES (
     v_debt_id,
-    v_order_record.client_id,
-    v_total_amount + v_delivery_fee,
+    v_order_record.user_id,            -- orders.user_id is the client
+    v_total_amount,                    -- total_amount already includes delivery_fee
     'debt_created',
     'Adeudo por orden no entregada #' || p_order_id
   );
@@ -340,13 +296,13 @@ BEGIN
   -- ── 10. Account suspension management ────────────────────────────────────
   SELECT * INTO v_client_suspension
   FROM public.client_account_suspensions
-  WHERE client_id = v_order_record.client_id
+  WHERE client_id = v_order_record.user_id  -- orders.user_id is the client
   FOR UPDATE;
 
   IF NOT FOUND THEN
     INSERT INTO public.client_account_suspensions (
       client_id, failed_attempts, last_failed_order_id
-    ) VALUES (v_order_record.client_id, 1, p_order_id);
+    ) VALUES (v_order_record.user_id, 1, p_order_id);  -- orders.user_id
     v_new_failed_attempts := 1;
   ELSE
     v_new_failed_attempts := v_client_suspension.failed_attempts + 1;
@@ -361,14 +317,14 @@ BEGIN
         suspension_expires_at  = now() + interval '10 minutes',
         last_failed_order_id   = p_order_id,
         updated_at             = now()
-      WHERE client_id = v_order_record.client_id;
+      WHERE client_id = v_order_record.user_id;  -- orders.user_id
     ELSE
       UPDATE public.client_account_suspensions
       SET
         failed_attempts      = v_new_failed_attempts,
         last_failed_order_id = p_order_id,
         updated_at           = now()
-      WHERE client_id = v_order_record.client_id;
+      WHERE client_id = v_order_record.user_id;  -- orders.user_id
     END IF;
   END IF;
 
@@ -377,7 +333,7 @@ BEGIN
     'success',               true,
     'debt_id',               v_debt_id,
     'order_id',              p_order_id,
-    'amount_owed',           v_total_amount + v_delivery_fee,
+    'amount_owed',           v_total_amount,                    -- total_amount already includes delivery_fee
     'restaurant_paid',       v_restaurant_net,
     'delivery_agent_paid',   v_delivery_earning,
     'failed_attempts',       v_new_failed_attempts,

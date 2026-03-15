@@ -21,7 +21,15 @@
       "Bash(grep -n \"Entregar en\\\\|delivery_address\\\\|deliveryAddress\\\\|totalAmount\\\\|total_amount\\\\|$397\\\\|order\\\\.total\\\\|order\\\\.cash\" \"x:/Codes/donna-app/lib/screens/delivery/delivery_main_dashboard.dart\")",
       "Bash(find x:/Codes/donna-app/supabase/audit -name *.md -exec head -50 {} +)",
       "Bash(grep -i \"RESTAURANT_PAYABLE\\\\|DELIVERY_PAYABLE\\\\|PLATFORM_DELIVERY_MARGIN\\\\|PLATFORM_NOT_DELIVERED\" \"x:/Codes/donna-app/supabase_scripts\"/*.sql)",
-      "Bash(find x:/Codes/donna-app/supabase_scripts -name *DATABASE_SCHEMA* -o -name *schema*)"
+      "Bash(find x:/Codes/donna-app/supabase_scripts -name *DATABASE_SCHEMA* -o -name *schema*)",
+      "Bash(grep -r \"rpc_\" /x/Codes/donna-app/supabase_scripts/*.sql)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"CREATE FUNCTION\\\\|CREATE OR REPLACE FUNCTION\" /x/Codes/donna-app/supabase_scripts/*.sql)",
+      "Bash(grep -r \"rpc_initiate_restaurant_settlement\\\\|rpc_confirm_settlement\\\\|SETTLEMENT_PAYMENT\\\\|SETTLEMENT_RECEPTION\" /x/Codes/donna-app/sql_migrations/*.sql)",
+      "Bash(grep -r \"rpc_initiate\\\\|rpc_confirm\" /x/Codes/donna-app/supabase/*.sql)",
+      "Bash(grep -r \"rpc_initiate_restaurant_settlement\\\\|rpc_create_settlement\\\\|rpc_confirm_settlement\" /x/Codes/donna-app/supabase_scripts/*.sql)",
+      "Bash(find /x/Codes/donna-app/supabase_scripts -type f -name *.sql -exec grep -l \"rpc_initiate\\\\|rpc_confirm\\\\|initiate.*restaurant\\\\|confirm.*settlement\" {})",
+      "Bash(2)"
     ]
   }
 }
