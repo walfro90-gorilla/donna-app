@@ -18,7 +18,10 @@
       "Read(//dev/**)",
       "Bash(head -3 find X:/Codes/flutter -name *.gradle)",
       "Bash(head -20 grep -n \"cash_amount\\\\|cashAmount\\\\|payment_method\\\\|paymentMethod\" \"x:/Codes/donna-app/lib/models/doa_models.dart\")",
-      "Bash(grep -n \"Entregar en\\\\|delivery_address\\\\|deliveryAddress\\\\|totalAmount\\\\|total_amount\\\\|$397\\\\|order\\\\.total\\\\|order\\\\.cash\" \"x:/Codes/donna-app/lib/screens/delivery/delivery_main_dashboard.dart\")"
+      "Bash(grep -n \"Entregar en\\\\|delivery_address\\\\|deliveryAddress\\\\|totalAmount\\\\|total_amount\\\\|$397\\\\|order\\\\.total\\\\|order\\\\.cash\" \"x:/Codes/donna-app/lib/screens/delivery/delivery_main_dashboard.dart\")",
+      "Bash(find x:/Codes/donna-app/supabase/audit -name *.md -exec head -50 {} +)",
+      "Bash(grep -i \"RESTAURANT_PAYABLE\\\\|DELIVERY_PAYABLE\\\\|PLATFORM_DELIVERY_MARGIN\\\\|PLATFORM_NOT_DELIVERED\" \"x:/Codes/donna-app/supabase_scripts\"/*.sql)",
+      "Bash(find x:/Codes/donna-app/supabase_scripts -name *DATABASE_SCHEMA* -o -name *schema*)"
     ]
   }
 }

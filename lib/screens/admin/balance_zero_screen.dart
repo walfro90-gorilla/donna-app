@@ -33,7 +33,8 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
   final Map<String, String> _restaurantNamesByUserId = {}; // user_id -> restaurant name
 
   // Computed
-  double _globalNet = 0.0;
+  double _globalNet = 0.0;       // suma de balances de cuentas (salud real del sistema)
+  double _periodTxNet = 0.0;     // suma de transacciones en el periodo (diagnóstico)
   int _totalOrders = 0;
   int _unbalancedOrders = 0;
   List<_OrderBalance> _topUnbalanced = [];
@@ -202,6 +203,16 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
         final amt = (t['amount'] as num?)?.toDouble() ?? 0.0;
         _globalNet += amt;
       }
+    }
+
+    // Net del periodo (suma de transacciones filtradas) — diagnóstico, no indicador de salud.
+    // En un sistema sano con doble-entrada POR ORDEN, este debería ser 0 si el periodo
+    // contiene conjuntos completos de transacciones. Si no es 0, indica órdenes con
+    // transacciones dispersas en fechas distintas (backfills históricos).
+    _periodTxNet = 0.0;
+    for (final t in items) {
+      final amt = (t['amount'] as num?)?.toDouble() ?? 0.0;
+      _periodTxNet += amt;
     }
 
     // Per order sum
@@ -467,9 +478,25 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
             spacing: 12,
             runSpacing: 8,
             children: [
-              _metricChip(label: 'Global net (cuentas)', value: '${_numberFmt.format(_globalNet)} MXN', ok: okGlobal),
-              _metricChip(label: 'Órdenes en periodo', value: '$_unbalancedOrders / $_totalOrders con Δ≠0', ok: true),
-              _metricChip(label: 'Transacciones', value: '${_txs.length}', ok: true),
+              _metricChip(
+                label: '∑ Cuentas',
+                value: '${_numberFmt.format(_globalNet)} MXN',
+                ok: okGlobal,
+                tooltip: 'Suma de todos los balances de cuentas. Debe ser \$0 siempre.',
+              ),
+              _metricChip(
+                label: '∑ Periodo',
+                value: '${_numberFmt.format(_periodTxNet)} MXN',
+                ok: _periodTxNet.abs() < 0.01,
+                tooltip: 'Suma de transacciones en el rango seleccionado. Debe ser \$0 si el periodo contiene conjuntos completos por orden.',
+              ),
+              _metricChip(
+                label: 'Órdenes Δ≠0',
+                value: '$_unbalancedOrders / $_totalOrders',
+                ok: okOrders,
+                tooltip: 'Órdenes cuyas transacciones en el periodo no suman \$0. Indica transacciones incompletas o dispersas históricamente.',
+              ),
+              _metricChip(label: 'Txs', value: '${_txs.length}', ok: true),
             ],
           )
         ],
@@ -477,14 +504,16 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
     );
   }
 
-  Widget _metricChip({required String label, required String value, required bool ok}) {
+  Widget _metricChip({required String label, required String value, required bool ok, String? tooltip}) {
     final scheme = Theme.of(context).colorScheme;
-    return Chip(
+    final chip = Chip(
       avatar: Icon(ok ? Icons.check_circle : Icons.warning, color: ok ? scheme.secondary : scheme.error),
       label: Text('$label: $value', style: TextStyle(color: scheme.onSurface)),
       backgroundColor: scheme.surfaceContainerHighest,
       side: BorderSide(color: ok ? scheme.secondary.withValues(alpha: 0.4) : scheme.error.withValues(alpha: 0.4)),
     );
+    if (tooltip != null) return Tooltip(message: tooltip, child: chip);
+    return chip;
   }
 
   // Summary cards by account type with drilldown and dynamic status colors
@@ -1067,9 +1096,16 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
               children: [
                 Icon(Icons.warning_amber, color: scheme.error),
                 const SizedBox(width: 8),
-                Text('Órdenes con desbalance (${_topUnbalanced.length}/${_unbalancedOrders})',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: Text('Órdenes con Δ≠0 en periodo (${_topUnbalanced.length}/${_unbalancedOrders})',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                ),
               ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Δ = suma de transacciones del periodo para esa orden. Debe ser \$0 si el periodo contiene el set completo.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
             ListView.separated(
@@ -1077,16 +1113,30 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
               physics: const NeverScrollableScrollPhysics(),
               itemBuilder: (context, index) {
                 final ob = _topUnbalanced[index];
+                final isPositive = ob.net > 0;
+                // Mostrar tipos de transacciones de esta orden en el periodo
+                final orderTxTypes = _txs
+                    .where((t) => t['order_id']?.toString() == ob.orderId)
+                    .map((t) => t['type']?.toString() ?? '?')
+                    .toSet()
+                    .join(', ');
                 return ListTile(
+                  dense: true,
                   leading: CircleAvatar(
+                    radius: 16,
                     backgroundColor: scheme.error.withValues(alpha: 0.12),
-                    child: Icon(Icons.receipt_long, color: scheme.error),
+                    child: Icon(Icons.receipt_long, color: scheme.error, size: 16),
                   ),
-                  title: Text('Order ${ob.orderId}'),
-                  subtitle: const Text('Suma de transacciones != 0'),
+                  title: Text('Order …${ob.orderId.substring(ob.orderId.length > 8 ? ob.orderId.length - 8 : 0)}',
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+                  subtitle: Text(orderTxTypes, style: const TextStyle(fontSize: 11)),
                   trailing: Text(
-                    '${_numberFmt.format(ob.net)} MXN',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: scheme.error),
+                    'Δ ${isPositive ? '+' : ''}${_numberFmt.format(ob.net)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isPositive ? Colors.orange : scheme.error,
+                      fontSize: 12,
+                    ),
                   ),
                 );
               },
