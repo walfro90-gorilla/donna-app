@@ -5,6 +5,7 @@ import 'package:doa_repartos/supabase/supabase_config.dart';
 import 'package:doa_repartos/core/services/financial_service.dart';
 import 'package:doa_repartos/models/doa_models.dart';
 import 'package:doa_repartos/theme.dart';
+import 'package:doa_repartos/screens/admin/client_debts_screen.dart';
 
 class BalanceZeroScreen extends StatefulWidget {
   const BalanceZeroScreen({super.key});
@@ -337,6 +338,14 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
         title: const Text('Balance 0'),
         // Allow theme to control colors; keep action
         actions: [
+          IconButton(
+            icon: const Icon(Icons.money_off_outlined),
+            tooltip: 'Adeudos de Clientes',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ClientDebtsScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refrescar',

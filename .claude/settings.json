@@ -45,7 +45,10 @@
       "mcp__supabase__execute_sql",
       "mcp__supabase__apply_migration",
       "Bash(npm --version)",
-      "Bash(1)"
+      "Bash(1)",
+      "Bash(cmd.exe /c \"flutter analyze lib/screens/admin/client_debts_screen.dart lib/screens/admin/balance_zero_screen.dart 2>&1\")",
+      "Bash(cmd.exe /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze lib/screens/admin/client_debts_screen.dart 2>&1\")",
+      "Bash(cmd.exe /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze 2>&1\")"
     ]
   }
 }
