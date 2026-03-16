@@ -135,23 +135,27 @@ class RestaurantCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
+                            color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3),
+                              width: 0.5,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                Icons.star,
-                                size: 16,
+                                Icons.star_rounded,
+                                size: 15,
                                 color: Theme.of(context).colorScheme.tertiary,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 3),
                               Text(
                                 restaurant.rating!.toStringAsFixed(1),
                                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontWeight: FontWeight.w700,
+                                  color: Theme.of(context).colorScheme.tertiary,
                                 ),
                               ),
                             ],
@@ -181,25 +185,26 @@ class RestaurantCard extends StatelessWidget {
                     children: [
                       // Tiempo de entrega
                       Icon(
-                        Icons.access_time,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        Icons.access_time_rounded,
+                        size: 15,
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '${restaurant.deliveryTime ?? 30}-${(restaurant.deliveryTime ?? 30) + 15} min',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      
-                      const SizedBox(width: 16),
-                      
+
+                      const SizedBox(width: 14),
+
                       // Costo de envío
                       Icon(
-                        Icons.delivery_dining,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        Icons.delivery_dining_rounded,
+                        size: 15,
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -207,29 +212,52 @@ class RestaurantCard extends StatelessWidget {
                             ? '\$${restaurant.deliveryFee!.toStringAsFixed(0)}'
                             : '\$35',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      
+
                       const Spacer(),
-                      
+
                       // Estado abierto/cerrado
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: restaurant.isOpen
-                              ? Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1)
-                              : Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          restaurant.isOpen ? 'Abierto' : 'Cerrado',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              ? const Color(0xFF2E7D32).withValues(alpha: 0.12)
+                              : Theme.of(context).colorScheme.error.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
                             color: restaurant.isOpen
-                                ? Theme.of(context).colorScheme.secondary
-                                : Theme.of(context).colorScheme.error,
-                            fontWeight: FontWeight.w600,
+                                ? const Color(0xFF2E7D32).withValues(alpha: 0.4)
+                                : Theme.of(context).colorScheme.error.withValues(alpha: 0.4),
+                            width: 0.8,
                           ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: restaurant.isOpen
+                                    ? const Color(0xFF2E7D32)
+                                    : Theme.of(context).colorScheme.error,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              restaurant.isOpen ? 'Abierto' : 'Cerrado',
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: restaurant.isOpen
+                                    ? const Color(0xFF1B5E20)
+                                    : Theme.of(context).colorScheme.error,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

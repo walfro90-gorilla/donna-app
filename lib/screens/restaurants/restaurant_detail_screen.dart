@@ -193,32 +193,18 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
                       child: SizedBox(height: 80, width: double.infinity),
                     ),
                   ),
-                  // Avatar logo superpuesto en la esquina inferior izquierda del banner
-                  Positioned(
-                    bottom: 48, // justo sobre el TabBar
-                    left: 16,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.25),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                  // Gradiente extra sobre el logo para dar espacio visual al avatar
+                  const Align(
+                    alignment: Alignment.bottomLeft,
+                    child: SizedBox(height: 100, width: 110,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            center: Alignment(-1, 1),
+                            radius: 1.2,
+                            colors: [Colors.black38, Colors.transparent],
                           ),
-                        ],
-                      ),
-                      child: CircleAvatar(
-                        radius: 36,
-                        backgroundColor: Colors.grey.shade200,
-                        backgroundImage: widget.restaurant.logoUrl != null
-                            ? NetworkImage(widget.restaurant.logoUrl!)
-                            : null,
-                        child: widget.restaurant.logoUrl == null
-                            ? const Icon(Icons.restaurant, size: 32, color: Colors.grey)
-                            : null,
+                        ),
                       ),
                     ),
                   ),
@@ -256,23 +242,56 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
           // Perfil Social (nombre y descripción)
           SliverToBoxAdapter(
             child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
+                  // Avatar del restaurante — renderiza sobre el SliverAppBar (content > header en z-order)
+                  Transform.translate(
+                    offset: const Offset(0, -42),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.35),
+                                blurRadius: 20,
+                                spreadRadius: 1,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: CircleAvatar(
+                            radius: 40,
+                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            backgroundImage: widget.restaurant.logoUrl != null
+                                ? NetworkImage(widget.restaurant.logoUrl!)
+                                : null,
+                            child: widget.restaurant.logoUrl == null
+                                ? Icon(Icons.restaurant, size: 36,
+                                    color: Theme.of(context).colorScheme.primary)
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Nombre del restaurante junto al avatar para máximo contraste
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   widget.restaurant.name,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall
+                                  style: Theme.of(context).textTheme.headlineSmall
                                       ?.copyWith(fontWeight: FontWeight.bold),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 if (widget.restaurant.cuisineType != null)
                                   Text(
@@ -286,23 +305,26 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
                               ],
                             ),
                           ),
-                          _buildSocialIconsGrid(),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
+                        ),
+                        _buildSocialIconsGrid(),
+                      ],
+                    ),
+                  ),
 
                       if (widget.restaurant.description != null &&
                           widget.restaurant.description!.isNotEmpty)
-                        Text(
-                          widget.restaurant.description!,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.7),
-                                height: 1.4,
-                              ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            widget.restaurant.description!,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.85),
+                                  height: 1.5,
+                                ),
+                          ),
                         ),
 
                       const SizedBox(height: 16),
@@ -1045,10 +1067,11 @@ class CartBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1059,7 +1082,7 @@ class CartBottomSheet extends StatelessWidget {
             height: 4,
             margin: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: cs.onSurface.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),

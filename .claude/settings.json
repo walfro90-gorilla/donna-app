@@ -52,7 +52,9 @@
       "Bash(cmd.exe /c \"cd /d \"\"x:\\\\Codes\\\\donna-app\"\" && flutter analyze lib/screens/admin/client_debts_screen.dart\")",
       "Bash(cmd.exe /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze 2>&1 && echo DONE\")",
       "Bash(powershell.exe -Command \"Set-Location ''x:\\\\Codes\\\\donna-app''; flutter analyze 2>&1 | Out-String\")",
-      "Bash(powershell.exe -Command \"Get-Command flutter* 2>&1 | Select-Object -First 5 | Out-String\")"
+      "Bash(powershell.exe -Command \"Get-Command flutter* 2>&1 | Select-Object -First 5 | Out-String\")",
+      "Bash(cmd /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze lib/theme.dart lib/widgets/restaurant_card.dart lib/screens/restaurants/restaurant_detail_screen.dart 2>&1\")",
+      "Bash(cmd /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze 2>&1 | findstr /i /c:error /c:warning /c:theme.dart /c:restaurant_card /c:restaurant_detail\")"
     ]
   }
 }

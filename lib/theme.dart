@@ -122,6 +122,30 @@ ThemeData get lightTheme => ThemeData(
     elevation: 2,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
   ),
+  bottomSheetTheme: const BottomSheetThemeData(
+    backgroundColor: LightModeColors.lightSurface,
+    surfaceTintColor: Colors.transparent,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    dragHandleColor: Color(0xFFCAC4CB),
+    dragHandleSize: Size(40, 4),
+    showDragHandle: false,
+  ),
+  dividerTheme: DividerThemeData(
+    color: LightModeColors.lightOnSurface.withValues(alpha: 0.12),
+    thickness: 1,
+    space: 1,
+  ),
+  chipTheme: ChipThemeData(
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    side: BorderSide.none,
+  ),
+  inputDecorationTheme: InputDecorationTheme(
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+    filled: true,
+    fillColor: LightModeColors.lightPrimaryContainer.withValues(alpha: 0.3),
+  ),
   textTheme: TextTheme(
     displayLarge: GoogleFonts.inter(
       fontSize: FontSizes.displayLarge,
@@ -238,9 +262,31 @@ ThemeData get darkTheme => ThemeData(
     ),
   ),
   cardTheme: CardThemeData(
-    elevation: 2,
+    elevation: 3,
     color: DarkModeColors.darkSurfaceVariant,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+  ),
+  bottomSheetTheme: const BottomSheetThemeData(
+    backgroundColor: DarkModeColors.darkSurfaceVariant,
+    surfaceTintColor: Colors.transparent,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    showDragHandle: false,
+  ),
+  dividerTheme: DividerThemeData(
+    color: DarkModeColors.darkOnSurface.withValues(alpha: 0.12),
+    thickness: 1,
+    space: 1,
+  ),
+  chipTheme: ChipThemeData(
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    side: BorderSide.none,
+  ),
+  inputDecorationTheme: InputDecorationTheme(
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+    filled: true,
+    fillColor: DarkModeColors.darkPrimaryContainer.withValues(alpha: 0.2),
   ),
   textTheme: TextTheme(
     displayLarge: GoogleFonts.inter(
