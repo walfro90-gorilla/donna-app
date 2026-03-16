@@ -726,9 +726,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: (_isProcessingOrder || !_hasActiveCouriers || _subtotal < 100.0) ? null : _placeOrder,
+                  onPressed: (_isProcessingOrder || !_hasActiveCouriers || _subtotal < 100.0 || _clientTotalDebt > 0 || _isLoadingDebt) ? null : _placeOrder,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    backgroundColor: _clientTotalDebt > 0
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -741,9 +743,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : Text(
-                          _subtotal < 100.0
-                              ? 'Mínimo \$100 (faltan \$${(100.0 - _subtotal).toStringAsFixed(0)})'
-                              : 'Place Order - MXN ${_total.toStringAsFixed(2)}',
+                          _clientTotalDebt > 0
+                              ? 'Adeudo pendiente — contacta a soporte'
+                              : _subtotal < 100.0
+                                  ? 'Mínimo \$100 (faltan \$${(100.0 - _subtotal).toStringAsFixed(0)})'
+                                  : 'Place Order - MXN ${_total.toStringAsFixed(2)}',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
