@@ -204,7 +204,8 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
           .from('orders')
           .select('''
             *,
-            restaurants (name, address, phone)
+            restaurants (name, address, phone),
+            user:user_id (name, phone)
           ''')
           .inFilter('status', ['confirmed', 'in_preparation', 'ready_for_pickup'])
           .isFilter('delivery_agent_id', null)
@@ -215,7 +216,8 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
           .from('orders')
           .select('''
             *,
-            restaurants (name, address, phone)
+            restaurants (name, address, phone),
+            user:user_id (name, phone)
           ''')
           .eq('delivery_agent_id', currentUser.id)
           .order('created_at', ascending: false);
@@ -852,6 +854,23 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
                       ),
                     ],
                   ),
+
+                  // Nombre del cliente (solo en pedidos asignados a este repartidor)
+                  if (isMine) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.person, color: Colors.blueGrey, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            (order['user'] as Map?)?['name'] ?? 'Cliente',
+                            style: TextStyle(fontSize: 13, color: Colors.grey[300]),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   
                   // Dirección del restaurante (si es asignado o listo para recoger)
                   if (isMine && (status == 'assigned' || status == 'ready_for_pickup')) ...[
@@ -1050,10 +1069,17 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Función de llamada próximamente')),
-                    );
+                  onPressed: () async {
+                    final clientPhone = (order['user'] as Map?)?['phone']?.toString();
+                    if (clientPhone != null && clientPhone.isNotEmpty) {
+                      await _launchUriExternal(Uri(scheme: 'tel', path: clientPhone));
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('El cliente no tiene teléfono registrado')),
+                        );
+                      }
+                    }
                   },
                   icon: const Icon(Icons.phone, size: 16),
                   label: const Text('Llamar'),

@@ -297,7 +297,8 @@ class _MyDeliveriesScreenState extends State<MyDeliveriesScreen> {
               name,
               address,
               phone
-            )
+            ),
+            user:user_id (name, phone)
           ''')
           .eq('delivery_agent_id', currentUser.id)
           .order('created_at', ascending: false);
@@ -862,6 +863,21 @@ class _MyDeliveriesScreenState extends State<MyDeliveriesScreen> {
                   const Divider(height: 24),
                 ],
                 
+                // Nombre del cliente (siempre visible)
+                Row(
+                  children: [
+                    const Icon(Icons.person, color: Colors.blueGrey, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        (delivery['user'] as Map?)?['name'] ?? 'Cliente',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
                 // Dirección de entrega al cliente (siempre visible)
                 Row(
                   children: [
@@ -911,11 +927,17 @@ class _MyDeliveriesScreenState extends State<MyDeliveriesScreen> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () {
-                            // TODO: Llamar al cliente
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Función de llamada próximamente')),
-                            );
+                          onPressed: () async {
+                            final clientPhone = (delivery['user'] as Map?)?['phone']?.toString();
+                            if (clientPhone != null && clientPhone.isNotEmpty) {
+                              await _launchUriExternal(Uri(scheme: 'tel', path: clientPhone));
+                            } else {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('El cliente no tiene teléfono registrado')),
+                                );
+                              }
+                            }
                           },
                           icon: const Icon(Icons.phone, size: 18),
                           label: const Text('Llamar'),
