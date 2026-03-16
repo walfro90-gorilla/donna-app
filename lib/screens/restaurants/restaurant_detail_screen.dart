@@ -909,7 +909,7 @@ class ProductCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '\$${(product.price * (1 + commissionBps / 10000)).toStringAsFixed(2)}',
+                        '\$${product.price.toStringAsFixed(2)}',
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
                                   color: Theme.of(context).colorScheme.primary,
@@ -1056,10 +1056,9 @@ class CartBottomSheet extends StatelessWidget {
   });
 
   double _computeTotal(Map<String, int> items) {
-    final commissionRate = 1 + restaurant.commissionBps / 10000;
     return items.entries.fold(0.0, (sum, entry) {
       final product = products.firstWhere((p) => p.id == entry.key);
-      return sum + (product.price * commissionRate * entry.value);
+      return sum + (product.price * entry.value);
     });
   }
 
@@ -1127,7 +1126,7 @@ class CartBottomSheet extends StatelessWidget {
                                     ),
                               ),
                               Text(
-                                '\$${(product.price * (1 + restaurant.commissionBps / 10000)).toStringAsFixed(2)} c/u',
+                                '\$${product.price.toStringAsFixed(2)} c/u',
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyMedium
