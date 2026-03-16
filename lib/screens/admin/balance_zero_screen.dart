@@ -75,10 +75,9 @@ class _BalanceZeroScreenState extends State<BalanceZeroScreen> {
       }
       if (_typeFilter != 'ALL') {
         query = query.eq('type', _typeFilter);
-      } else {
-        // EXCLUDE CLIENT_DEBT from balance calculations (only show paid/completed transactions)
-        query = query.neq('type', 'CLIENT_DEBT');
       }
+      // CLIENT_DEBT es ahora doble-entrada en el ledger (CLIENT_DEBT + PLATFORM_NOT_DELIVERED_REFUND
+      // se cancelan en $0 por orden). No excluir — incluir en todos los cálculos.
 
       final data = await query.order('created_at', ascending: false).limit(500);
       final List<Map<String, dynamic>> items =
