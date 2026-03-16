@@ -46,7 +46,7 @@ class _ClientDebtsScreenState extends State<ClientDebtsScreen>
       final data = await SupabaseConfig.client
           .from('client_debts')
           .select('''
-            id, amount, status, reason, created_at, paid_at, forgiven_at,
+            id, amount, status, reason, fault_party, created_at, paid_at, forgiven_at,
             order_id,
             client:users!client_id(id, name, email, phone),
             order:orders!order_id(id, total_amount, payment_method, delivery_address)
@@ -132,8 +132,7 @@ class _ClientDebtsScreenState extends State<ClientDebtsScreen>
 
     if (ok != true || !mounted) return;
 
-    final adminId = SessionManager.instance.currentSession?.userId;
-    if (adminId == null) return;
+    final adminId = SessionManager.instance.currentSession!.userId;
 
     try {
       final result = await SupabaseConfig.client.rpc(
@@ -148,7 +147,7 @@ class _ClientDebtsScreenState extends State<ClientDebtsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Pago confirmado. Settlement creado. ${clientName} desbloqueado.',
+              'Pago confirmado. Settlement creado. $clientName desbloqueado.',
             ),
             backgroundColor: Colors.green,
           ),
@@ -198,8 +197,8 @@ class _ClientDebtsScreenState extends State<ClientDebtsScreen>
                 border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
               ),
               child: const Text(
-                'Perdonar la deuda desbloqueará al cliente pero NO recuperará '
-                'el dinero para MASTER. Úsalo solo en casos justificados.',
+                'Perdonar la deuda desbloqueará al cliente. MASTER absorberá '
+                'la pérdida. El Balance 0 se mantiene con un settlement interno.',
                 style: TextStyle(fontSize: 13),
               ),
             ),
@@ -222,24 +221,139 @@ class _ClientDebtsScreenState extends State<ClientDebtsScreen>
 
     if (ok != true || !mounted) return;
 
-    final adminId = SessionManager.instance.currentSession?.userId;
+    final adminId = SessionManager.instance.currentSession!.userId;
 
     try {
-      await SupabaseConfig.client.from('client_debts').update({
-        'status': 'forgiven',
-        'forgiven_at': DateTime.now().toIso8601String(),
-        'forgiven_by': adminId,
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', debt['id'] as String);
+      // Llama RPC que crea el settlement contable + desbloquea al cliente
+      final result = await SupabaseConfig.client.rpc(
+        'admin_forgive_client_debt',
+        params: {
+          'p_debt_id': debt['id'],
+          'p_admin_id': adminId,
+          'p_reason': 'admin_decision',
+        },
+      );
 
+      final res = Map<String, dynamic>.from(result as Map);
+      if (!mounted) return;
+
+      if (res['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deuda perdonada. $clientName desbloqueado.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        await _load();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${res['error']}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Deuda perdonada. $clientName desbloqueado.'),
-          backgroundColor: Colors.orange,
-        ),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
-      await _load();
+    }
+  }
+
+  // ── Culpa del repartidor ──────────────────────────────────────────────────────
+  Future<void> _setDeliveryFault(Map<String, dynamic> debt) async {
+    final client = debt['client'] as Map<String, dynamic>?;
+    final clientName = client?['name'] ?? client?['email'] ?? 'Cliente';
+    final amount = (debt['amount'] as num).toDouble();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.delivery_dining, color: Colors.deepOrange),
+            const SizedBox(width: 8),
+            const Text('Culpa del Repartidor'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Cliente: $clientName',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('Monto: ${_fmt.format(amount)}'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.deepOrange.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: Colors.deepOrange.withValues(alpha: 0.3)),
+              ),
+              child: const Text(
+                '• El cliente quedará exonerado y desbloqueado.\n'
+                '• Se penalizará al repartidor revirtiendo su ganancia.\n'
+                '• MASTER absorberá la pérdida.\n'
+                '• Balance 0 se mantiene.',
+                style: TextStyle(fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            icon: const Icon(Icons.delivery_dining),
+            label: const Text('Confirmar'),
+            style: FilledButton.styleFrom(backgroundColor: Colors.deepOrange),
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true || !mounted) return;
+
+    final adminId = SessionManager.instance.currentSession!.userId;
+
+    try {
+      final result = await SupabaseConfig.client.rpc(
+        'admin_set_delivery_fault',
+        params: {
+          'p_debt_id': debt['id'],
+          'p_admin_id': adminId,
+          'p_notes': 'Determinado por admin tras revisión de evidencia',
+        },
+      );
+
+      final res = Map<String, dynamic>.from(result as Map);
+      if (!mounted) return;
+
+      if (res['success'] == true) {
+        final penalty = (res['penalty_amount'] as num?)?.toDouble() ?? 0;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '$clientName exonerado. Repartidor penalizado ${_fmt.format(penalty)}.',
+            ),
+            backgroundColor: Colors.deepOrange,
+          ),
+        );
+        await _load();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${res['error']}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -392,6 +506,7 @@ class _ClientDebtsScreenState extends State<ClientDebtsScreen>
     final clientEmail = client?['email'] ?? '';
     final amount = (debt['amount'] as num).toDouble();
     final status = debt['status'] as String;
+    final faultParty = debt['fault_party'] as String? ?? 'client';
     final reason = debt['reason'] as String? ?? 'not_delivered';
     final createdAt = DateTime.tryParse(debt['created_at'] as String? ?? '');
     final orderId = debt['order_id'] as String? ?? '';
@@ -460,8 +575,14 @@ class _ClientDebtsScreenState extends State<ClientDebtsScreen>
               _infoRow(Icons.calendar_today_outlined, 'Fecha',
                   _dateFmt.format(createdAt.toLocal())),
             const SizedBox(height: 10),
-            // ── Badge de status ───────────────────────────────────────────────
-            _statusBadge(status),
+            // ── Badges: status + culpable ─────────────────────────────────────
+            Row(
+              children: [
+                _statusBadge(status),
+                const SizedBox(width: 8),
+                _faultBadge(faultParty),
+              ],
+            ),
             // ── Acciones ──────────────────────────────────────────────────────
             if (showActions) ...[
               const SizedBox(height: 12),
@@ -489,6 +610,19 @@ class _ClientDebtsScreenState extends State<ClientDebtsScreen>
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.delivery_dining, size: 18),
+                  label: const Text('Culpa del Repartidor'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.deepOrange,
+                    side: const BorderSide(color: Colors.deepOrange),
+                  ),
+                  onPressed: () => _setDeliveryFault(debt),
+                ),
               ),
             ],
           ],
@@ -539,6 +673,33 @@ class _ClientDebtsScreenState extends State<ClientDebtsScreen>
           Text(cfg.$3,
               style: TextStyle(
                   fontSize: 12, color: cfg.$1, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Widget _faultBadge(String faultParty) {
+    final cfg = switch (faultParty) {
+      'client'   => (Colors.red[700]!, Icons.person_off_outlined, 'Culpa Cliente'),
+      'delivery' => (Colors.deepOrange, Icons.delivery_dining, 'Culpa Repartidor'),
+      'platform' => (Colors.blue, Icons.business_outlined, 'Plataforma'),
+      _          => (Colors.grey, Icons.help_outline, 'Por determinar'),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: cfg.$1.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cfg.$1.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(cfg.$2, size: 13, color: cfg.$1),
+          const SizedBox(width: 4),
+          Text(cfg.$3,
+              style: TextStyle(
+                  fontSize: 11, color: cfg.$1, fontWeight: FontWeight.w600)),
         ],
       ),
     );
