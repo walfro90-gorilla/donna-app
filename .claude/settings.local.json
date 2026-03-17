@@ -43,14 +43,16 @@
       "Bash(cmd.exe /c \"flutter analyze lib/core/config/payment_config.dart lib/models/doa_models.dart lib/screens/checkout/checkout_screen.dart 2>&1 | tail -15\")",
       "Bash(cmd.exe /c \"flutter analyze lib/core/config/payment_config.dart lib/models/doa_models.dart lib/screens/checkout/checkout_screen.dart 2>&1\")",
       "Bash(find /x/Codes/donna-app -name *.sql -type f)",
-      "Bash(export PATH=\"$PATH:/c/Users/walfr/flutter/bin\")"
+      "Bash(export PATH=\"$PATH:/c/Users/walfr/flutter/bin\")",
+      "Bash(grep -r create_order_safe x:/Codes/donna-app/sql_migrations --include=*.sql)",
+      "Bash(grep -r \"commission_bps\\\\|commission_rate\\\\|\\\\* 0\\\\.15\\\\|\\\\* 0\\\\.20\" x:/Codes/donna-app/sql_migrations --include=*.sql)"
     ],
     "additionalDirectories": [
       "C:\\Users\\walfr\\.claude"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }
