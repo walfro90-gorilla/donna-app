@@ -1365,6 +1365,7 @@ class DoaOrderItem {
   final bool isRemoved;
   final DateTime createdAt;
   final DoaProduct? product;
+  final String? notes;
 
   DoaOrderItem({
     required this.id,
@@ -1376,6 +1377,7 @@ class DoaOrderItem {
     this.isRemoved = false,
     required this.createdAt,
     this.product,
+    this.notes,
   }) : unitPrice = unitPrice ?? priceAtTimeOfOrder;
 
   // Precio unitario efectivo: preferir unit_price (campo canónico), fallback a priceAtTimeOfOrder
@@ -1404,6 +1406,7 @@ class DoaOrderItem {
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
         product: json['product'] != null ? DoaProduct.fromJson(json['product']) : null,
+        notes: json['notes'] as String?,
       );
     } catch (e) {
       print('❌ [ORDER_ITEM] Error parsing order item: $e');
@@ -1428,9 +1431,168 @@ class DoaOrderItem {
       'unit_price': unitPrice,
       'price_at_time_of_order': priceAtTimeOfOrder,
       'created_at': createdAt.toIso8601String(),
+      if (notes != null && notes!.isNotEmpty) 'notes': notes,
     };
   }
 }
+
+// ─── Modifier System ──────────────────────────────────────────────────────────
+
+/// Selección ligera usada en el carrito (no persistida hasta crear la orden)
+class ModifierSelection {
+  final String modifierId;
+  final String groupId;
+  final String name;
+  final String groupName;
+  final double priceDelta;
+
+  const ModifierSelection({
+    required this.modifierId,
+    required this.groupId,
+    required this.name,
+    required this.groupName,
+    required this.priceDelta,
+  });
+
+  Map<String, dynamic> toOrderJson() => {
+    'modifier_id': modifierId,
+    'group_id': groupId,
+    'name': name,
+    'group_name': groupName,
+    'price_delta': priceDelta,
+  };
+}
+
+/// Opción individual dentro de un grupo de modificadores
+class DoaModifier {
+  final String id;
+  final String groupId;
+  final String name;
+  final String? description;
+  final double priceDelta;
+  final bool isAvailable;
+  final int sortOrder;
+
+  const DoaModifier({
+    required this.id,
+    required this.groupId,
+    required this.name,
+    this.description,
+    required this.priceDelta,
+    required this.isAvailable,
+    required this.sortOrder,
+  });
+
+  factory DoaModifier.fromJson(Map<String, dynamic> json) {
+    return DoaModifier(
+      id: json['id'] as String,
+      groupId: json['group_id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String?,
+      priceDelta: (json['price_delta'] as num?)?.toDouble() ?? 0.0,
+      isAvailable: json['is_available'] as bool? ?? true,
+      sortOrder: json['sort_order'] as int? ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'group_id': groupId,
+    'name': name,
+    'description': description,
+    'price_delta': priceDelta,
+    'is_available': isAvailable,
+    'sort_order': sortOrder,
+  };
+}
+
+/// Grupo de modificadores de un producto (e.g., "Elige tu salsa")
+class DoaModifierGroup {
+  final String id;
+  final String productId;
+  final String name;
+  final String? description;
+  /// 'single' | 'multiple'
+  final String selectionType;
+  final int minSelections;
+  final int maxSelections;
+  final bool isRequired;
+  final int sortOrder;
+  final bool isActive;
+  final List<DoaModifier> modifiers;
+
+  const DoaModifierGroup({
+    required this.id,
+    required this.productId,
+    required this.name,
+    this.description,
+    required this.selectionType,
+    required this.minSelections,
+    required this.maxSelections,
+    required this.isRequired,
+    required this.sortOrder,
+    required this.isActive,
+    required this.modifiers,
+  });
+
+  factory DoaModifierGroup.fromJson(Map<String, dynamic> json) {
+    final modifiersRaw = json['modifiers'] as List<dynamic>? ?? [];
+    return DoaModifierGroup(
+      id: json['id'] as String,
+      productId: json['product_id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String?,
+      selectionType: json['selection_type'] as String? ?? 'single',
+      minSelections: json['min_selections'] as int? ?? 0,
+      maxSelections: json['max_selections'] as int? ?? 1,
+      isRequired: json['is_required'] as bool? ?? false,
+      sortOrder: json['sort_order'] as int? ?? 0,
+      isActive: json['is_active'] as bool? ?? true,
+      modifiers: modifiersRaw
+          .map((m) => DoaModifier.fromJson(m as Map<String, dynamic>))
+          .toList()
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
+    );
+  }
+
+  bool get isSingle => selectionType == 'single';
+  bool get isMultiple => selectionType == 'multiple';
+}
+
+/// Snapshot de un modificador seleccionado, guardado en order_item_modifiers
+class DoaOrderItemModifier {
+  final String id;
+  final String orderItemId;
+  final String? modifierId;
+  final String? groupId;
+  final String name;
+  final String? groupName;
+  final double priceDelta;
+
+  const DoaOrderItemModifier({
+    required this.id,
+    required this.orderItemId,
+    this.modifierId,
+    this.groupId,
+    required this.name,
+    this.groupName,
+    required this.priceDelta,
+  });
+
+  factory DoaOrderItemModifier.fromJson(Map<String, dynamic> json) {
+    return DoaOrderItemModifier(
+      id: json['id'] as String,
+      orderItemId: json['order_item_id'] as String,
+      modifierId: json['modifier_id'] as String?,
+      groupId: json['modifier_group_id'] as String?,
+      name: json['name'] as String,
+      groupName: json['group_name'] as String?,
+      priceDelta: (json['price_delta'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
+// ─── End Modifier System ───────────────────────────────────────────────────────
 
 class DoaPayment {
   final String id;

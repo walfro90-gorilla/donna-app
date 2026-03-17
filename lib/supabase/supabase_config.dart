@@ -1542,6 +1542,8 @@ class DoaRepartosService {
           'product_id': item['product_id'],
           'quantity': item['quantity'],
           'price': item['unit_price'] ?? item['price_at_time_of_order'] ?? item['price'],
+          'notes': item['notes'],
+          'modifiers': item['modifiers'] ?? [],
         }).toList();
 
         final itemsResult = await SupabaseConfig.client.rpc('insert_order_items_v2', params: {

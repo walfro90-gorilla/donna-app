@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:doa_repartos/models/doa_models.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
 import 'package:doa_repartos/screens/checkout/checkout_screen.dart';
@@ -27,6 +28,12 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
 
   // Carrito temporal (reactivo para bottom sheet)
   final ValueNotifier<Map<String, int>> _cartVN = ValueNotifier(<String, int>{});
+  // Notas por item: productId → texto de instrucciones especiales (free-text)
+  final Map<String, String> _itemNotes = {};
+  // Modificadores seleccionados: productId → lista de selecciones
+  final Map<String, List<ModifierSelection>> _itemModifiers = {};
+  // Caché de grupos de modificadores: productId → lista de grupos (evita re-fetches)
+  final Map<String, List<DoaModifierGroup>> _modifierGroupsCache = {};
   bool _hasActiveCouriers = true;
   StreamSubscription<void>? _couriersUpdatesSubscription;
   bool _isPreviewMode = false;
@@ -144,10 +151,28 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
   int get _totalItems =>
       _cartVN.value.values.fold(0, (sum, quantity) => sum + quantity);
 
+  /// Genera un resumen de texto con modificadores + nota libre para mostrar en ProductCard
+  String? _buildItemSummaryNote(String productId) {
+    final mods = _itemModifiers[productId] ?? [];
+    final note = _itemNotes[productId] ?? '';
+    if (mods.isEmpty && note.isEmpty) return null;
+    final parts = <String>[
+      if (mods.isNotEmpty) mods.map((m) => m.name).join(', '),
+      if (note.isNotEmpty) note,
+    ];
+    return parts.join(' · ');
+  }
+
+  double _effectivePriceForProduct(String productId) {
+    final product = _products.firstWhere((p) => p.id == productId);
+    final modifierDelta = (_itemModifiers[productId] ?? [])
+        .fold(0.0, (sum, m) => sum + m.priceDelta);
+    return product.price + modifierDelta;
+  }
+
   double get _totalAmount {
     return _cartVN.value.entries.fold(0.0, (sum, entry) {
-      final product = _products.firstWhere((p) => p.id == entry.key);
-      return sum + (product.price * entry.value);
+      return sum + _effectivePriceForProduct(entry.key) * entry.value;
     });
   }
 
@@ -474,6 +499,10 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
                                             ? () => _removeFromCart(product.id)
                                             : null,
                                         productNameById: productNameById,
+                                        note: _buildItemSummaryNote(product.id),
+                                        onNotesTap: _hasActiveCouriers && (_cartVN.value[product.id] ?? 0) > 0
+                                            ? () => _showItemCustomizationSheet(product)
+                                            : null,
                                       ),
                                     );
                                   },
@@ -646,6 +675,73 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
     );
   }
 
+  /// Carga modifier_groups del producto (con caché por sesión)
+  Future<List<DoaModifierGroup>> _getModifierGroups(String productId) async {
+    if (_modifierGroupsCache.containsKey(productId)) {
+      return _modifierGroupsCache[productId]!;
+    }
+    try {
+      final data = await Supabase.instance.client
+          .from('modifier_groups')
+          .select('*, modifiers(*)')
+          .eq('product_id', productId)
+          .eq('is_active', true)
+          .order('sort_order');
+      final groups = (data as List)
+          .map((g) => DoaModifierGroup.fromJson(g as Map<String, dynamic>))
+          .toList();
+      _modifierGroupsCache[productId] = groups;
+      return groups;
+    } catch (e) {
+      debugPrint('⚠️ [RESTAURANT_DETAIL] Error cargando modificadores: $e');
+      _modifierGroupsCache[productId] = [];
+      return [];
+    }
+  }
+
+  /// Muestra la hoja de personalización: si el producto tiene grupos estructurados
+  /// los muestra primero; siempre termina con el campo de notas libre.
+  Future<void> _showItemCustomizationSheet(DoaProduct product) async {
+    final groups = await _getModifierGroups(product.id);
+
+    if (!mounted) return;
+
+    // Selecciones actuales (para pre-cargar si el usuario ya eligió antes)
+    final currentSelections = List<ModifierSelection>.from(_itemModifiers[product.id] ?? []);
+    final notesController = TextEditingController(text: _itemNotes[product.id] ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _ItemCustomizationSheet(
+        product: product,
+        groups: groups,
+        initialSelections: currentSelections,
+        notesController: notesController,
+        onConfirm: (selections, note) {
+          setState(() {
+            if (selections.isEmpty) {
+              _itemModifiers.remove(product.id);
+            } else {
+              _itemModifiers[product.id] = selections;
+            }
+            if (note.isEmpty) {
+              _itemNotes.remove(product.id);
+            } else {
+              _itemNotes[product.id] = note;
+            }
+          });
+        },
+      ),
+    );
+  }
+
+  /// Mantiene compatibilidad con el CartBottomSheet que solo soporta notas texto
+  void _showItemNotesSheet(DoaProduct product) {
+    _showItemCustomizationSheet(product);
+  }
+
   void _showCartBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -657,8 +753,19 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
         cartListenable: _cartVN,
         products: _products,
         canCheckout: _hasActiveCouriers,
+        itemNotes: Map<String, String>.from(_itemNotes),
+        itemModifiers: Map<String, List<ModifierSelection>>.from(_itemModifiers),
         onUpdateCart: (productId, quantity) {
           _updateCart(productId, quantity);
+        },
+        onUpdateItemNotes: (productId, notes) {
+          setState(() {
+            if (notes.isEmpty) {
+              _itemNotes.remove(productId);
+            } else {
+              _itemNotes[productId] = notes;
+            }
+          });
         },
       ),
     );
@@ -786,6 +893,10 @@ class ProductCard extends StatelessWidget {
   final Map<String, String>? productNameById;
   // Commission in basis points (1500 = 15%). Used to calculate client-facing price.
   final int commissionBps;
+  // Per-item note (shown when set)
+  final String? note;
+  // Callback to open notes editor
+  final VoidCallback? onNotesTap;
 
   const ProductCard({
     super.key,
@@ -796,6 +907,8 @@ class ProductCard extends StatelessWidget {
     this.orderingEnabled = true,
     this.productNameById,
     this.commissionBps = 1500,
+    this.note,
+    this.onNotesTap,
   });
 
   @override
@@ -905,6 +1018,40 @@ class ProductCard extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 8),
+                  // Nota del item (si existe)
+                  if (quantity > 0 && (note != null && note!.isNotEmpty)) ...[
+                    GestureDetector(
+                      onTap: onNotesTap,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_note, size: 14, color: Theme.of(context).colorScheme.primary),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                note!,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontStyle: FontStyle.italic,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -934,6 +1081,19 @@ class ProductCard extends StatelessWidget {
                           : Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                if (onNotesTap != null)
+                                  IconButton(
+                                    onPressed: onNotesTap,
+                                    icon: Icon(
+                                      (note != null && note!.isNotEmpty)
+                                          ? Icons.edit_note
+                                          : Icons.note_add_outlined,
+                                      size: 20,
+                                    ),
+                                    color: Theme.of(context).colorScheme.primary,
+                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                    tooltip: 'Instrucciones especiales',
+                                  ),
                                 IconButton(
                                   onPressed: orderingEnabled ? onRemove : null,
                                   icon: const Icon(Icons.remove_circle_outline),
@@ -1044,6 +1204,9 @@ class CartBottomSheet extends StatelessWidget {
   final List<DoaProduct> products;
   final Function(String, int) onUpdateCart;
   final bool canCheckout;
+  final Map<String, String> itemNotes;
+  final Map<String, List<ModifierSelection>> itemModifiers;
+  final Function(String productId, String notes)? onUpdateItemNotes;
 
   const CartBottomSheet({
     super.key,
@@ -1053,12 +1216,20 @@ class CartBottomSheet extends StatelessWidget {
     required this.products,
     required this.onUpdateCart,
     this.canCheckout = true,
+    this.itemNotes = const {},
+    this.itemModifiers = const {},
+    this.onUpdateItemNotes,
   });
+
+  double _effectivePrice(String productId) {
+    final product = products.firstWhere((p) => p.id == productId);
+    final delta = (itemModifiers[productId] ?? []).fold(0.0, (s, m) => s + m.priceDelta);
+    return product.price + delta;
+  }
 
   double _computeTotal(Map<String, int> items) {
     return items.entries.fold(0.0, (sum, entry) {
-      final product = products.firstWhere((p) => p.id == entry.key);
-      return sum + (product.price * entry.value);
+      return sum + _effectivePrice(entry.key) * entry.value;
     });
   }
 
@@ -1108,79 +1279,135 @@ class CartBottomSheet extends StatelessWidget {
                   final product = products.firstWhere((p) => p.id == entry.key);
                   final quantity = entry.value;
 
+                  final itemNote = itemNotes[product.id];
+                  final mods = itemModifiers[product.id] ?? [];
+                  final unitPrice = _effectivePrice(product.id);
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product.name,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleSmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                              Text(
-                                '\$${product.price.toStringAsFixed(2)} c/u',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Controles de cantidad
                         Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            IconButton(
-                              onPressed: () =>
-                                  onUpdateCart(product.id, quantity - 1),
-                              icon: const Icon(Icons.remove_circle_outline),
-                              constraints: const BoxConstraints(
-                                  minWidth: 32, minHeight: 32),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
-                                borderRadius: BorderRadius.circular(6),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product.name,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                  Text(
+                                    '\$${unitPrice.toStringAsFixed(2)} c/u',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                  ),
+                                  if (mods.isNotEmpty)
+                                    Text(
+                                      mods.map((m) => m.name).join(', '),
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        fontStyle: FontStyle.italic,
+                                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                ],
                               ),
-                              child: Text(quantity.toString()),
                             ),
-                            IconButton(
-                              onPressed: () =>
-                                  onUpdateCart(product.id, quantity + 1),
-                              icon: const Icon(Icons.add_circle_outline),
-                              constraints: const BoxConstraints(
-                                  minWidth: 32, minHeight: 32),
+                            // Controles de cantidad
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  onPressed: () => onUpdateCart(product.id, quantity - 1),
+                                  icon: const Icon(Icons.remove_circle_outline),
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(quantity.toString()),
+                                ),
+                                IconButton(
+                                  onPressed: () => onUpdateCart(product.id, quantity + 1),
+                                  icon: const Icon(Icons.add_circle_outline),
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '\$${(unitPrice * quantity).toStringAsFixed(2)}',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
-
-                        const SizedBox(width: 8),
-
-                        Text(
-                          '\$${(product.price * quantity).toStringAsFixed(2)}',
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
+                        // Nota del item
+                        if (itemNote != null && itemNote.isNotEmpty)
+                          GestureDetector(
+                            onTap: () {
+                              if (onUpdateItemNotes != null) {
+                                _showCartItemNotesSheet(context, product, itemNote);
+                              }
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_note, size: 14, color: Theme.of(context).colorScheme.primary),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      itemNote,
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        fontStyle: FontStyle.italic,
+                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                        ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else if (onUpdateItemNotes != null)
+                          GestureDetector(
+                            onTap: () => _showCartItemNotesSheet(context, product, ''),
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.note_add_outlined, size: 13, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Agregar nota',
+                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   );
@@ -1217,13 +1444,14 @@ class CartBottomSheet extends StatelessWidget {
                     onPressed: canCheckout
                         ? () {
                             Navigator.of(context).pop();
-                            // Navigate to checkout screen
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (context) => CheckoutScreen(
                                   restaurant: restaurant,
                                   cartItems: cartListenable?.value ?? cartItems,
                                   products: products,
+                                  itemNotes: Map<String, String>.from(itemNotes),
+                                  itemModifiers: Map<String, List<ModifierSelection>>.from(itemModifiers),
                                 ),
                               ),
                             );
@@ -1254,6 +1482,310 @@ class CartBottomSheet extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showCartItemNotesSheet(BuildContext context, DoaProduct product, String currentNote) {
+    final controller = TextEditingController(text: currentNote);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                product.name,
+                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Instrucciones especiales',
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                maxLines: 3,
+                maxLength: 200,
+                decoration: InputDecoration(
+                  hintText: 'Ej: salsa BBQ, sin cebolla, extra picante...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (currentNote.isNotEmpty)
+                    TextButton(
+                      onPressed: () {
+                        onUpdateItemNotes?.call(product.id, '');
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text('Eliminar nota'),
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  ElevatedButton(
+                    onPressed: () {
+                      onUpdateItemNotes?.call(product.id, controller.text.trim());
+                      Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(ctx).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('Listo'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// _ItemCustomizationSheet: Hoja de personalización estilo DoorDash
+// Muestra grupos de modificadores (single/multiple) + campo de notas libre
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ItemCustomizationSheet extends StatefulWidget {
+  final DoaProduct product;
+  final List<DoaModifierGroup> groups;
+  final List<ModifierSelection> initialSelections;
+  final TextEditingController notesController;
+  final void Function(List<ModifierSelection> selections, String note) onConfirm;
+
+  const _ItemCustomizationSheet({
+    required this.product,
+    required this.groups,
+    required this.initialSelections,
+    required this.notesController,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_ItemCustomizationSheet> createState() => _ItemCustomizationSheetState();
+}
+
+class _ItemCustomizationSheetState extends State<_ItemCustomizationSheet> {
+  // Selecciones actuales: groupId → lista de ModifierSelection (para multiple) o una sola (single)
+  late Map<String, List<ModifierSelection>> _selectionsByGroup;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicializar desde selecciones previas
+    _selectionsByGroup = {};
+    for (final sel in widget.initialSelections) {
+      _selectionsByGroup.putIfAbsent(sel.groupId, () => []).add(sel);
+    }
+  }
+
+  bool get _isValid {
+    for (final group in widget.groups) {
+      if (!group.isRequired) continue;
+      final selected = _selectionsByGroup[group.id] ?? [];
+      if (selected.isEmpty) return false;
+    }
+    return true;
+  }
+
+  void _toggleModifier(DoaModifierGroup group, DoaModifier modifier) {
+    setState(() {
+      final current = _selectionsByGroup[group.id] ?? [];
+      final sel = ModifierSelection(
+        modifierId: modifier.id,
+        groupId: group.id,
+        name: modifier.name,
+        groupName: group.name,
+        priceDelta: modifier.priceDelta,
+      );
+
+      if (group.isSingle) {
+        // Single: siempre reemplazar
+        _selectionsByGroup[group.id] = [sel];
+      } else {
+        // Multiple: toggle
+        final exists = current.any((s) => s.modifierId == modifier.id);
+        if (exists) {
+          _selectionsByGroup[group.id] = current.where((s) => s.modifierId != modifier.id).toList();
+        } else {
+          if (current.length < group.maxSelections) {
+            _selectionsByGroup[group.id] = [...current, sel];
+          }
+        }
+      }
+    });
+  }
+
+  bool _isSelected(String groupId, String modifierId) {
+    return (_selectionsByGroup[groupId] ?? []).any((s) => s.modifierId == modifierId);
+  }
+
+  void _confirm() {
+    final allSelections = _selectionsByGroup.values.expand((list) => list).toList();
+    widget.onConfirm(allSelections, widget.notesController.text.trim());
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Container(
+            width: 40, height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(color: cs.onSurface.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2)),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Título
+                  Text(widget.product.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+
+                  // Grupos de modificadores
+                  ...widget.groups.map((group) => _buildGroup(group, cs)),
+
+                  // Instrucciones especiales (texto libre, siempre al final)
+                  const SizedBox(height: 8),
+                  Text(
+                    'Instrucciones especiales',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: widget.notesController,
+                    maxLines: 2,
+                    maxLength: 200,
+                    decoration: InputDecoration(
+                      hintText: 'Sin cebolla, extra picante...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+          ),
+          // Botón confirmar
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isValid ? _confirm : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: cs.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  disabledBackgroundColor: cs.onSurface.withValues(alpha: 0.12),
+                ),
+                child: Text(
+                  _isValid ? 'Listo' : 'Selecciona las opciones obligatorias',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGroup(DoaModifierGroup group, ColorScheme cs) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(group.name, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+            ),
+            if (group.isRequired)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: cs.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                child: Text('Obligatorio', style: TextStyle(fontSize: 10, color: cs.error, fontWeight: FontWeight.w600)),
+              ),
+          ],
+        ),
+        if (group.description != null && group.description!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2, bottom: 4),
+            child: Text(group.description!, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.6))),
+          ),
+        const SizedBox(height: 8),
+        ...group.modifiers.map((modifier) => _buildModifierRow(group, modifier, cs)),
+        const Divider(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildModifierRow(DoaModifierGroup group, DoaModifier modifier, ColorScheme cs) {
+    final selected = _isSelected(group.id, modifier.id);
+    return InkWell(
+      onTap: () => _toggleModifier(group, modifier),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        child: Row(
+          children: [
+            if (group.isSingle)
+              Icon(selected ? Icons.radio_button_on : Icons.radio_button_off, color: selected ? cs.primary : cs.onSurface.withValues(alpha: 0.4), size: 22)
+            else
+              Icon(selected ? Icons.check_box : Icons.check_box_outline_blank, color: selected ? cs.primary : cs.onSurface.withValues(alpha: 0.4), size: 22),
+            const SizedBox(width: 12),
+            Expanded(child: Text(modifier.name, style: Theme.of(context).textTheme.bodyMedium)),
+            if (modifier.priceDelta > 0)
+              Text('+\$${modifier.priceDelta.toStringAsFixed(2)}', style: TextStyle(color: cs.primary, fontWeight: FontWeight.w600, fontSize: 13)),
+            if (modifier.priceDelta == 0)
+              Text('Gratis', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.4), fontSize: 12)),
+          ],
+        ),
       ),
     );
   }

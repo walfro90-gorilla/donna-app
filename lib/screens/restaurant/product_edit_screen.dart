@@ -1,4 +1,5 @@
 import 'package:doa_repartos/models/doa_models.dart';
+import 'package:doa_repartos/screens/restaurant/modifier_groups_screen.dart';
 import 'package:doa_repartos/services/storage_service.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
 import 'package:doa_repartos/widgets/image_upload_field.dart';
@@ -215,8 +216,51 @@ class _ProductEditScreenState extends State<ProductEditScreen> {
                 ),
               ),
               
+              // ── Personalización (solo en modo edición) ────────────────────
+              if (isEdit) ...[
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ModifierGroupsScreen(
+                        productId: widget.product!.id,
+                        productName: widget.product!.name,
+                      ),
+                    ),
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.3 : 0.5),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.tune, color: theme.colorScheme.primary),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Opciones de personalización', style: TextStyle(fontWeight: FontWeight.w600)),
+                              Text(
+                                'Salsas, extras, variantes...',
+                                style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.arrow_forward_ios, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 40),
-              
+
               // Action Button
               FilledButton(
                 onPressed: _saving ? null : _save,

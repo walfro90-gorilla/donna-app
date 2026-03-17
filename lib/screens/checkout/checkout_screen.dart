@@ -18,12 +18,16 @@ class CheckoutScreen extends StatefulWidget {
   final DoaRestaurant restaurant;
   final Map<String, int> cartItems;
   final List<DoaProduct> products;
+  final Map<String, String> itemNotes;
+  final Map<String, List<ModifierSelection>> itemModifiers;
 
   const CheckoutScreen({
     super.key,
     required this.restaurant,
     required this.cartItems,
     required this.products,
+    this.itemNotes = const {},
+    this.itemModifiers = const {},
   });
 
   @override
@@ -343,7 +347,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   double get _subtotal {
     return widget.cartItems.entries.fold(0.0, (sum, entry) {
       final product = widget.products.firstWhere((p) => p.id == entry.key);
-      return sum + (product.price * entry.value);
+      final mods = widget.itemModifiers[entry.key] ?? [];
+      final modDelta = mods.fold(0.0, (s, m) => s + m.priceDelta);
+      return sum + ((product.price + modDelta) * entry.value);
     });
   }
 
@@ -461,12 +467,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'order_notes': _notesController.text.trim(),
           'items': widget.cartItems.entries.map((entry) {
             final product = widget.products.firstWhere((p) => p.id == entry.key);
+            final mods = widget.itemModifiers[entry.key] ?? [];
+            final modDelta = mods.fold(0.0, (s, m) => s + m.priceDelta);
+            final effectivePrice = product.price + modDelta;
             return {
               'product_id': entry.key,
               'product_name': product.name,
               'quantity': entry.value,
-              'unit_price': product.price,
-              'price_at_time_of_order': product.price,
+              'unit_price': effectivePrice,
+              'price_at_time_of_order': effectivePrice,
+              'notes': widget.itemNotes[entry.key] ?? '',
+              'modifiers': mods.map((m) => m.toOrderJson()).toList(),
             };
           }).toList(),
         };
@@ -528,11 +539,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         
         final orderItems = widget.cartItems.entries.map((entry) {
           final product = widget.products.firstWhere((p) => p.id == entry.key);
+          final mods = widget.itemModifiers[entry.key] ?? [];
+          final modDelta = mods.fold(0.0, (s, m) => s + m.priceDelta);
+          final effectivePrice = product.price + modDelta;
           return {
             'product_id': entry.key,
             'quantity': entry.value,
-            'unit_price': product.price,
-            'price_at_time_of_order': product.price,
+            'unit_price': effectivePrice,
+            'price_at_time_of_order': effectivePrice,
+            'notes': widget.itemNotes[entry.key] ?? '',
+            'modifiers': mods.map((m) => m.toOrderJson()).toList(),
             'created_at': DateTime.now().toIso8601String(),
           };
         }).toList();
@@ -773,11 +789,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 16),
             ..._cartProducts.map((product) {
               final quantity = widget.cartItems[product.id]!;
-              final clientPrice = widget.restaurant.clientPrice(product.price);
-              final itemTotal = clientPrice * quantity;
+              final mods = widget.itemModifiers[product.id] ?? [];
+              final modDelta = mods.fold(0.0, (s, m) => s + m.priceDelta);
+              final effectivePrice = product.price + modDelta;
+              final itemTotal = effectivePrice * quantity;
+              final note = widget.itemNotes[product.id] ?? '';
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       width: 40,
@@ -797,10 +817,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(product.name, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-                          Text('${quantity} × \$${clientPrice.toStringAsFixed(2)} MXN',
+                          Text('$quantity × \$${effectivePrice.toStringAsFixed(2)} MXN',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Theme.of(context).colorScheme.onSurface,
                               )),
+                          if (mods.isNotEmpty)
+                            Text(
+                              mods.map((m) => m.priceDelta > 0 ? '${m.name} +\$${m.priceDelta.toStringAsFixed(0)}' : m.name).join(', '),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          if (note.isNotEmpty)
+                            Text(
+                              note,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontStyle: FontStyle.italic,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                         ],
                       ),
                     ),

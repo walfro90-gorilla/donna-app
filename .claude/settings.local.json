@@ -45,7 +45,13 @@
       "Bash(find /x/Codes/donna-app -name *.sql -type f)",
       "Bash(export PATH=\"$PATH:/c/Users/walfr/flutter/bin\")",
       "Bash(grep -r create_order_safe x:/Codes/donna-app/sql_migrations --include=*.sql)",
-      "Bash(grep -r \"commission_bps\\\\|commission_rate\\\\|\\\\* 0\\\\.15\\\\|\\\\* 0\\\\.20\" x:/Codes/donna-app/sql_migrations --include=*.sql)"
+      "Bash(grep -r \"commission_bps\\\\|commission_rate\\\\|\\\\* 0\\\\.15\\\\|\\\\* 0\\\\.20\" x:/Codes/donna-app/sql_migrations --include=*.sql)",
+      "Bash(grep -l \"order.*item\\\\|cart\\\\|product.*select\" /x/Codes/donna-app/lib/widgets/*.dart)",
+      "Bash(grep -l \"updated_by_user_id\\\\|ALTER TABLE.*order_status_updates\" /x/Codes/donna-app/sql_migrations/*.sql)",
+      "Bash(cmd /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze lib/screens/restaurants/restaurant_detail_screen.dart 2>&1\")",
+      "Bash(cmd /c \"cd /d \"\"x:\\\\Codes\\\\donna-app\"\" && flutter analyze lib\\\\screens\\\\restaurants\\\\restaurant_detail_screen.dart\")",
+      "Bash(cmd /c \"cd /d \"\"x:\\\\Codes\\\\donna-app\"\" && flutter analyze lib\\\\screens\\\\restaurants\\\\restaurant_detail_screen.dart && echo ANALYZE_DONE\")",
+      "Bash(grep -r insert_order_items_v2 /x/Codes/donna-app/lib --include=*.dart)"
     ],
     "additionalDirectories": [
       "C:\\Users\\walfr\\.claude"
