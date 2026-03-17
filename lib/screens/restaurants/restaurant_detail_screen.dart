@@ -30,8 +30,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
   final ValueNotifier<Map<String, int>> _cartVN = ValueNotifier(<String, int>{});
   // Notas por item: productId → texto de instrucciones especiales (free-text)
   final Map<String, String> _itemNotes = {};
-  // Modificadores seleccionados: productId → lista de selecciones
-  final Map<String, List<ModifierSelection>> _itemModifiers = {};
+  // Modificadores por unidad: productId → [ [selecciones_unidad_1], [selecciones_unidad_2], ... ]
+  final Map<String, List<List<ModifierSelection>>> _itemModifiers = {};
   // Caché de grupos de modificadores: productId → lista de grupos (evita re-fetches)
   final Map<String, List<DoaModifierGroup>> _modifierGroupsCache = {};
   bool _hasActiveCouriers = true;
@@ -134,46 +134,118 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
     });
   }
 
-  void _addToCart(String productId) {
-    final q = (_cartVN.value[productId] ?? 0) + 1;
-    _updateCart(productId, q);
+  /// Intenta agregar una unidad al carrito. Si el producto tiene grupos de
+  /// modificadores, abre el sheet de personalización PRIMERO y solo agrega
+  /// tras confirmar. Si no tiene grupos, agrega directamente.
+  Future<void> _addToCartWithModifiers(DoaProduct product) async {
+    final groups = await _getModifierGroups(product.id);
+    if (!mounted) return;
+
+    if (groups.isEmpty) {
+      // Sin modificadores: agregar directo
+      _updateCart(product.id, (_cartVN.value[product.id] ?? 0) + 1);
+      return;
+    }
+
+    // Con modificadores: mostrar sheet → agregar al confirmar
+    final notesController = TextEditingController(text: _itemNotes[product.id] ?? '');
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _ItemCustomizationSheet(
+        product: product,
+        groups: groups,
+        initialSelections: const [], // cada unidad empieza vacía
+        notesController: notesController,
+        onConfirm: (selections, note) {
+          // Agregar unidad al carrito
+          _updateCart(product.id, (_cartVN.value[product.id] ?? 0) + 1);
+          // Guardar selecciones de esta unidad
+          setState(() {
+            final units = List<List<ModifierSelection>>.from(_itemModifiers[product.id] ?? []);
+            units.add(selections);
+            _itemModifiers[product.id] = units;
+            if (note.isEmpty) {
+              _itemNotes.remove(product.id);
+            } else {
+              _itemNotes[product.id] = note;
+            }
+          });
+        },
+      ),
+    );
   }
 
   void _removeFromCart(String productId) {
     final current = _cartVN.value[productId] ?? 0;
     if (current <= 1) {
       _updateCart(productId, 0);
+      _itemModifiers.remove(productId);
+      _itemNotes.remove(productId);
     } else {
       _updateCart(productId, current - 1);
+      // Eliminar selecciones de la última unidad agregada
+      setState(() {
+        final units = List<List<ModifierSelection>>.from(_itemModifiers[productId] ?? []);
+        if (units.isNotEmpty) {
+          units.removeLast();
+          if (units.isEmpty) {
+            _itemModifiers.remove(productId);
+          } else {
+            _itemModifiers[productId] = units;
+          }
+        }
+      });
     }
   }
 
   int get _totalItems =>
       _cartVN.value.values.fold(0, (sum, quantity) => sum + quantity);
 
-  /// Genera un resumen de texto con modificadores + nota libre para mostrar en ProductCard
+  /// Genera un resumen de texto con modificadores por unidad + nota libre.
   String? _buildItemSummaryNote(String productId) {
-    final mods = _itemModifiers[productId] ?? [];
+    final units = _itemModifiers[productId] ?? [];
     final note = _itemNotes[productId] ?? '';
-    if (mods.isEmpty && note.isEmpty) return null;
-    final parts = <String>[
-      if (mods.isNotEmpty) mods.map((m) => m.name).join(', '),
-      if (note.isNotEmpty) note,
-    ];
-    return parts.join(' · ');
+    if (units.isEmpty && note.isEmpty) return null;
+
+    final parts = <String>[];
+    final allSame = units.isNotEmpty &&
+        units.every((u) =>
+            u.map((m) => m.modifierId).join(',') ==
+            units.first.map((m) => m.modifierId).join(','));
+
+    if (units.isNotEmpty) {
+      if (allSame) {
+        parts.add(units.first.map((m) => m.name).join(', '));
+      } else {
+        for (int i = 0; i < units.length; i++) {
+          if (units[i].isNotEmpty) {
+            parts.add('U${i + 1}: ${units[i].map((m) => m.name).join(', ')}');
+          }
+        }
+      }
+    }
+    if (note.isNotEmpty) parts.add(note);
+    return parts.isEmpty ? null : parts.join(' · ');
   }
 
-  double _effectivePriceForProduct(String productId) {
+  /// Total por producto: suma (precio_base + delta_modificadores) por cada unidad.
+  double _productTotal(String productId) {
     final product = _products.firstWhere((p) => p.id == productId);
-    final modifierDelta = (_itemModifiers[productId] ?? [])
-        .fold(0.0, (sum, m) => sum + m.priceDelta);
-    return product.price + modifierDelta;
+    final qty = _cartVN.value[productId] ?? 0;
+    final units = _itemModifiers[productId] ?? [];
+    double total = 0;
+    for (int i = 0; i < qty; i++) {
+      final unitMods = i < units.length ? units[i] : <ModifierSelection>[];
+      final delta = unitMods.fold(0.0, (s, m) => s + m.priceDelta);
+      total += product.price + delta;
+    }
+    return total;
   }
 
   double get _totalAmount {
-    return _cartVN.value.entries.fold(0.0, (sum, entry) {
-      return sum + _effectivePriceForProduct(entry.key) * entry.value;
-    });
+    return _cartVN.value.keys.fold(0.0, (sum, id) => sum + _productTotal(id));
   }
 
   @override
@@ -493,7 +565,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
                                         orderingEnabled: _hasActiveCouriers,
                                         commissionBps: widget.restaurant.commissionBps,
                                         onAdd: _hasActiveCouriers
-                                            ? () => _addToCart(product.id)
+                                            ? () => _addToCartWithModifiers(product)
                                             : null,
                                         onRemove: _hasActiveCouriers
                                             ? () => _removeFromCart(product.id)
@@ -699,15 +771,16 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
     }
   }
 
-  /// Muestra la hoja de personalización: si el producto tiene grupos estructurados
-  /// los muestra primero; siempre termina con el campo de notas libre.
+  /// Edita las selecciones de la primera unidad + la nota libre.
+  /// Se abre al tocar el ícono de nota cuando el producto ya está en el carrito.
   Future<void> _showItemCustomizationSheet(DoaProduct product) async {
     final groups = await _getModifierGroups(product.id);
-
     if (!mounted) return;
 
-    // Selecciones actuales (para pre-cargar si el usuario ya eligió antes)
-    final currentSelections = List<ModifierSelection>.from(_itemModifiers[product.id] ?? []);
+    // Editar la primera unidad (unitIndex=0)
+    final units = _itemModifiers[product.id] ?? [];
+    final currentSelections =
+        units.isNotEmpty ? List<ModifierSelection>.from(units.first) : <ModifierSelection>[];
     final notesController = TextEditingController(text: _itemNotes[product.id] ?? '');
 
     showModalBottomSheet(
@@ -721,10 +794,13 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
         notesController: notesController,
         onConfirm: (selections, note) {
           setState(() {
-            if (selections.isEmpty) {
+            final newUnits = List<List<ModifierSelection>>.from(_itemModifiers[product.id] ?? []);
+            if (newUnits.isEmpty) newUnits.add([]);
+            newUnits[0] = selections;
+            if (newUnits.every((u) => u.isEmpty)) {
               _itemModifiers.remove(product.id);
             } else {
-              _itemModifiers[product.id] = selections;
+              _itemModifiers[product.id] = newUnits;
             }
             if (note.isEmpty) {
               _itemNotes.remove(product.id);
@@ -735,11 +811,6 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
         },
       ),
     );
-  }
-
-  /// Mantiene compatibilidad con el CartBottomSheet que solo soporta notas texto
-  void _showItemNotesSheet(DoaProduct product) {
-    _showItemCustomizationSheet(product);
   }
 
   void _showCartBottomSheet() {
@@ -754,7 +825,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
         products: _products,
         canCheckout: _hasActiveCouriers,
         itemNotes: Map<String, String>.from(_itemNotes),
-        itemModifiers: Map<String, List<ModifierSelection>>.from(_itemModifiers),
+        itemModifiers: Map<String, List<List<ModifierSelection>>>.from(_itemModifiers),
         onUpdateCart: (productId, quantity) {
           _updateCart(productId, quantity);
         },
@@ -1205,7 +1276,7 @@ class CartBottomSheet extends StatelessWidget {
   final Function(String, int) onUpdateCart;
   final bool canCheckout;
   final Map<String, String> itemNotes;
-  final Map<String, List<ModifierSelection>> itemModifiers;
+  final Map<String, List<List<ModifierSelection>>> itemModifiers;
   final Function(String productId, String notes)? onUpdateItemNotes;
 
   const CartBottomSheet({
@@ -1221,16 +1292,21 @@ class CartBottomSheet extends StatelessWidget {
     this.onUpdateItemNotes,
   });
 
-  double _effectivePrice(String productId) {
+  /// Suma precio_base + deltas de cada unidad para un producto.
+  double _productTotal(String productId, int quantity) {
     final product = products.firstWhere((p) => p.id == productId);
-    final delta = (itemModifiers[productId] ?? []).fold(0.0, (s, m) => s + m.priceDelta);
-    return product.price + delta;
+    final units = itemModifiers[productId] ?? [];
+    double total = 0;
+    for (int i = 0; i < quantity; i++) {
+      final unitMods = i < units.length ? units[i] : <ModifierSelection>[];
+      final delta = unitMods.fold(0.0, (s, m) => s + m.priceDelta);
+      total += product.price + delta;
+    }
+    return total;
   }
 
   double _computeTotal(Map<String, int> items) {
-    return items.entries.fold(0.0, (sum, entry) {
-      return sum + _effectivePrice(entry.key) * entry.value;
-    });
+    return items.entries.fold(0.0, (sum, e) => sum + _productTotal(e.key, e.value));
   }
 
   double get _totalAmount => _computeTotal(cartListenable?.value ?? cartItems);
@@ -1280,14 +1356,20 @@ class CartBottomSheet extends StatelessWidget {
                   final quantity = entry.value;
 
                   final itemNote = itemNotes[product.id];
-                  final mods = itemModifiers[product.id] ?? [];
-                  final unitPrice = _effectivePrice(product.id);
+                  final units = itemModifiers[product.id] ?? [];
+                  final itemTotal = _productTotal(product.id, quantity);
+                  // Resumen de modificadores: si todas las unidades tienen las mismas selecciones, mostrar una vez
+                  final allSame = units.length <= 1 ||
+                      units.every((u) =>
+                          u.map((m) => m.modifierId).join(',') ==
+                          units.first.map((m) => m.modifierId).join(','));
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: Column(
@@ -1301,7 +1383,7 @@ class CartBottomSheet extends StatelessWidget {
                                         ?.copyWith(fontWeight: FontWeight.w600),
                                   ),
                                   Text(
-                                    '\$${unitPrice.toStringAsFixed(2)} c/u',
+                                    '\$${(itemTotal / quantity).toStringAsFixed(2)} c/u',
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodyMedium
@@ -1311,15 +1393,25 @@ class CartBottomSheet extends StatelessWidget {
                                               .onSurfaceVariant,
                                         ),
                                   ),
-                                  if (mods.isNotEmpty)
+                                  if (units.isNotEmpty && allSame && units.first.isNotEmpty)
                                     Text(
-                                      mods.map((m) => m.name).join(', '),
+                                      units.first.map((m) => m.name).join(', '),
                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        fontStyle: FontStyle.italic,
                                         color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
+                                    )
+                                  else if (units.isNotEmpty && !allSame)
+                                    ...units.asMap().entries.where((e) => e.value.isNotEmpty).map((e) =>
+                                      Text(
+                                        'U${e.key + 1}: ${e.value.map((m) => m.name).join(', ')}',
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      )
                                     ),
                                 ],
                               ),
@@ -1350,7 +1442,7 @@ class CartBottomSheet extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '\$${(unitPrice * quantity).toStringAsFixed(2)}',
+                              '\$${itemTotal.toStringAsFixed(2)}',
                               style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ],
@@ -1451,7 +1543,7 @@ class CartBottomSheet extends StatelessWidget {
                                   cartItems: cartListenable?.value ?? cartItems,
                                   products: products,
                                   itemNotes: Map<String, String>.from(itemNotes),
-                                  itemModifiers: Map<String, List<ModifierSelection>>.from(itemModifiers),
+                                  itemModifiers: Map<String, List<List<ModifierSelection>>>.from(itemModifiers),
                                 ),
                               ),
                             );

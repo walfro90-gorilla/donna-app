@@ -19,7 +19,8 @@ class CheckoutScreen extends StatefulWidget {
   final Map<String, int> cartItems;
   final List<DoaProduct> products;
   final Map<String, String> itemNotes;
-  final Map<String, List<ModifierSelection>> itemModifiers;
+  // Por unidad: productId → [ [selecciones_u1], [selecciones_u2], ... ]
+  final Map<String, List<List<ModifierSelection>>> itemModifiers;
 
   const CheckoutScreen({
     super.key,
@@ -345,12 +346,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   double get _subtotal {
-    return widget.cartItems.entries.fold(0.0, (sum, entry) {
+    double total = 0;
+    for (final entry in widget.cartItems.entries) {
       final product = widget.products.firstWhere((p) => p.id == entry.key);
-      final mods = widget.itemModifiers[entry.key] ?? [];
-      final modDelta = mods.fold(0.0, (s, m) => s + m.priceDelta);
-      return sum + ((product.price + modDelta) * entry.value);
-    });
+      final qty = entry.value;
+      final units = widget.itemModifiers[entry.key] ?? [];
+      for (int i = 0; i < qty; i++) {
+        final unitMods = i < units.length ? units[i] : <ModifierSelection>[];
+        final delta = unitMods.fold(0.0, (s, m) => s + m.priceDelta);
+        total += product.price + delta;
+      }
+    }
+    return total;
   }
 
   double get _total => _subtotal + _deliveryFee;
@@ -465,21 +472,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'delivery_place_id': _deliveryPlaceId,
           'delivery_address_structured': _deliveryAddressStructured,
           'order_notes': _notesController.text.trim(),
-          'items': widget.cartItems.entries.map((entry) {
-            final product = widget.products.firstWhere((p) => p.id == entry.key);
-            final mods = widget.itemModifiers[entry.key] ?? [];
-            final modDelta = mods.fold(0.0, (s, m) => s + m.priceDelta);
-            final effectivePrice = product.price + modDelta;
-            return {
-              'product_id': entry.key,
-              'product_name': product.name,
-              'quantity': entry.value,
-              'unit_price': effectivePrice,
-              'price_at_time_of_order': effectivePrice,
-              'notes': widget.itemNotes[entry.key] ?? '',
-              'modifiers': mods.map((m) => m.toOrderJson()).toList(),
-            };
-          }).toList(),
+          // Expandir por unidad (igual que el flujo de efectivo)
+          'items': () {
+            final expanded = <Map<String, dynamic>>[];
+            for (final entry in widget.cartItems.entries) {
+              final product = widget.products.firstWhere((p) => p.id == entry.key);
+              final qty = entry.value;
+              final units = widget.itemModifiers[entry.key] ?? [];
+              for (int i = 0; i < qty; i++) {
+                final unitMods = i < units.length ? units[i] : <ModifierSelection>[];
+                final delta = unitMods.fold(0.0, (s, m) => s + m.priceDelta);
+                final effectivePrice = product.price + delta;
+                expanded.add({
+                  'product_id': entry.key,
+                  'product_name': product.name,
+                  'quantity': 1,
+                  'unit_price': effectivePrice,
+                  'price_at_time_of_order': effectivePrice,
+                  'notes': i == 0 ? (widget.itemNotes[entry.key] ?? '') : '',
+                  'modifiers': unitMods.map((m) => m.toOrderJson()).toList(),
+                });
+              }
+            }
+            return expanded;
+          }(),
         };
         
         if (mounted) {
@@ -537,21 +553,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         // **PAGO EN EFECTIVO**: Crear orden inmediatamente
         debugPrint('💵 [CHECKOUT] Método de pago: EFECTIVO - Creando orden...');
         
-        final orderItems = widget.cartItems.entries.map((entry) {
+        // Expandir cada producto en order_items individuales por unidad
+        // para preservar las selecciones de modificadores de cada una.
+        final orderItems = <Map<String, dynamic>>[];
+        for (final entry in widget.cartItems.entries) {
           final product = widget.products.firstWhere((p) => p.id == entry.key);
-          final mods = widget.itemModifiers[entry.key] ?? [];
-          final modDelta = mods.fold(0.0, (s, m) => s + m.priceDelta);
-          final effectivePrice = product.price + modDelta;
-          return {
-            'product_id': entry.key,
-            'quantity': entry.value,
-            'unit_price': effectivePrice,
-            'price_at_time_of_order': effectivePrice,
-            'notes': widget.itemNotes[entry.key] ?? '',
-            'modifiers': mods.map((m) => m.toOrderJson()).toList(),
-            'created_at': DateTime.now().toIso8601String(),
-          };
-        }).toList();
+          final qty = entry.value;
+          final units = widget.itemModifiers[entry.key] ?? [];
+          for (int i = 0; i < qty; i++) {
+            final unitMods = i < units.length ? units[i] : <ModifierSelection>[];
+            final delta = unitMods.fold(0.0, (s, m) => s + m.priceDelta);
+            final effectivePrice = product.price + delta;
+            orderItems.add({
+              'product_id': entry.key,
+              'quantity': 1,
+              'unit_price': effectivePrice,
+              'price_at_time_of_order': effectivePrice,
+              // La nota solo va en la primera unidad
+              'notes': i == 0 ? (widget.itemNotes[entry.key] ?? '') : '',
+              'modifiers': unitMods.map((m) => m.toOrderJson()).toList(),
+              'created_at': DateTime.now().toIso8601String(),
+            });
+          }
+        }
 
         debugPrint('📦 [CHECKOUT._placeOrder] Creando orden con coordenadas:');
         debugPrint('   - deliveryLat: $_deliveryLat');
@@ -789,11 +813,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 16),
             ..._cartProducts.map((product) {
               final quantity = widget.cartItems[product.id]!;
-              final mods = widget.itemModifiers[product.id] ?? [];
-              final modDelta = mods.fold(0.0, (s, m) => s + m.priceDelta);
-              final effectivePrice = product.price + modDelta;
-              final itemTotal = effectivePrice * quantity;
+              final units = widget.itemModifiers[product.id] ?? [];
+              // Calcular total por producto sumando por unidad
+              double itemTotal = 0;
+              for (int i = 0; i < quantity; i++) {
+                final unitMods = i < units.length ? units[i] : <ModifierSelection>[];
+                final delta = unitMods.fold(0.0, (s, m) => s + m.priceDelta);
+                itemTotal += product.price + delta;
+              }
               final note = widget.itemNotes[product.id] ?? '';
+              final allSame = units.length <= 1 ||
+                  units.every((u) =>
+                      u.map((m) => m.modifierId).join(',') ==
+                      units.first.map((m) => m.modifierId).join(','));
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
@@ -817,18 +849,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(product.name, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-                          Text('$quantity × \$${effectivePrice.toStringAsFixed(2)} MXN',
+                          Text('$quantity × \$${(itemTotal / quantity).toStringAsFixed(2)} MXN',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Theme.of(context).colorScheme.onSurface,
                               )),
-                          if (mods.isNotEmpty)
+                          // Mostrar selecciones: una vez si son iguales, por unidad si difieren
+                          if (units.isNotEmpty && allSame && units.first.isNotEmpty)
                             Text(
-                              mods.map((m) => m.priceDelta > 0 ? '${m.name} +\$${m.priceDelta.toStringAsFixed(0)}' : m.name).join(', '),
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
+                              units.first.map((m) => m.priceDelta > 0 ? '${m.name} +\$${m.priceDelta.toStringAsFixed(0)}' : m.name).join(', '),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
+                            )
+                          else if (units.isNotEmpty && !allSame)
+                            ...units.asMap().entries.where((e) => e.value.isNotEmpty).map((e) =>
+                              Text(
+                                'U${e.key + 1}: ${e.value.map((m) => m.priceDelta > 0 ? '${m.name} +\$${m.priceDelta.toStringAsFixed(0)}' : m.name).join(', ')}',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              )
                             ),
                           if (note.isNotEmpty)
                             Text(

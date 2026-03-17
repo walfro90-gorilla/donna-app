@@ -51,7 +51,10 @@
       "Bash(cmd /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze lib/screens/restaurants/restaurant_detail_screen.dart 2>&1\")",
       "Bash(cmd /c \"cd /d \"\"x:\\\\Codes\\\\donna-app\"\" && flutter analyze lib\\\\screens\\\\restaurants\\\\restaurant_detail_screen.dart\")",
       "Bash(cmd /c \"cd /d \"\"x:\\\\Codes\\\\donna-app\"\" && flutter analyze lib\\\\screens\\\\restaurants\\\\restaurant_detail_screen.dart && echo ANALYZE_DONE\")",
-      "Bash(grep -r insert_order_items_v2 /x/Codes/donna-app/lib --include=*.dart)"
+      "Bash(grep -r insert_order_items_v2 /x/Codes/donna-app/lib --include=*.dart)",
+      "Bash(grep -E \"error:|warning:|^$\")",
+      "Bash(cmd /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze 2>&1\")",
+      "Bash(powershell -Command \"Set-Location ''x:\\\\Codes\\\\donna-app''; flutter analyze 2>&1 | Select-Object -Last 30\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\walfr\\.claude"
