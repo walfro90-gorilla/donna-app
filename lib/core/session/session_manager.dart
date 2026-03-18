@@ -8,6 +8,8 @@ import 'package:doa_repartos/models/doa_models.dart';
 import 'package:doa_repartos/services/alert_sound_service.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
 import 'package:doa_repartos/services/polling_service.dart';
+import 'package:doa_repartos/services/realtime_service.dart';
+import 'package:doa_repartos/services/location_tracking_service.dart';
 
 /// Session Manager Centralizado - Controlador único de todas las sesiones
 class SessionManager {
@@ -373,6 +375,24 @@ class SessionManager {
       print('✅ [SESSION] PollingService detenido');
     } catch (e) {
       print('⚠️ [SESSION] Error deteniendo PollingService: $e');
+    }
+
+    // Limpiar instancias de Realtime (canales WebSocket + StreamControllers)
+    try {
+      if (oldSession.userId != null) {
+        RealtimeNotificationService.clearUserInstance(oldSession.userId!);
+      }
+      print('✅ [SESSION] RealtimeNotificationService limpiado');
+    } catch (e) {
+      print('⚠️ [SESSION] Error limpiando RealtimeNotificationService: $e');
+    }
+
+    // Detener GPS si el repartidor cerró sesión con tracking activo
+    try {
+      LocationTrackingService.instance.stop();
+      print('✅ [SESSION] LocationTrackingService detenido');
+    } catch (e) {
+      print('⚠️ [SESSION] Error deteniendo LocationTrackingService: $e');
     }
 
     print('✅ [SESSION] Session ended successfully');

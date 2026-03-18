@@ -157,14 +157,10 @@ class DeliveryService extends BaseService {
           .lte('created_at', todayEnd.toIso8601String());
       
       // Ganancias del mes
-      final monthStart = DateTime.now().copyWith(day: 1, hour: 0, minute: 0, second: 0);
-      final monthEnd = DateTime.now().copyWith(
-        month: DateTime.now().month + 1, 
-        day: 1, 
-        hour: 0, 
-        minute: 0, 
-        second: 0
-      ).subtract(const Duration(seconds: 1));
+      final now = DateTime.now();
+      final monthStart = DateTime(now.year, now.month, 1);
+      // Dart maneja month=13 → enero del año siguiente correctamente
+      final monthEnd = DateTime(now.year, now.month + 1, 1).subtract(const Duration(seconds: 1));
       
       final monthDeliveries = await SupabaseConfig.client
           .from('orders')

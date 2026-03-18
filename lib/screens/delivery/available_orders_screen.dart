@@ -103,7 +103,7 @@ class _AvailableOrdersScreenState extends State<AvailableOrdersScreen> {
       }
     } catch (e) {
       debugPrint('⚠️ [DELIVERY] Onboarding gate check failed: $e');
-      setState(() => _canDeliver = true); // fail-open
+      setState(() => _canDeliver = false); // fail-closed: si no se puede verificar, no permitir entregas
     }
   }
   

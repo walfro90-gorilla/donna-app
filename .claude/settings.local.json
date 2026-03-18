@@ -54,7 +54,16 @@
       "Bash(grep -r insert_order_items_v2 /x/Codes/donna-app/lib --include=*.dart)",
       "Bash(grep -E \"error:|warning:|^$\")",
       "Bash(cmd /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze 2>&1\")",
-      "Bash(powershell -Command \"Set-Location ''x:\\\\Codes\\\\donna-app''; flutter analyze 2>&1 | Select-Object -Last 30\")"
+      "Bash(powershell -Command \"Set-Location ''x:\\\\Codes\\\\donna-app''; flutter analyze 2>&1 | Select-Object -Last 30\")",
+      "Bash(python3 -c \":*)",
+      "Bash(node -e \":*)",
+      "Bash(cmd /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze lib/core/services/delivery_service.dart lib/screens/delivery/available_orders_screen.dart lib/screens/auth/email_verification_screen.dart lib/core/session/session_manager.dart lib/screens/admin/simple_admin_dashboard.dart 2>&1\")",
+      "Bash(cmd /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze lib/core/services/delivery_service.dart 2>&1\")",
+      "Bash(powershell -Command \"Set-Location ''x:\\\\Codes\\\\donna-app''; flutter analyze lib/core/services/delivery_service.dart lib/screens/delivery/available_orders_screen.dart lib/screens/auth/email_verification_screen.dart lib/core/session/session_manager.dart 2>&1 | Select-Object -Last 20\")",
+      "Bash(powershell -Command \"Get-Command flutter* -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
+      "Bash(powershell -Command \"where.exe flutter 2>&1; Get-ChildItem C:\\\\flutter\\\\bin -ErrorAction SilentlyContinue | Select Name\")",
+      "Bash(grep -i \"whatsapp\\\\|wa_\\\\|webhook\\\\|bot\" /x/Codes/donna-app/sql_migrations/*.sql)",
+      "Bash(grep -n \"insert_order_items_v2\\\\|p_items\" /x/Codes/donna-app/sql_migrations/*.sql)"
     ],
     "additionalDirectories": [
       "C:\\Users\\walfr\\.claude"

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,6 +19,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   bool _isLoading = false;
   bool _canResend = true;
   int _countdown = 0;
+  StreamSubscription? _authSub;
 
   @override
   void initState() {
@@ -25,8 +27,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     _startListeningToAuthChanges();
   }
 
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
+  }
+
   void _startListeningToAuthChanges() {
-    SupabaseAuth.authStateChanges.listen((authState) {
+    _authSub = SupabaseAuth.authStateChanges.listen((authState) {
       print('🔄 EmailVerificationScreen - Auth state change: ${authState.event}');
       print('📧 User email confirmed: ${authState.session?.user?.emailConfirmedAt != null}');
       
@@ -44,6 +52,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       }
     });
   }
+
 
   Future<void> _updateEmailConfirmStatus(String userId) async {
     try {
