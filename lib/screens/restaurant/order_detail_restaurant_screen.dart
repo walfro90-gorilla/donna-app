@@ -60,8 +60,8 @@ class _OrderDetailRestaurantScreenState
         final priceAtOrder = raw['price_at_time_of_order'] != null
             ? (raw['price_at_time_of_order'] as num).toDouble()
             : 0.0;
-        // unit_price es el precio unitario; price_at_time_of_order como fallback
-        unitPrices[id] = unitPrice ?? priceAtOrder;
+        // unit_price default es 0.00 en DB — usar solo si es > 0, sino fallback a price_at_time_of_order
+        unitPrices[id] = (unitPrice != null && unitPrice > 0) ? unitPrice : priceAtOrder;
 
         // Parsear modificadores del item
         final rawMods = raw['order_item_modifiers'];
