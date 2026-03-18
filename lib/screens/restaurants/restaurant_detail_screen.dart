@@ -1125,14 +1125,17 @@ class ProductCard extends StatelessWidget {
                   ],
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        '\$${product.price.toStringAsFixed(2)}',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                      Flexible(
+                        child: Text(
+                          '\$${product.price.toStringAsFixed(2)}',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
 
                       // Controles de cantidad
@@ -1140,19 +1143,43 @@ class ProductCard extends StatelessWidget {
                           ? ElevatedButton(
                               onPressed: orderingEnabled ? onAdd : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    Theme.of(context).colorScheme.primary,
+                                backgroundColor: Theme.of(context).colorScheme.primary,
                                 foregroundColor: Colors.white,
                                 minimumSize: const Size(80, 32),
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
                               ),
                               child: const Text('Agregar'),
                             )
                           : Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (onNotesTap != null)
+                                IconButton(
+                                  onPressed: orderingEnabled ? onRemove : null,
+                                  icon: const Icon(Icons.remove_circle_outline, size: 22),
+                                  color: Theme.of(context).colorScheme.primary,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 32, maxWidth: 32, minHeight: 32, maxHeight: 32),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    quantity.toString(),
+                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: orderingEnabled ? onAdd : null,
+                                  icon: const Icon(Icons.add_circle_outline, size: 22),
+                                  color: Theme.of(context).colorScheme.primary,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 32, maxWidth: 32, minHeight: 32, maxHeight: 32),
+                                ),
+                                if (onNotesTap != null) ...[
+                                  const SizedBox(width: 4),
                                   IconButton(
                                     onPressed: onNotesTap,
                                     icon: Icon(
@@ -1162,42 +1189,11 @@ class ProductCard extends StatelessWidget {
                                       size: 20,
                                     ),
                                     color: Theme.of(context).colorScheme.primary,
-                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                    tooltip: 'Instrucciones especiales',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 28, maxWidth: 28, minHeight: 28, maxHeight: 28),
+                                    tooltip: 'Personalizar',
                                   ),
-                                IconButton(
-                                  onPressed: orderingEnabled ? onRemove : null,
-                                  icon: const Icon(Icons.remove_circle_outline),
-                                  color: Theme.of(context).colorScheme.primary,
-                                  constraints: const BoxConstraints(
-                                      minWidth: 32, minHeight: 32),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primaryContainer,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    quantity.toString(),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: orderingEnabled ? onAdd : null,
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  color: Theme.of(context).colorScheme.primary,
-                                  constraints: const BoxConstraints(
-                                      minWidth: 32, minHeight: 32),
-                                ),
+                                ],
                               ],
                             ),
                     ],

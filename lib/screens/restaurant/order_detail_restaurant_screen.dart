@@ -29,6 +29,8 @@ class _OrderDetailRestaurantScreenState
   final Map<String, double> _unitPrices = {};
   // IDs de ítems quitados por la cocina
   final Set<String> _removedItemIds = {};
+  // Modificadores seleccionados por item: itemId → lista de opciones
+  final Map<String, List<DoaOrderItemModifier>> _itemModifiers = {};
 
   @override
   void initState() {
@@ -42,13 +44,14 @@ class _OrderDetailRestaurantScreenState
     try {
       final response = await SupabaseConfig.client
           .from('order_items')
-          .select('*, product:products(id, name, description, image_url, price)')
+          .select('*, product:products(id, name, description, image_url, price), order_item_modifiers(*)')
           .eq('order_id', widget.order.id);
 
       final rawList = response as List;
 
       // Guardar unit_price por item id antes de parsear el modelo
       final unitPrices = <String, double>{};
+      final modifiersByItem = <String, List<DoaOrderItemModifier>>{};
       for (final raw in rawList) {
         final id = raw['id']?.toString() ?? '';
         final unitPrice = raw['unit_price'] != null
@@ -59,6 +62,14 @@ class _OrderDetailRestaurantScreenState
             : 0.0;
         // unit_price es el precio unitario; price_at_time_of_order como fallback
         unitPrices[id] = unitPrice ?? priceAtOrder;
+
+        // Parsear modificadores del item
+        final rawMods = raw['order_item_modifiers'];
+        if (rawMods is List && rawMods.isNotEmpty) {
+          modifiersByItem[id] = rawMods
+              .map((m) => DoaOrderItemModifier.fromJson(m as Map<String, dynamic>))
+              .toList();
+        }
       }
 
       final items = rawList.map((item) => DoaOrderItem.fromJson(item)).toList();
@@ -78,6 +89,7 @@ class _OrderDetailRestaurantScreenState
           _orderItems = items;
           _unitPrices.addAll(unitPrices);
           _removedItemIds.addAll(removedIds);
+          _itemModifiers.addAll(modifiersByItem);
           _isLoadingItems = false;
         });
       }
@@ -397,13 +409,15 @@ class _OrderDetailRestaurantScreenState
     // Usar unit_price del DB (precio por pieza), no price_at_time_of_order
     final unitPrice = _unitPrices[item.id] ?? item.priceAtTimeOfOrder;
     final totalLine = unitPrice * item.quantity;
+    final mods = _itemModifiers[item.id] ?? [];
+    final note = item.notes;
 
     return Opacity(
       opacity: isRemoved ? 0.45 : 1.0,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Cantidad — grande y visible
             Container(
@@ -438,7 +452,7 @@ class _OrderDetailRestaurantScreenState
 
             const SizedBox(width: 14),
 
-            // Nombre del platillo
+            // Nombre del platillo + opciones + nota
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,6 +481,56 @@ class _OrderDetailRestaurantScreenState
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                  // ── Opciones seleccionadas ──────────────────────────────
+                  if (mods.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: mods.map((m) {
+                        final label = m.priceDelta > 0
+                            ? '${m.name}  +\$${m.priceDelta.toStringAsFixed(0)}'
+                            : m.name;
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.orange.shade300, width: 1),
+                          ),
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange.shade800,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                  // ── Nota libre del cliente ──────────────────────────────
+                  if (note != null && note.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.chat_bubble_outline, size: 14, color: Colors.grey.shade500),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            note,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   Text(
                     '\$${unitPrice.toStringAsFixed(2)} c/u',

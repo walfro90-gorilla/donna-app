@@ -79,11 +79,23 @@ CREATE POLICY "public_read_modifiers" ON public.modifiers
 
 CREATE POLICY "insert_order_item_modifiers" ON public.order_item_modifiers
   FOR INSERT WITH CHECK (true);
+-- Clientes: pueden leer los modificadores de sus propios pedidos
 CREATE POLICY "read_own_order_item_modifiers" ON public.order_item_modifiers
   FOR SELECT USING (
     order_item_id IN (
       SELECT oi.id FROM public.order_items oi
       JOIN public.orders o ON oi.order_id = o.id
       WHERE o.user_id = auth.uid()
+    )
+  );
+
+-- Restaurantes: pueden leer los modificadores de pedidos que les pertenecen
+CREATE POLICY "restaurant_read_order_item_modifiers" ON public.order_item_modifiers
+  FOR SELECT USING (
+    order_item_id IN (
+      SELECT oi.id FROM public.order_items oi
+      JOIN public.orders o ON oi.order_id = o.id
+      JOIN public.restaurants r ON o.restaurant_id = r.id
+      WHERE r.user_id = auth.uid()
     )
   );
