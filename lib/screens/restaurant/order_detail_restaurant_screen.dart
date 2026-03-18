@@ -406,9 +406,6 @@ class _OrderDetailRestaurantScreenState
   Widget _buildKitchenItem(DoaOrderItem item, int number) {
     final isRemoved = _removedItemIds.contains(item.id);
     final productName = item.product?.name ?? 'Platillo #${item.productId.substring(0, 6)}';
-    // Usar unit_price del DB (precio por pieza), no price_at_time_of_order
-    final unitPrice = _unitPrices[item.id] ?? item.priceAtTimeOfOrder;
-    final totalLine = unitPrice * item.quantity;
     final mods = _itemModifiers[item.id] ?? [];
     final note = item.notes;
 
@@ -531,29 +528,7 @@ class _OrderDetailRestaurantScreenState
                       ],
                     ),
                   ],
-                  const SizedBox(height: 4),
-                  Text(
-                    '\$${unitPrice.toStringAsFixed(2)} c/u',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade400,
-                    ),
-                  ),
                 ],
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            // Precio total de la línea
-            Text(
-              '\$${totalLine.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: isRemoved ? Colors.grey.shade400 : Colors.green.shade700,
-                decoration: isRemoved ? TextDecoration.lineThrough : null,
-                decorationColor: Colors.grey.shade400,
               ),
             ),
 
@@ -756,7 +731,24 @@ class _OrderDetailRestaurantScreenState
   //  RESUMEN ECONÓMICO
   // ─────────────────────────────────────────────
   Widget _buildTotalCard(DoaOrder order) {
-    final subtotal = order.totalAmount - (order.deliveryFee ?? 0);
+    // Subtotal desde el precio real del producto en DB (products.price),
+    // ignorando price_at_time_of_order que puede tener comisión aplicada.
+    // Fallback a totalAmount - deliveryFee si los items aún no cargaron.
+    final double subtotal;
+    if (!_isLoadingItems && _orderItems.isNotEmpty) {
+      subtotal = _orderItems
+          .where((i) => !_removedItemIds.contains(i.id))
+          .fold(0.0, (sum, i) {
+        final productPrice = i.product?.price ?? (_unitPrices[i.id] ?? i.priceAtTimeOfOrder);
+        final modsTotal = (_itemModifiers[i.id] ?? [])
+            .fold(0.0, (ms, m) => ms + m.priceDelta);
+        return sum + ((productPrice + modsTotal) * i.quantity);
+      });
+    } else {
+      subtotal = order.totalAmount - (order.deliveryFee ?? 0);
+    }
+    final deliveryFee = order.deliveryFee ?? 0;
+    final total = subtotal + deliveryFee;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -769,14 +761,12 @@ class _OrderDetailRestaurantScreenState
         children: [
           _buildTotalRow('Subtotal', subtotal, Colors.black87),
           const SizedBox(height: 6),
-          _buildTotalRow(
-              'Envío', order.deliveryFee ?? 0, Colors.grey.shade600),
+          _buildTotalRow('Envío', deliveryFee, Colors.grey.shade600),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Divider(height: 1),
           ),
-          _buildTotalRow('TOTAL', order.totalAmount, Colors.green.shade700,
-              large: true),
+          _buildTotalRow('TOTAL', total, Colors.green.shade700, large: true),
           const SizedBox(height: 6),
           Row(
             children: [
