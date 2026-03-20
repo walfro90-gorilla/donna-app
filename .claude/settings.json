@@ -55,7 +55,17 @@
       "Bash(powershell.exe -Command \"Get-Command flutter* 2>&1 | Select-Object -First 5 | Out-String\")",
       "Bash(cmd /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze lib/theme.dart lib/widgets/restaurant_card.dart lib/screens/restaurants/restaurant_detail_screen.dart 2>&1\")",
       "Bash(cmd /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze 2>&1 | findstr /i /c:error /c:warning /c:theme.dart /c:restaurant_card /c:restaurant_detail\")",
-      "mcp__supabase__list_tables"
+      "mcp__supabase__list_tables",
+      "Bash(grep -r \"fcm\\\\|token\\\\|notification\" /x/Codes/donna-app/supabase_scripts/*.sql)",
+      "Bash(find /x/Codes/donna-app -name \"*.dart\" -type f -exec grep -l \"OrderReadyEvent\\\\|class.*Event.*extends AppEvent\" {})",
+      "Bash(find /x/Codes/donna-app -type f -name *.json -path */android/* -o -name google-services.json)",
+      "Bash(xargs ls:*)",
+      "mcp__supabase__deploy_edge_function",
+      "Read(//x/flutter/**)",
+      "Read(//x/Programs/flutter/**)",
+      "mcp__supabase__list_edge_functions",
+      "Read(//x/Codes//**)",
+      "Bash(grep -r \"clawbot\\\\|whatsapp\\\\|notify\" /x/Codes/donna-website/ --include=*.ts --include=*.js --include=*.json -l)"
     ]
   }
 }

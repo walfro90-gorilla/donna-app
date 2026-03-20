@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:doa_repartos/theme.dart';
+import 'package:doa_repartos/firebase_options.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
+import 'package:doa_repartos/services/push_notification_service.dart';
 import 'package:doa_repartos/core/session/session_manager.dart';
 import 'package:doa_repartos/services/network_service.dart';
 import 'package:doa_repartos/screens/auth/login_screen.dart';
@@ -18,6 +22,14 @@ import 'package:doa_repartos/screens/delivery/delivery_onboarding_dashboard.dart
 import 'package:doa_repartos/screens/public/privacy_policy_screen.dart';
 import 'dart:async';
 import 'package:doa_repartos/core/theme/app_theme_controller.dart';
+
+/// 🔔 Background FCM handler — debe ser top-level (fuera de cualquier clase)
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  debugPrint('🔔 [FCM_BG] Background message: ${message.notification?.title}');
+  // flutter_local_notifications puede mostrarse aquí si se necesita en killed state
+}
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 
@@ -37,6 +49,9 @@ void main() async {
     }
   }
 
+  // Registrar background handler de FCM (debe hacerse antes de runApp)
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   // Initialize theme preference first
   await AppThemeController.initialize();
   // Initialize services
@@ -49,6 +64,11 @@ Future<void> _initializeServices() async {
   debugPrint('🚀 [MAIN] ===== INICIALIZANDO SERVICIOS DOA REPARTOS =====');
 
   try {
+    // 0. Inicializar Firebase (requerido por FCM)
+    debugPrint('🔥 [MAIN] Inicializando Firebase...');
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    debugPrint('✅ [MAIN] Firebase inicializado');
+
     // 1. Inicializar Supabase
     debugPrint('📡 [MAIN] Inicializando Supabase...');
     await SupabaseConfig.initialize();
@@ -66,6 +86,11 @@ Future<void> _initializeServices() async {
     debugPrint('🎯 [MAIN] Inicializando Session Manager...');
     await SessionManager.instance.initialize();
     debugPrint('✅ [MAIN] Session Manager inicializado');
+
+    // 3.2. Inicializar Push Notifications (después de Supabase y Session)
+    debugPrint('🔔 [MAIN] Inicializando PushNotificationService...');
+    await PushNotificationService.init();
+    debugPrint('✅ [MAIN] PushNotificationService inicializado');
 
     // 3.5. Test database connection SOLO si hay sesión (evita errores RLS en confirmación de email)
     if (SupabaseConfig.auth.currentUser != null) {
