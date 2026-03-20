@@ -63,7 +63,10 @@
       "Bash(powershell -Command \"Get-Command flutter* -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
       "Bash(powershell -Command \"where.exe flutter 2>&1; Get-ChildItem C:\\\\flutter\\\\bin -ErrorAction SilentlyContinue | Select Name\")",
       "Bash(grep -i \"whatsapp\\\\|wa_\\\\|webhook\\\\|bot\" /x/Codes/donna-app/sql_migrations/*.sql)",
-      "Bash(grep -n \"insert_order_items_v2\\\\|p_items\" /x/Codes/donna-app/sql_migrations/*.sql)"
+      "Bash(grep -n \"insert_order_items_v2\\\\|p_items\" /x/Codes/donna-app/sql_migrations/*.sql)",
+      "mcp__supabase__get_logs",
+      "Bash(npx supabase:*)",
+      "mcp__supabase__get_project_url"
     ],
     "additionalDirectories": [
       "C:\\Users\\walfr\\.claude"

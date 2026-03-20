@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
+import 'package:doa_repartos/core/session/session_manager.dart';
+import 'package:doa_repartos/core/session/user_session.dart';
 
 /// 🔔 Servicio de notificaciones push (FCM + local)
 /// Maneja tokens de dispositivo, notificaciones en foreground/background
@@ -23,6 +26,7 @@ class PushNotificationService {
   );
 
   bool _initialized = false;
+  StreamSubscription<UserSession>? _sessionSubscription;
 
   /// Inicializar el servicio de notificaciones push
   static Future<void> init() async {
@@ -37,6 +41,7 @@ class PushNotificationService {
     if (kIsWeb) {
       await _initWeb();
       _initialized = true;
+      _listenSessionChanges();
       return;
     }
 
@@ -59,7 +64,23 @@ class PushNotificationService {
     });
 
     _initialized = true;
+    _listenSessionChanges();
     debugPrint('✅ [PUSH] PushNotificationService inicializado');
+  }
+
+  /// Escucha cambios de sesión para registrar el token al hacer login
+  void _listenSessionChanges() {
+    _sessionSubscription?.cancel();
+    _sessionSubscription = SessionManager.instance.sessionStream.listen((session) {
+      if (session.isValid) {
+        debugPrint('🔔 [PUSH] Sesión activa detectada — re-registrando FCM token');
+        if (kIsWeb) {
+          _initWeb();
+        } else {
+          _getAndSaveToken();
+        }
+      }
+    });
   }
 
   Future<void> _initWeb() async {

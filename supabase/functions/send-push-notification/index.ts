@@ -137,16 +137,30 @@ serve(async (req) => {
     const pushResults: unknown[] = []
     const msgConfig = NOTIFICATION_MESSAGES[newStatus]
 
+    console.log(`📊 [PUSH] Tokens encontrados: ${tokens?.length ?? 0}`)
+
+    if (!msgConfig) {
+      console.warn(`⚠️ [PUSH] No hay mensaje configurado para status: ${newStatus}`)
+    }
+
+    // Verificar FCM_SERVICE_ACCOUNT_JSON
+    const hasFcmConfig = !!Deno.env.get('FCM_SERVICE_ACCOUNT_JSON')
+    console.log(`🔑 [PUSH] FCM_SERVICE_ACCOUNT_JSON presente: ${hasFcmConfig}`)
+
     if (tokens && tokens.length > 0 && msgConfig) {
       // Enviar FCM para cada token
       for (const { token, platform } of tokens) {
+        console.log(`📤 [PUSH] Enviando a plataforma: ${platform}, token: ${token.substring(0, 20)}...`)
         try {
           const result = await sendFcmNotification(token, platform, msgConfig.title, msgConfig.body, orderId)
+          console.log(`📬 [PUSH] Resultado FCM:`, JSON.stringify(result))
           pushResults.push(result)
         } catch (e) {
           console.warn('⚠️ [PUSH] FCM error for token:', e)
         }
       }
+    } else {
+      console.log(`⏭️ [PUSH] Saltando FCM — tokens: ${tokens?.length ?? 0}, msgConfig: ${!!msgConfig}`)
     }
 
     // WhatsApp via Clawbot
