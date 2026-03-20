@@ -22,6 +22,8 @@ import 'package:doa_repartos/screens/delivery/delivery_onboarding_dashboard.dart
 import 'package:doa_repartos/screens/public/privacy_policy_screen.dart';
 import 'dart:async';
 import 'package:doa_repartos/core/theme/app_theme_controller.dart';
+import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 
 /// 🔔 Background FCM handler — debe ser top-level (fuera de cualquier clase)
 @pragma('vm:entry-point')
@@ -30,8 +32,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('🔔 [FCM_BG] Background message: ${message.notification?.title}');
   // flutter_local_notifications puede mostrarse aquí si se necesita en killed state
 }
-import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
-import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
