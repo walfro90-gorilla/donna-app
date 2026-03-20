@@ -13,31 +13,54 @@ const corsHeaders = {
 // ────────────────────────────────────────────
 // Configuración de destinatarios por status
 // ────────────────────────────────────────────
+type TargetRole = 'kitchen' | 'delivery' | 'client'
+
 interface NotificationTarget {
-  roles: ('kitchen' | 'delivery' | 'client')[]
+  roles: TargetRole[]
   whatsapp: boolean
 }
 
 const STATUS_CONFIG: Record<string, NotificationTarget> = {
-  pending:          { roles: ['kitchen'],            whatsapp: false },
-  confirmed:        { roles: ['client'],              whatsapp: true  },
-  preparing:        { roles: ['client'],              whatsapp: false },
-  ready_for_pickup: { roles: ['delivery'],            whatsapp: false },
-  on_the_way:       { roles: ['client'],              whatsapp: true  },
-  delivered:        { roles: ['kitchen', 'client'],   whatsapp: true  },
-  cancelled:        { roles: ['kitchen', 'delivery', 'client'], whatsapp: true },
-  not_delivered:    { roles: ['kitchen', 'client'],   whatsapp: true  },
+  pending:          { roles: ['kitchen'],                        whatsapp: false },
+  confirmed:        { roles: ['client'],                         whatsapp: true  },
+  preparing:        { roles: ['client'],                         whatsapp: false },
+  ready_for_pickup: { roles: ['delivery'],                       whatsapp: false },
+  on_the_way:       { roles: ['client'],                         whatsapp: true  },
+  delivered:        { roles: ['kitchen', 'client'],              whatsapp: true  },
+  cancelled:        { roles: ['kitchen', 'delivery', 'client'],  whatsapp: true  },
+  not_delivered:    { roles: ['kitchen', 'client'],              whatsapp: true  },
 }
 
-const NOTIFICATION_MESSAGES: Record<string, { title: string; body: string }> = {
-  pending:          { title: '🔔 Nueva orden',        body: 'Tienes una nueva orden esperando confirmación.' },
-  confirmed:        { title: '✅ Orden confirmada',    body: 'Tu pedido fue confirmado. ¡Ya lo están preparando!' },
-  preparing:        { title: '👨‍🍳 En preparación',     body: 'Tu pedido está siendo preparado.' },
-  ready_for_pickup: { title: '📦 Listo para recoger',  body: 'La orden está lista para ser recogida.' },
-  on_the_way:       { title: '🛵 En camino',           body: 'Tu repartidor ya va en camino con tu pedido.' },
-  delivered:        { title: '✅ Entregado',           body: '¡Tu pedido fue entregado! Buen provecho.' },
-  cancelled:        { title: '❌ Orden cancelada',     body: 'La orden fue cancelada.' },
-  not_delivered:    { title: '⚠️ No entregado',        body: 'Hubo un problema con la entrega de tu pedido.' },
+// Mensajes específicos por rol — cada destinatario recibe el mensaje apropiado
+const ROLE_MESSAGES: Record<string, Partial<Record<TargetRole, { title: string; body: string }>>> = {
+  pending: {
+    kitchen:  { title: '🔔 Nueva orden',        body: 'Tienes una nueva orden esperando confirmación.' },
+  },
+  confirmed: {
+    client:   { title: '✅ Orden confirmada',    body: 'Tu pedido fue confirmado. ¡Ya lo están preparando!' },
+  },
+  preparing: {
+    client:   { title: '👨‍🍳 En preparación',     body: 'Tu pedido está siendo preparado.' },
+  },
+  ready_for_pickup: {
+    delivery: { title: '📦 Orden lista',         body: 'La orden está lista. Ve a recogerla.' },
+  },
+  on_the_way: {
+    client:   { title: '🛵 En camino',           body: 'Tu repartidor ya va en camino con tu pedido.' },
+  },
+  delivered: {
+    kitchen:  { title: '✅ Orden entregada',     body: 'El pedido fue entregado exitosamente.' },
+    client:   { title: '✅ ¡Llegó tu pedido!',   body: '¡Tu pedido fue entregado! Buen provecho 🍽️' },
+  },
+  cancelled: {
+    kitchen:  { title: '❌ Orden cancelada',     body: 'Una orden fue cancelada.' },
+    delivery: { title: '❌ Orden cancelada',     body: 'La orden que tenías asignada fue cancelada.' },
+    client:   { title: '❌ Pedido cancelado',    body: 'Tu pedido fue cancelado. Contáctanos si tienes dudas.' },
+  },
+  not_delivered: {
+    kitchen:  { title: '⚠️ No entregado',        body: 'Una orden no pudo ser entregada.' },
+    client:   { title: '⚠️ Problema con entrega', body: 'Hubo un problema con la entrega de tu pedido.' },
+  },
 }
 
 const WHATSAPP_MESSAGES: Record<string, string> = {
@@ -107,20 +130,20 @@ serve(async (req) => {
       .eq('id', order.restaurant_id)
       .single()
 
-    // Construir lista de user_ids destino
-    const targetUserIds: string[] = []
-
+    // Construir mapa role → user_id (evita duplicados)
+    const roleToUserId = new Map<TargetRole, string>()
     if (config.roles.includes('kitchen') && restaurant?.user_id) {
-      targetUserIds.push(restaurant.user_id)
+      roleToUserId.set('kitchen', restaurant.user_id)
     }
     if (config.roles.includes('client') && order.user_id) {
-      targetUserIds.push(order.user_id)
+      roleToUserId.set('client', order.user_id)
     }
     if (config.roles.includes('delivery') && order.delivery_agent_id) {
-      targetUserIds.push(order.delivery_agent_id)
+      roleToUserId.set('delivery', order.delivery_agent_id)
     }
 
-    console.log(`📋 [PUSH] Targets for status "${newStatus}":`, targetUserIds)
+    const targetUserIds = [...new Set(roleToUserId.values())]
+    console.log(`📋 [PUSH] Targets for status "${newStatus}":`, Object.fromEntries(roleToUserId))
 
     if (targetUserIds.length === 0) {
       return new Response(JSON.stringify({ skipped: true, reason: 'no targets' }), {
@@ -128,39 +151,50 @@ serve(async (req) => {
       })
     }
 
-    // Obtener tokens de dispositivos
-    const { data: tokens } = await supabase
+    // Obtener tokens de dispositivos (un token por user_id+platform — el más reciente)
+    const { data: allTokens } = await supabase
       .from('device_tokens')
-      .select('token, platform')
+      .select('user_id, token, platform')
       .in('user_id', targetUserIds)
+      .order('updated_at', { ascending: false })
 
-    const pushResults: unknown[] = []
-    const msgConfig = NOTIFICATION_MESSAGES[newStatus]
+    // Deduplicar: un token por (user_id, platform)
+    const seenKeys = new Set<string>()
+    const tokens = (allTokens ?? []).filter(({ user_id, platform }) => {
+      const key = `${user_id}:${platform}`
+      if (seenKeys.has(key)) return false
+      seenKeys.add(key)
+      return true
+    })
 
-    console.log(`📊 [PUSH] Tokens encontrados: ${tokens?.length ?? 0}`)
-
-    if (!msgConfig) {
-      console.warn(`⚠️ [PUSH] No hay mensaje configurado para status: ${newStatus}`)
-    }
+    console.log(`📊 [PUSH] Tokens únicos: ${tokens.length} (total en DB: ${allTokens?.length ?? 0})`)
 
     // Verificar FCM_SERVICE_ACCOUNT_JSON
     const hasFcmConfig = !!Deno.env.get('FCM_SERVICE_ACCOUNT_JSON')
     console.log(`🔑 [PUSH] FCM_SERVICE_ACCOUNT_JSON presente: ${hasFcmConfig}`)
 
-    if (tokens && tokens.length > 0 && msgConfig) {
-      // Enviar FCM para cada token
-      for (const { token, platform } of tokens) {
-        console.log(`📤 [PUSH] Enviando a plataforma: ${platform}, token: ${token.substring(0, 20)}...`)
-        try {
-          const result = await sendFcmNotification(token, platform, msgConfig.title, msgConfig.body, orderId)
-          console.log(`📬 [PUSH] Resultado FCM:`, JSON.stringify(result))
-          pushResults.push(result)
-        } catch (e) {
-          console.warn('⚠️ [PUSH] FCM error for token:', e)
-        }
+    // Construir mapa inverso user_id → role para mensajes específicos
+    const userIdToRole = new Map<string, TargetRole>()
+    for (const [role, uid] of roleToUserId) userIdToRole.set(uid, role)
+
+    const pushResults: unknown[] = []
+    const roleMsgs = ROLE_MESSAGES[newStatus] ?? {}
+
+    for (const { user_id, token, platform } of tokens) {
+      const role = userIdToRole.get(user_id)
+      const msgConfig = role ? roleMsgs[role] : undefined
+      if (!msgConfig) {
+        console.warn(`⚠️ [PUSH] Sin mensaje para rol "${role}" en status "${newStatus}"`)
+        continue
       }
-    } else {
-      console.log(`⏭️ [PUSH] Saltando FCM — tokens: ${tokens?.length ?? 0}, msgConfig: ${!!msgConfig}`)
+      console.log(`📤 [PUSH] → ${role} (${platform}): "${msgConfig.title}"`)
+      try {
+        const result = await sendFcmNotification(token, platform, msgConfig.title, msgConfig.body, orderId)
+        console.log(`📬 [PUSH] Resultado:`, JSON.stringify(result))
+        pushResults.push({ role, platform, ...result })
+      } catch (e) {
+        console.warn(`⚠️ [PUSH] FCM error (${role}/${platform}):`, e)
+      }
     }
 
     // WhatsApp via Clawbot
