@@ -262,14 +262,17 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
     if (isMine && status == 'assigned') {
       return 2; // Asignado - ir al restaurante (amarillo)
     }
-    if (isMine && status == 'ready_for_pickup') {
-      return 3; // Listo para recoger (azul)
+    if (isMine && (status == 'arrived_at_restaurant' || status == 'ready_for_pickup')) {
+      return 3; // En restaurante / listo para recoger (azul)
     }
     if (isMine && (status == 'on_the_way' || status == 'en_camino')) {
       return 4; // En camino (naranja)
     }
+    if (isMine && status == 'arrived_at_client') {
+      return 5; // En domicilio del cliente (deep purple)
+    }
     if (isMine && (status == 'delivered' || status == 'entregado')) {
-      return 5; // Completado (verde oscuro)
+      return 6; // Completado (verde oscuro)
     }
     if (status == 'not_delivered') {
       return 7; // No entregado (rojo)
@@ -341,6 +344,12 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
       if (mounted) {
         String message;
         switch (newStatus) {
+          case 'arrived_at_restaurant':
+            message = '🍽️ Llegada al restaurante confirmada';
+            break;
+          case 'arrived_at_client':
+            message = '📍 Llegada al domicilio confirmada';
+            break;
           case 'delivered':
           case 'entregado':
             message = '¡Pedido entregado correctamente!';
@@ -370,6 +379,10 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
     } finally {
       _isUpdatingStatus = false;
     }
+  }
+
+  Future<void> _changeOrderStatus(String orderId, String newStatus) async {
+    await _updateDeliveryStatus(orderId, newStatus);
   }
 
   Future<void> _showConfirmCodeDialog(Map<String, dynamic> delivery) async {
@@ -570,19 +583,19 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
       ['confirmed', 'in_preparation', 'ready_for_pickup'].contains(o['status'])
     ).length;
     
-    final assigned = allOrders.where((o) => 
-      o['delivery_agent_id'] == currentUser?.id && 
-      o['status'] == 'assigned'
+    final assigned = allOrders.where((o) =>
+      o['delivery_agent_id'] == currentUser?.id &&
+      ['assigned', 'arrived_at_restaurant'].contains(o['status'])
     ).length;
-    
-    final readyPickup = allOrders.where((o) => 
-      o['delivery_agent_id'] == currentUser?.id && 
+
+    final readyPickup = allOrders.where((o) =>
+      o['delivery_agent_id'] == currentUser?.id &&
       o['status'] == 'ready_for_pickup'
     ).length;
-    
-    final onTheWay = allOrders.where((o) => 
-      o['delivery_agent_id'] == currentUser?.id && 
-      ['on_the_way', 'en_camino'].contains(o['status'])
+
+    final onTheWay = allOrders.where((o) =>
+      o['delivery_agent_id'] == currentUser?.id &&
+      ['on_the_way', 'en_camino', 'arrived_at_client'].contains(o['status'])
     ).length;
     
     final completed = allOrders.where((o) => 
@@ -733,6 +746,10 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
       statusColor = Colors.amber;
       statusText = 'ASIGNADO - IR AL RESTAURANTE';
       categoryLabel = '🟡 ASIGNADO';
+    } else if (isMine && status == 'arrived_at_restaurant') {
+      statusColor = Colors.deepOrange;
+      statusText = 'EN RESTAURANTE';
+      categoryLabel = '🍽️ EN RESTAURANTE';
     } else if (isMine && status == 'ready_for_pickup') {
       statusColor = Colors.blue;
       statusText = 'LISTO PARA RECOGER';
@@ -741,6 +758,10 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
       statusColor = Colors.orange;
       statusText = 'EN CAMINO';
       categoryLabel = '🟠 EN CAMINO';
+    } else if (isMine && status == 'arrived_at_client') {
+      statusColor = Colors.deepPurple;
+      statusText = 'EN DOMICILIO';
+      categoryLabel = '📍 EN DOMICILIO';
     } else if (isMine && (status == 'delivered' || status == 'entregado')) {
       statusColor = Colors.green.shade700;
       statusText = 'ENTREGADO';
@@ -873,7 +894,7 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
                   ],
                   
                   // Dirección del restaurante (si es asignado o listo para recoger)
-                  if (isMine && (status == 'assigned' || status == 'ready_for_pickup')) ...[
+                  if (isMine && (status == 'assigned' || status == 'arrived_at_restaurant' || status == 'ready_for_pickup')) ...[
                     const SizedBox(height: 4),
                     Row(
                       children: [
@@ -1015,11 +1036,26 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
     }
     
     // Pedido mío - botones según estado
+
+    // 1. Asignado → repartidor va al restaurante
     if (status == 'assigned') {
-      return const SizedBox.shrink(); // Esperar a que restaurante marque listo
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () => _changeOrderStatus(order['id'], 'arrived_at_restaurant'),
+          icon: const Icon(Icons.storefront, color: Colors.white, size: 18),
+          label: const Text('🍽️ Llegué al Restaurante', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.deepOrange,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+      );
     }
-    
-    if (status == 'ready_for_pickup') {
+
+    // 2. En restaurante → mostrar código pickup, esperar validación de cocina
+    if (status == 'arrived_at_restaurant' || status == 'ready_for_pickup') {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -1035,7 +1071,7 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
               children: [
                 Icon(Icons.qr_code, color: Colors.white, size: 18),
                 SizedBox(width: 6),
-                Text('Código Pickup', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                Text('Código para Cocina', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
               ],
             ),
             const SizedBox(height: 4),
@@ -1050,18 +1086,51 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
             ),
             const SizedBox(height: 2),
             Text(
-              'Mostrar al restaurante',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.8),
-                fontSize: 11,
-              ),
+              'Muestra este código al restaurante',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11),
             ),
           ],
         ),
       );
     }
-    
+
+    // 3. En camino → repartidor llega al domicilio del cliente
     if (status == 'on_the_way' || status == 'en_camino') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _changeOrderStatus(order['id'], 'arrived_at_client'),
+              icon: const Icon(Icons.location_on, color: Colors.white, size: 18),
+              label: const Text('📍 Llegué al Domicilio', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _showNotDeliveredBottomSheet(order),
+              icon: const Icon(Icons.report_gmailerrorred, color: Colors.red, size: 16),
+              label: const Text('Marcar como NO Entregado', style: TextStyle(fontSize: 13)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // 4. En domicilio → confirmar entrega con código del cliente
+    if (status == 'arrived_at_client') {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1102,10 +1171,7 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
             child: OutlinedButton.icon(
               onPressed: () => _showNotDeliveredBottomSheet(order),
               icon: const Icon(Icons.report_gmailerrorred, color: Colors.red, size: 16),
-              label: const Text(
-                'Marcar como NO Entregado',
-                style: TextStyle(fontSize: 13),
-              ),
+              label: const Text('Marcar como NO Entregado', style: TextStyle(fontSize: 13)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.red,
                 side: const BorderSide(color: Colors.red),
@@ -1115,7 +1181,7 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
         ],
       );
     }
-    
+
     return const SizedBox.shrink();
   }
 

@@ -147,7 +147,7 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
             const SizedBox(height: 16),
             
             // Código de pickup (solo si está disponible y status es assigned o ready_for_pickup)
-            if (pickupCode != null && (status == 'assigned' || status == 'ready_for_pickup')) ...[
+            if (pickupCode != null && (status == 'assigned' || status == 'arrived_at_restaurant' || status == 'ready_for_pickup')) ...[
               _buildPickupCodeCard(pickupCode),
               const SizedBox(height: 16),
             ],
@@ -218,11 +218,21 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
         statusText = 'Listo para Recoger';
         statusDescription = 'El pedido está listo en el restaurante';
         break;
+      case 'arrived_at_restaurant':
+        statusColor = Colors.deepOrange;
+        statusText = 'En el Restaurante';
+        statusDescription = 'Muestra el código al restaurante para recoger el pedido';
+        break;
       case 'on_the_way':
       case 'en_camino':
         statusColor = Colors.orange;
         statusText = 'En Camino';
         statusDescription = 'Dirigiéndote al cliente para la entrega';
+        break;
+      case 'arrived_at_client':
+        statusColor = Colors.deepPurple;
+        statusText = 'En el Domicilio';
+        statusDescription = 'Solicita el código de 3 dígitos al cliente para confirmar la entrega';
         break;
       case 'not_delivered':
         statusColor = Colors.red;
