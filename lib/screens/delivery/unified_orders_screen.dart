@@ -206,7 +206,7 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
             *,
             restaurants (name, address, phone),
             user:user_id (name, phone),
-            order_items (unit_price, quantity, is_removed)
+            order_items (unit_price, price_at_time_of_order, quantity, is_removed)
           ''')
           .inFilter('status', ['confirmed', 'in_preparation', 'ready_for_pickup'])
           .isFilter('delivery_agent_id', null)
@@ -219,7 +219,7 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
             *,
             restaurants (name, address, phone),
             user:user_id (name, phone),
-            order_items (unit_price, quantity, is_removed)
+            order_items (unit_price, price_at_time_of_order, quantity, is_removed)
           ''')
           .eq('delivery_agent_id', currentUser.id)
           .order('created_at', ascending: false);
@@ -736,8 +736,13 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
     final itemsTotal = rawItems != null
         ? rawItems
             .where((i) => i['is_removed'] != true)
-            .fold<double>(0.0, (sum, i) =>
-                sum + ((i['unit_price'] as num).toDouble() * (i['quantity'] as num).toDouble()))
+            .fold<double>(0.0, (sum, i) {
+              // Mirror effectiveUnitPrice: prefer unit_price if > 0, else price_at_time_of_order
+              final unitPrice = (i['unit_price'] as num?)?.toDouble() ?? 0.0;
+              final priceAtOrder = (i['price_at_time_of_order'] as num?)?.toDouble() ?? 0.0;
+              final effectivePrice = unitPrice > 0 ? unitPrice : priceAtOrder;
+              return sum + effectivePrice * ((i['quantity'] as num).toDouble());
+            })
         : null;
     final totalAmount = itemsTotal != null
         ? itemsTotal + deliveryFee
