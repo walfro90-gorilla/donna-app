@@ -77,7 +77,7 @@ BEGIN
   WHERE 
     o.user_id = client_id_param
     -- ✅ FIXED: Ahora incluye 'confirmed' y todos los status activos
-    AND o.status IN ('pending', 'confirmed', 'in_preparation', 'ready_for_pickup', 'assigned', 'on_the_way')
+    AND o.status IN ('pending', 'confirmed', 'in_preparation', 'ready_for_pickup', 'assigned', 'arrived_at_restaurant', 'on_the_way', 'arrived_at_client')
   ORDER BY o.created_at DESC;
 END;
 $$;
