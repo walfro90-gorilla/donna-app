@@ -66,7 +66,8 @@
       "Bash(grep -n \"insert_order_items_v2\\\\|p_items\" /x/Codes/donna-app/sql_migrations/*.sql)",
       "mcp__supabase__get_logs",
       "Bash(npx supabase:*)",
-      "mcp__supabase__get_project_url"
+      "mcp__supabase__get_project_url",
+      "Bash(grep -r \"MenuScannerScreen\\\\|menu_scanner\" /x/Codes/donna-app/lib --include=*.dart -n)"
     ],
     "additionalDirectories": [
       "C:\\Users\\walfr\\.claude"

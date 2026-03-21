@@ -46,6 +46,9 @@ const ROLE_MESSAGES: Record<string, Partial<Record<TargetRole, { title: string; 
   preparing: {
     client:   { title: '👨‍🍳 En preparación',     body: 'Tu pedido está siendo preparado.' },
   },
+  in_preparation: {
+    client:   { title: '👨‍🍳 En preparación',     body: 'Tu pedido está siendo preparado.' },
+  },
   ready_for_pickup: {
     delivery: { title: '📦 Orden lista',              body: 'La orden está lista. Ve a recogerla.' },
   },

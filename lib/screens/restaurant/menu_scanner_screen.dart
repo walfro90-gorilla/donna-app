@@ -4,8 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
 
 /// Pantalla para escanear el menú físico del restaurante con IA (GPT-4o).
-/// La IA detecta los precios del menú físico (precio cocina).
-/// La app aplica automáticamente la comisión del 15% para obtener el precio final al cliente.
+/// Detecta platillos, los clasifica por tipo, y propone grupos de modificadores
+/// (extras, término de cocción, tamaños, etc.) para que el restaurante revise.
 class MenuScannerScreen extends StatefulWidget {
   final String restaurantId;
 
@@ -16,7 +16,7 @@ class MenuScannerScreen extends StatefulWidget {
 }
 
 class _MenuScannerScreenState extends State<MenuScannerScreen> {
-  static const double _commissionRate = 0.15; // 15% comisión de plataforma
+  static const double _commissionRate = 0.15;
 
   _ScanPhase _phase = _ScanPhase.selection;
   PlatformFile? _selectedFile;
@@ -89,7 +89,7 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
     return 'image/jpeg';
   }
 
-  // ─── Fase 3: Insertar productos confirmados ───────────────────────────────
+  // ─── Fase 3: Insertar productos + modifier_groups + modifiers ─────────────
 
   Future<void> _insertSelectedProducts() async {
     final toInsert = _detectedProducts.where((p) => p.selected).toList();
@@ -99,17 +99,65 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
 
     try {
       for (final product in toInsert) {
-        // Se guarda el precio de COCINA → la app aplica la comisión (commission_bps) al mostrar
-        await SupabaseConfig.client.from('products').insert({
-          'restaurant_id': widget.restaurantId,
-          'name': product.nameController.text.trim(),
-          'description': product.descriptionController.text.trim(),
-          'price': product.kitchenPrice,
-          'type': product.type,
-          'is_available': true,
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        });
+        // 1. INSERT product → obtener ID
+        final inserted = await SupabaseConfig.client
+            .from('products')
+            .insert({
+              'restaurant_id': widget.restaurantId,
+              'name': product.nameController.text.trim(),
+              'description': product.descriptionController.text.trim(),
+              'price': product.kitchenPrice,
+              'type': product.type,
+              'is_available': true,
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .select('id')
+            .single();
+
+        final productId = inserted['id'] as String;
+
+        // 2. INSERT modifier_groups + modifiers (tolerante — si falla no revierte el producto)
+        if (product.hasModifiers && product.modifierGroups.isNotEmpty) {
+          int groupOrder = 0;
+          for (final group in product.modifierGroups) {
+            if (!group.enabled) continue;
+            final enabledMods = group.modifiers.where((m) => m.enabled).toList();
+            if (enabledMods.isEmpty) continue;
+
+            try {
+              final groupInserted = await SupabaseConfig.client
+                  .from('modifier_groups')
+                  .insert({
+                    'product_id': productId,
+                    'name': group.nameController.text.trim(),
+                    'selection_type': group.selectionType,
+                    'min_selections': group.minSelections,
+                    'max_selections': group.maxSelections,
+                    'is_required': group.isRequired,
+                    'sort_order': groupOrder++,
+                  })
+                  .select('id')
+                  .single();
+
+              final groupId = groupInserted['id'] as String;
+
+              int modOrder = 0;
+              for (final mod in enabledMods) {
+                final modName = mod.nameController.text.trim();
+                if (modName.isEmpty) continue;
+                await SupabaseConfig.client.from('modifiers').insert({
+                  'group_id': groupId,
+                  'name': modName,
+                  'price_delta': mod.priceDelta,
+                  'sort_order': modOrder++,
+                });
+              }
+            } catch (modError) {
+              debugPrint('⚠️ [SCANNER] Modifier group save failed (non-critical): $modError');
+            }
+          }
+        }
       }
 
       if (mounted) {
@@ -175,12 +223,11 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Sube una foto de tu carta física. La IA detecta los platillos y precios automáticamente.',
+              'Sube una foto de tu carta física. La IA detecta platillos, precios y opciones extra automáticamente.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            // Nota sobre comisión
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -246,7 +293,7 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
             const SizedBox(height: 16),
             Text('Analizando menú con IA...', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            Text('GPT-4o está identificando platillos y precios', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey), textAlign: TextAlign.center),
+            Text('GPT-4o está identificando platillos, tipos y opciones extra', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey), textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -259,6 +306,7 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
     final selected = _detectedProducts.where((p) => p.selected).toList();
     final totalKitchen = selected.fold(0.0, (sum, p) => sum + p.kitchenPrice);
     final totalApp = selected.fold(0.0, (sum, p) => sum + p.appPrice);
+    final withModifiers = _detectedProducts.where((p) => p.hasModifiers).length;
 
     return Column(
       children: [
@@ -273,7 +321,9 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${_detectedProducts.length} platillos detectados — revisa y edita antes de guardar',
+                  withModifiers > 0
+                      ? '${_detectedProducts.length} platillos detectados — $withModifiers con opciones extra'
+                      : '${_detectedProducts.length} platillos detectados — revisa y edita antes de guardar',
                   style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.purple, fontSize: 13),
                 ),
               ),
@@ -327,33 +377,17 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Totales (visibles si hay algo seleccionado)
               if (selected.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Row(
                     children: [
-                      Expanded(
-                        child: _buildTotalChip(
-                          label: 'Total cocina',
-                          amount: totalKitchen,
-                          color: Colors.grey[700]!,
-                          icon: Icons.storefront,
-                        ),
-                      ),
+                      Expanded(child: _buildTotalChip(label: 'Total cocina', amount: totalKitchen, color: Colors.grey[700]!, icon: Icons.storefront)),
                       const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildTotalChip(
-                          label: 'Total en app',
-                          amount: totalApp,
-                          color: Colors.purple,
-                          icon: Icons.phone_android,
-                        ),
-                      ),
+                      Expanded(child: _buildTotalChip(label: 'Total en app', amount: totalApp, color: Colors.purple, icon: Icons.phone_android)),
                     ],
                   ),
                 ),
-              // Botón principal
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -453,7 +487,6 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Tipo compacto
                   SizedBox(
                     width: 110,
                     child: DropdownButtonFormField<String>(
@@ -470,6 +503,7 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
                         DropdownMenuItem(value: 'bebida', child: Text('Bebida', style: TextStyle(fontSize: 13))),
                         DropdownMenuItem(value: 'postre', child: Text('Postre', style: TextStyle(fontSize: 13))),
                         DropdownMenuItem(value: 'entrada', child: Text('Entrada', style: TextStyle(fontSize: 13))),
+                        DropdownMenuItem(value: 'combo', child: Text('Combo', style: TextStyle(fontSize: 13))),
                       ],
                       onChanged: (v) => setState(() => product.type = v ?? 'principal'),
                     ),
@@ -483,7 +517,7 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
                 child: _buildPriceBreakdown(product, isDark),
               ),
 
-              // ── Descripción (si tiene contenido) ──
+              // ── Descripción ──
               if (product.descriptionController.text.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(left: 48, top: 8),
@@ -497,6 +531,13 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
                       isDense: true,
                     ),
                   ),
+                ),
+
+              // ── Opciones / Modifier groups ──
+              if (product.hasModifiers && product.modifierGroups.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 48, top: 8),
+                  child: _buildModifierGroupsSection(product),
                 ),
             ],
           ),
@@ -519,22 +560,16 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
       ),
       child: Column(
         children: [
-          // Precio cocina (editable)
           Row(
             children: [
               Icon(Icons.storefront_outlined, size: 15, color: Colors.grey[600]),
               const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'Precio en tu menú:',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ),
+              Expanded(child: Text('Precio en tu menú:', style: TextStyle(fontSize: 12, color: Colors.grey[600]))),
               SizedBox(
                 width: 100,
                 child: TextField(
                   controller: product.kitchenPriceController,
-                  onChanged: (_) => setState(() {}), // recalcula en tiempo real
+                  onChanged: (_) => setState(() {}),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   textAlign: TextAlign.right,
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
@@ -548,64 +583,171 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 8),
-
-          // Comisión (calculada, solo lectura)
           Row(
             children: [
               Icon(Icons.add_circle_outline, size: 15, color: Colors.orange[700]),
               const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'Comisión plataforma (15%):',
-                  style: TextStyle(fontSize: 12, color: Colors.orange[700]),
-                ),
-              ),
+              Expanded(child: Text('Comisión plataforma (15%):', style: TextStyle(fontSize: 12, color: Colors.orange[700]))),
               Text(
                 kitchenPrice > 0 ? '+ \$${commission.toStringAsFixed(2)}' : '—',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.orange[700],
-                ),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.orange[700]),
               ),
             ],
           ),
-
           Divider(height: 14, color: Colors.purple.withValues(alpha: 0.3)),
-
-          // Precio final en app (resultado, destacado)
           Row(
             children: [
               const Icon(Icons.phone_android, size: 15, color: Colors.purple),
               const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'Precio al cliente (en app):',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.purple,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+              const Expanded(child: Text('Precio al cliente (en app):', style: TextStyle(fontSize: 12, color: Colors.purple, fontWeight: FontWeight.w600))),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.purple,
-                  borderRadius: BorderRadius.circular(6),
-                ),
+                decoration: BoxDecoration(color: Colors.purple, borderRadius: BorderRadius.circular(6)),
                 child: Text(
                   kitchenPrice > 0 ? '\$${appPrice.toStringAsFixed(2)}' : '—',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Modifier groups section ───────────────────────────────────────────────
+
+  Widget _buildModifierGroupsSection(_DetectedProduct product) {
+    final enabledCount = product.modifierGroups.where((g) => g.enabled).length;
+
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: EdgeInsets.zero,
+        leading: Icon(Icons.tune, color: enabledCount > 0 ? Colors.purple : Colors.grey, size: 18),
+        title: Text(
+          'Opciones detectadas ($enabledCount activa${enabledCount == 1 ? '' : 's'})',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: enabledCount > 0 ? Colors.purple : Colors.grey,
+          ),
+        ),
+        children: product.modifierGroups.map((group) => _buildModifierGroupCard(group)).toList(),
+      ),
+    );
+  }
+
+  Widget _buildModifierGroupCard(_ScannedModifierGroup group) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final typeLabel = group.selectionType == 'single' ? 'único' : 'múltiple';
+    final reqLabel = group.isRequired ? 'requerido' : 'opcional';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: group.enabled ? Colors.purple.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header del grupo
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 6, 6, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: group.nameController,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'Nombre del grupo'),
+                    enabled: group.enabled,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text('$typeLabel · $reqLabel', style: const TextStyle(fontSize: 10, color: Colors.purple)),
+                ),
+                const SizedBox(width: 4),
+                Transform.scale(
+                  scale: 0.75,
+                  child: Switch(
+                    value: group.enabled,
+                    activeColor: Colors.purple,
+                    onChanged: (v) => setState(() => group.enabled = v),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Lista de modifiers
+          if (group.enabled) ...[
+            const Divider(height: 1),
+            ...group.modifiers.map((mod) => _buildModifierRow(mod)),
+            TextButton.icon(
+              onPressed: () => setState(() => group.modifiers.add(_ScannedModifier(name: '', priceDelta: 0))),
+              icon: const Icon(Icons.add, size: 14),
+              label: const Text('Agregar opción', style: TextStyle(fontSize: 12)),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.purple,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModifierRow(_ScannedModifier mod) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 2, 8, 2),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            child: Checkbox(
+              value: mod.enabled,
+              activeColor: Colors.purple,
+              onChanged: (v) => setState(() => mod.enabled = v ?? false),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          Expanded(
+            child: TextField(
+              controller: mod.nameController,
+              style: TextStyle(fontSize: 12, color: mod.enabled ? null : Colors.grey),
+              decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'Nombre de la opción'),
+              enabled: mod.enabled,
+            ),
+          ),
+          SizedBox(
+            width: 72,
+            child: TextField(
+              controller: mod.priceDeltaController,
+              onChanged: (_) => setState(() {}),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textAlign: TextAlign.right,
+              style: TextStyle(fontSize: 12, color: mod.priceDelta > 0 ? Colors.orange[700] : Colors.grey[600]),
+              decoration: InputDecoration(
+                isDense: true,
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                prefixText: mod.priceDelta > 0 ? '+\$' : '\$',
+              ),
+              enabled: mod.enabled,
+            ),
           ),
         ],
       ),
@@ -616,6 +758,11 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
 
   Widget _buildSavingPhase() {
     final count = _detectedProducts.where((p) => p.selected).length;
+    final modGroupCount = _detectedProducts
+        .where((p) => p.selected && p.hasModifiers)
+        .expand((p) => p.modifierGroups.where((g) => g.enabled))
+        .length;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -623,6 +770,11 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
           const CircularProgressIndicator(color: Colors.purple),
           const SizedBox(height: 16),
           Text('Guardando $count producto${count == 1 ? '' : 's'}...', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+          if (modGroupCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text('con $modGroupCount grupo${modGroupCount == 1 ? '' : 's'} de opciones', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+            ),
         ],
       ),
     );
@@ -669,9 +821,11 @@ class _DetectedProduct {
 
   final TextEditingController nameController;
   final TextEditingController descriptionController;
-  final TextEditingController kitchenPriceController; // precio del menú físico
+  final TextEditingController kitchenPriceController;
   String type;
   bool selected;
+  bool hasModifiers;
+  final List<_ScannedModifierGroup> modifierGroups;
 
   _DetectedProduct({
     required String name,
@@ -679,29 +833,87 @@ class _DetectedProduct {
     required double kitchenPrice,
     required this.type,
     this.selected = true,
+    this.hasModifiers = false,
+    List<_ScannedModifierGroup>? modifierGroups,
   })  : nameController = TextEditingController(text: name),
         descriptionController = TextEditingController(text: description),
         kitchenPriceController = TextEditingController(
           text: kitchenPrice > 0 ? kitchenPrice.toStringAsFixed(2) : '',
-        );
+        ),
+        modifierGroups = modifierGroups ?? [];
 
-  /// Precio que el restaurante tiene en su menú físico
   double get kitchenPrice => double.tryParse(kitchenPriceController.text) ?? 0.0;
-
-  /// Monto de la comisión (15% del precio cocina)
   double get commissionAmount => kitchenPrice * _commissionRate;
-
-  /// Precio final que paga el cliente en la app (solo para visualización — NO se guarda en DB)
   double get appPrice => kitchenPrice * (1 + _commissionRate);
 
   factory _DetectedProduct.fromJson(Map<String, dynamic> json) {
-    const validTypes = {'principal', 'bebida', 'postre', 'entrada'};
+    const validTypes = {'principal', 'bebida', 'postre', 'entrada', 'combo'};
     final rawType = (json['type'] as String? ?? 'principal').toLowerCase();
+    final hasModifiers = json['has_modifiers'] as bool? ?? false;
+    final rawGroups = json['modifier_groups'] as List<dynamic>? ?? [];
     return _DetectedProduct(
       name: json['name'] as String? ?? '',
       description: json['description'] as String? ?? '',
       kitchenPrice: (json['price'] as num?)?.toDouble() ?? 0.0,
       type: validTypes.contains(rawType) ? rawType : 'principal',
+      hasModifiers: hasModifiers,
+      modifierGroups: rawGroups
+          .map((g) => _ScannedModifierGroup.fromJson(g as Map<String, dynamic>))
+          .toList(),
     );
   }
+}
+
+class _ScannedModifierGroup {
+  final TextEditingController nameController;
+  final String selectionType;
+  final int minSelections;
+  final int maxSelections;
+  final bool isRequired;
+  bool enabled;
+  final List<_ScannedModifier> modifiers;
+
+  _ScannedModifierGroup({
+    required String name,
+    required this.selectionType,
+    required this.minSelections,
+    required this.maxSelections,
+    required this.isRequired,
+    this.enabled = true,
+    required this.modifiers,
+  }) : nameController = TextEditingController(text: name);
+
+  factory _ScannedModifierGroup.fromJson(Map<String, dynamic> j) =>
+      _ScannedModifierGroup(
+        name: j['name'] as String? ?? '',
+        selectionType: j['selection_type'] as String? ?? 'single',
+        minSelections: (j['min_selections'] as num?)?.toInt() ?? 0,
+        maxSelections: (j['max_selections'] as num?)?.toInt() ?? 1,
+        isRequired: j['is_required'] as bool? ?? false,
+        modifiers: (j['modifier_groups'] as List<dynamic>? ?? j['modifiers'] as List<dynamic>? ?? [])
+            .map((m) => _ScannedModifier.fromJson(m as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+class _ScannedModifier {
+  final TextEditingController nameController;
+  final TextEditingController priceDeltaController;
+  bool enabled;
+
+  _ScannedModifier({
+    required String name,
+    required double priceDelta,
+    this.enabled = true,
+  })  : nameController = TextEditingController(text: name),
+        priceDeltaController = TextEditingController(
+          text: priceDelta > 0 ? priceDelta.toStringAsFixed(0) : '0',
+        );
+
+  double get priceDelta => double.tryParse(priceDeltaController.text) ?? 0.0;
+
+  factory _ScannedModifier.fromJson(Map<String, dynamic> j) => _ScannedModifier(
+        name: j['name'] as String? ?? '',
+        priceDelta: (j['price_delta'] as num?)?.toDouble() ?? 0.0,
+      );
 }
