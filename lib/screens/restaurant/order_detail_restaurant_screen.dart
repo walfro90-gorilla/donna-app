@@ -168,7 +168,8 @@ class _OrderDetailRestaurantScreenState
     final order = _currentOrder!;
     final canModifyStatus = order.status == OrderStatus.pending;
     final canMarkReady = order.status == OrderStatus.assigned;
-    final canValidatePickup = order.status == OrderStatus.readyForPickup;
+    final canValidatePickup = order.status == OrderStatus.readyForPickup ||
+        order.status == OrderStatus.arrivedAtRestaurant;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),

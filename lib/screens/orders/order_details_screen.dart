@@ -276,6 +276,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     OrderStatus.inPreparation,
     OrderStatus.readyForPickup,
     OrderStatus.onTheWay,
+    OrderStatus.arrivedAtClient,
     OrderStatus.delivered,
   ];
 
@@ -283,8 +284,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     'Recibido',
     'Confirmado',
     'Preparando',
-    'Listo',
+    'Recogiendo',
     'En camino',
+    'En puerta',
     'Entregado',
   ];
 
@@ -292,14 +294,25 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     Icons.receipt_long_outlined,
     Icons.thumb_up_alt_outlined,
     Icons.restaurant_menu_outlined,
-    Icons.inventory_2_outlined,
     Icons.delivery_dining_outlined,
+    Icons.near_me_outlined,
+    Icons.location_on_outlined,
     Icons.home_outlined,
   ];
 
   int _detailsCurrentStepIndex(OrderStatus status) {
-    final effective = status == OrderStatus.assigned ? OrderStatus.readyForPickup : status;
-    return _detailsFlowSteps.indexOf(effective);
+    switch (status) {
+      case OrderStatus.pending:           return 0;
+      case OrderStatus.confirmed:         return 1;
+      case OrderStatus.inPreparation:     return 2;
+      case OrderStatus.readyForPickup:
+      case OrderStatus.assigned:
+      case OrderStatus.arrivedAtRestaurant: return 3;
+      case OrderStatus.onTheWay:          return 4;
+      case OrderStatus.arrivedAtClient:   return 5;
+      case OrderStatus.delivered:         return 6;
+      default:                            return -1;
+    }
   }
 
   Widget _buildDetailsStepTimeline(BuildContext context, Color statusColor) {
@@ -383,13 +396,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     final deliveryFee = _order.deliveryFee
         ?? _order.restaurant?.deliveryFee
         ?? 35.0; // Fallback a $35 según requerimiento
-    // Si viene total_amount desde DB, usarlo para mantener consistencia contable
-    final displayedSubtotal = (_order.totalAmount > 0)
-        ? (_order.totalAmount - deliveryFee).clamp(0, double.infinity)
-        : itemsTotal;
-    final displayedTotal = (_order.totalAmount > 0)
-        ? _order.totalAmount
-        : (itemsTotal + deliveryFee);
+    // Siempre calcular desde los ítems activos — total_amount en DB puede quedar
+    // desactualizado cuando la cocina quita productos (is_removed = true).
+    final displayedSubtotal = itemsTotal;
+    final displayedTotal = itemsTotal + deliveryFee;
 
     return Scaffold(
       appBar: AppBar(
@@ -481,7 +491,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               // - delivered: NO mostrar (orden ya completada, no necesitamos el minimapa)
               if (({
                     OrderStatus.assigned,
+                    OrderStatus.arrivedAtRestaurant,
                     OrderStatus.onTheWay,
+                    OrderStatus.arrivedAtClient,
                   }.contains(_order.status)) ||
                   (_order.status == OrderStatus.readyForPickup && _order.deliveryAgentId != null)) ...[
                 _SectionCard(
@@ -512,7 +524,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             return null;
                           })(),
                           // Show restaurant before pickup; after pickup show client's home
-                          showClientDestination: _order.status == OrderStatus.onTheWay || _order.status == OrderStatus.delivered,
+                          showClientDestination: {OrderStatus.onTheWay, OrderStatus.arrivedAtClient, OrderStatus.delivered}.contains(_order.status),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -582,10 +594,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               const SizedBox(height: 16),
 
               // Información del repartidor
-              if (_order.deliveryAgent != null || 
-                  _order.status == OrderStatus.assigned || 
-                  _order.status == OrderStatus.onTheWay || 
-                  _order.status == OrderStatus.delivered) ...[
+              if (_order.deliveryAgent != null ||
+                  {OrderStatus.assigned, OrderStatus.arrivedAtRestaurant, OrderStatus.onTheWay, OrderStatus.arrivedAtClient, OrderStatus.delivered}.contains(_order.status)) ...[
                 _SectionCard(
                   title: 'Repartidor',
                   icon: Icons.delivery_dining,

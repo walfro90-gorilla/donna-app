@@ -28,7 +28,7 @@ const STATUS_CONFIG: Record<string, NotificationTarget> = {
   ready_for_pickup:      { roles: ['delivery'],                       whatsapp: false },
   arrived_at_restaurant: { roles: ['kitchen', 'delivery'],            whatsapp: false },
   on_the_way:            { roles: ['client'],                         whatsapp: true  },
-  arrived_at_client:     { roles: ['client'],                         whatsapp: false },
+  arrived_at_client:     { roles: ['client'],                         whatsapp: true  },
   delivered:             { roles: ['kitchen', 'client'],              whatsapp: true  },
   cancelled:             { roles: ['kitchen', 'delivery', 'client'],  whatsapp: true  },
   canceled:              { roles: ['kitchen', 'delivery', 'client'],  whatsapp: true  },
@@ -80,6 +80,7 @@ const ROLE_MESSAGES: Record<string, Partial<Record<TargetRole, { title: string; 
 const WHATSAPP_MESSAGES: Record<string, string> = {
   confirmed:     '✅ Tu pedido fue confirmado. Pronto lo estarán preparando.',
   on_the_way:    '🛵 Tu repartidor ya va en camino con tu pedido.',
+  arrived_at_client: '📍 ¡Tu repartidor llegó a tu domicilio! Sal a recibir tu pedido. 🛵',
   delivered:     '✅ ¡Tu pedido fue entregado! Buen provecho 🍽️',
   cancelled:     '❌ Tu pedido fue cancelado. Contáctanos si tienes dudas.',
   not_delivered: '⚠️ Hubo un problema con la entrega. Nos pondremos en contacto contigo.',

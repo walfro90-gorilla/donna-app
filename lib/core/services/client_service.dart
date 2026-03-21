@@ -164,7 +164,7 @@ class ClientService extends BaseService {
             delivery_agent:users!orders_delivery_agent_id_fkey(id, name, phone)
           ''')
           .eq('user_id', currentSession!.userId!)
-          .inFilter('status', ['pending', 'confirmed', 'in_preparation', 'ready_for_pickup', 'assigned', 'on_the_way'])
+          .inFilter('status', ['pending', 'confirmed', 'in_preparation', 'ready_for_pickup', 'assigned', 'arrived_at_restaurant', 'on_the_way', 'arrived_at_client'])
           .order('created_at', ascending: false)
           .limit(1);
       _activeOrderController.add(response.isNotEmpty ? DoaOrder.fromJson(response.first) : null);
