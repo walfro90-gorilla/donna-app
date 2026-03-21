@@ -84,8 +84,7 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
           isLoading = false;
         });
         final status = (response['status'] as String?) ?? '';
-        if (status == 'assigned' || status == 'ready_for_pickup' || status == 'on_the_way' || status == 'en_camino') {
-          // Start tracking for active delivery states
+        if (['assigned', 'arrived_at_restaurant', 'ready_for_pickup', 'on_the_way', 'en_camino', 'arrived_at_client'].contains(status)) {
           LocationTrackingService.instance.start(orderId: response['id'].toString());
         } else if (status == 'delivered' || status == 'entregado') {
           // Ensure tracking is stopped if already delivered
@@ -787,46 +786,40 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
   Widget _buildActionButtons(String status) {
     switch (status) {
       case 'assigned':
-      case 'ready_for_pickup':
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-          ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.access_time, color: Colors.blue, size: 24),
-                  const SizedBox(width: 8),
-                  Text(
-                    status == 'assigned' ? 'Ve al Restaurante' : 'Esperando Validación',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                status == 'assigned' 
-                  ? 'Dirígete al restaurante y muestra el código púrpura para recoger el pedido.'
-                  : 'Muestra el código púrpura al restaurante. El pedido se marcará automáticamente como "En Camino" cuando el restaurante valide el código.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.blue.withValues(alpha: 0.7),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _infoPanel(
+              color: Colors.blue,
+              icon: Icons.storefront,
+              title: 'Ve al Restaurante',
+              subtitle: 'Dirígete al restaurante a recoger el pedido.',
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () => _changeStatus('arrived_at_restaurant'),
+                icon: const Icon(Icons.storefront, color: Colors.white),
+                label: const Text('Llegué al Restaurante', style: TextStyle(color: Colors.white, fontSize: 16)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         );
+
+      case 'arrived_at_restaurant':
+      case 'ready_for_pickup':
+        return _infoPanel(
+          color: Colors.deepOrange,
+          icon: Icons.access_time,
+          title: 'Esperando Validación',
+          subtitle: 'Muestra el código púrpura al restaurante. El pedido pasará a "En Camino" cuando el restaurante valide el código.',
+        );
+
       case 'on_the_way':
       case 'en_camino':
         return Column(
@@ -835,12 +828,49 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
             SizedBox(
               height: 50,
               child: ElevatedButton.icon(
+                onPressed: () => _changeStatus('arrived_at_client'),
+                icon: const Icon(Icons.location_on, color: Colors.white),
+                label: const Text('Llegué al Domicilio', style: TextStyle(color: Colors.white, fontSize: 16)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 46,
+              child: OutlinedButton.icon(
+                onPressed: _showNotDeliveredBottomSheet,
+                icon: const Icon(Icons.report_gmailerrorred, color: Colors.red),
+                label: const Text('Marcar como NO Entregado', style: TextStyle(fontSize: 15)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        );
+
+      case 'arrived_at_client':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _infoPanel(
+              color: Colors.deepPurple,
+              icon: Icons.location_on,
+              title: 'En el Domicilio',
+              subtitle: 'Solicita al cliente el código de 3 dígitos para confirmar la entrega.',
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 50,
+              child: ElevatedButton.icon(
                 onPressed: () => _showConfirmCodeDialog(),
                 icon: const Icon(Icons.pin, color: Colors.white),
-                label: const Text(
-                  'Confirmar Entrega con Código',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
+                label: const Text('Confirmar Entrega con Código', style: TextStyle(color: Colors.white, fontSize: 16)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -853,10 +883,7 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
               child: OutlinedButton.icon(
                 onPressed: _showNotDeliveredBottomSheet,
                 icon: const Icon(Icons.report_gmailerrorred, color: Colors.red),
-                label: const Text(
-                  'Marcar como NO Entregado',
-                  style: TextStyle(fontSize: 15),
-                ),
+                label: const Text('Marcar como NO Entregado', style: TextStyle(fontSize: 15)),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                   side: const BorderSide(color: Colors.red),
@@ -866,8 +893,59 @@ class _DeliveryOrderDetailScreenState extends State<DeliveryOrderDetailScreen> {
             ),
           ],
         );
+
       default:
         return Container();
+    }
+  }
+
+  Widget _infoPanel({required Color color, required IconData icon, required String title, required String subtitle}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(width: 8),
+              Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color.withValues(alpha: 0.9))),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(subtitle, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: color.withValues(alpha: 0.7))),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _changeStatus(String newStatus) async {
+    final orderId = orderDetails?['id']?.toString();
+    if (orderId == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Confirmar'),
+        content: Text('¿Confirmas el cambio de status?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirmar')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final success = await OrderStatusHelper.updateOrderStatus(orderId, newStatus);
+    if (success && mounted) {
+      setState(() => orderDetails!['status'] = newStatus);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('✅ Status actualizado'), backgroundColor: Colors.green),
+      );
     }
   }
 

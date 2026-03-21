@@ -21,14 +21,18 @@ interface NotificationTarget {
 }
 
 const STATUS_CONFIG: Record<string, NotificationTarget> = {
-  pending:          { roles: ['kitchen'],                        whatsapp: false },
-  confirmed:        { roles: ['client'],                         whatsapp: true  },
-  preparing:        { roles: ['client'],                         whatsapp: false },
-  ready_for_pickup: { roles: ['delivery'],                       whatsapp: false },
-  on_the_way:       { roles: ['client'],                         whatsapp: true  },
-  delivered:        { roles: ['kitchen', 'client'],              whatsapp: true  },
-  cancelled:        { roles: ['kitchen', 'delivery', 'client'],  whatsapp: true  },
-  not_delivered:    { roles: ['kitchen', 'client'],              whatsapp: true  },
+  pending:               { roles: ['kitchen'],                        whatsapp: false },
+  confirmed:             { roles: ['client'],                         whatsapp: true  },
+  preparing:             { roles: ['client'],                         whatsapp: false },
+  in_preparation:        { roles: ['client'],                         whatsapp: false },
+  ready_for_pickup:      { roles: ['delivery'],                       whatsapp: false },
+  arrived_at_restaurant: { roles: ['kitchen', 'delivery'],            whatsapp: false },
+  on_the_way:            { roles: ['client'],                         whatsapp: true  },
+  arrived_at_client:     { roles: ['client'],                         whatsapp: false },
+  delivered:             { roles: ['kitchen', 'client'],              whatsapp: true  },
+  cancelled:             { roles: ['kitchen', 'delivery', 'client'],  whatsapp: true  },
+  canceled:              { roles: ['kitchen', 'delivery', 'client'],  whatsapp: true  },
+  not_delivered:         { roles: ['kitchen', 'client'],              whatsapp: true  },
 }
 
 // Mensajes específicos por rol — cada destinatario recibe el mensaje apropiado
@@ -43,10 +47,17 @@ const ROLE_MESSAGES: Record<string, Partial<Record<TargetRole, { title: string; 
     client:   { title: '👨‍🍳 En preparación',     body: 'Tu pedido está siendo preparado.' },
   },
   ready_for_pickup: {
-    delivery: { title: '📦 Orden lista',         body: 'La orden está lista. Ve a recogerla.' },
+    delivery: { title: '📦 Orden lista',              body: 'La orden está lista. Ve a recogerla.' },
+  },
+  arrived_at_restaurant: {
+    kitchen:  { title: '🛵 Repartidor llegó',         body: 'El repartidor llegó al restaurante a recoger el pedido.' },
+    delivery: { title: '✅ Llegada confirmada',        body: 'Tu llegada al restaurante fue registrada.' },
   },
   on_the_way: {
-    client:   { title: '🛵 En camino',           body: 'Tu repartidor ya va en camino con tu pedido.' },
+    client:   { title: '🛵 En camino',                body: 'Tu repartidor ya va en camino con tu pedido.' },
+  },
+  arrived_at_client: {
+    client:   { title: '📍 Repartidor en tu puerta',  body: '¡Tu repartidor llegó! Sal a recibir tu pedido.' },
   },
   delivered: {
     kitchen:  { title: '✅ Orden entregada',     body: 'El pedido fue entregado exitosamente.' },

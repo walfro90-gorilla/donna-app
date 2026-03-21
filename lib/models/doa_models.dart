@@ -1203,11 +1203,13 @@ enum OrderStatus {
   confirmed,
   inPreparation,
   readyForPickup,
-  assigned,      // Nuevo status: repartidor asignado
+  assigned,
+  arrivedAtRestaurant, // Repartidor llegó al restaurante
   onTheWay,
+  arrivedAtClient,     // Repartidor llegó al domicilio del cliente
   delivered,
   canceled,
-  notDelivered;  // Status: no se pudo entregar (cliente no responde, dirección falsa, etc.)
+  notDelivered;
 
   static OrderStatus fromString(String status) {
     switch (status) {
@@ -1221,9 +1223,13 @@ enum OrderStatus {
         return OrderStatus.readyForPickup;
       case 'assigned':
         return OrderStatus.assigned;
+      case 'arrived_at_restaurant':
+        return OrderStatus.arrivedAtRestaurant;
       case 'on_the_way':
-      case 'en_camino':  // Soporte para valores legacy
+      case 'en_camino':
         return OrderStatus.onTheWay;
+      case 'arrived_at_client':
+        return OrderStatus.arrivedAtClient;
       case 'delivered':
         return OrderStatus.delivered;
       case 'canceled':
@@ -1246,8 +1252,12 @@ enum OrderStatus {
         return 'ready_for_pickup';
       case OrderStatus.assigned:
         return 'assigned';
+      case OrderStatus.arrivedAtRestaurant:
+        return 'arrived_at_restaurant';
       case OrderStatus.onTheWay:
         return 'on_the_way';
+      case OrderStatus.arrivedAtClient:
+        return 'arrived_at_client';
       case OrderStatus.delivered:
         return 'delivered';
       case OrderStatus.canceled:
@@ -1273,8 +1283,12 @@ extension OrderStatusUI on OrderStatus {
         return 'Lista para recoger';
       case OrderStatus.assigned:
         return 'Asignada';
+      case OrderStatus.arrivedAtRestaurant:
+        return 'Llegó al Restaurante';
       case OrderStatus.onTheWay:
         return 'En camino';
+      case OrderStatus.arrivedAtClient:
+        return 'Llegó al Domicilio';
       case OrderStatus.delivered:
         return 'Entregada';
       case OrderStatus.canceled:
@@ -1296,8 +1310,12 @@ extension OrderStatusUI on OrderStatus {
         return Colors.cyan;
       case OrderStatus.assigned:
         return Colors.indigo;
+      case OrderStatus.arrivedAtRestaurant:
+        return Colors.deepOrange;
       case OrderStatus.onTheWay:
         return Colors.teal;
+      case OrderStatus.arrivedAtClient:
+        return Colors.deepPurple;
       case OrderStatus.delivered:
         return Colors.green;
       case OrderStatus.canceled:
@@ -1319,8 +1337,12 @@ extension OrderStatusUI on OrderStatus {
         return Icons.shopping_bag;
       case OrderStatus.assigned:
         return Icons.person_pin;
+      case OrderStatus.arrivedAtRestaurant:
+        return Icons.storefront;
       case OrderStatus.onTheWay:
         return Icons.delivery_dining;
+      case OrderStatus.arrivedAtClient:
+        return Icons.location_on;
       case OrderStatus.delivered:
         return Icons.done_all;
       case OrderStatus.canceled:

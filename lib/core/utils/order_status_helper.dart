@@ -21,9 +21,14 @@ class OrderStatusHelper {
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      // Si el status es delivered, establecer delivery_time
-      if (newStatus.toLowerCase() == 'delivered' || newStatus.toLowerCase() == 'entregado') {
+      if (newStatus == 'delivered' || newStatus == 'entregado') {
         orderUpdateData['delivery_time'] = DateTime.now().toIso8601String();
+      }
+      if (newStatus == 'arrived_at_restaurant') {
+        orderUpdateData['arrived_restaurant_at'] = DateTime.now().toIso8601String();
+      }
+      if (newStatus == 'arrived_at_client') {
+        orderUpdateData['arrived_client_at'] = DateTime.now().toIso8601String();
       }
 
       await SupabaseConfig.client
