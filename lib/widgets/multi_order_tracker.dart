@@ -98,6 +98,10 @@ class _MultiOrderTrackerState extends State<MultiOrderTracker> {
         return Colors.green;
       case OrderStatus.assigned:
         return Colors.amber;
+      case OrderStatus.arrivedAtRestaurant:
+        return Colors.deepOrange;
+      case OrderStatus.arrivedAtClient:
+        return Colors.deepPurple;
       case OrderStatus.onTheWay:
         return Colors.teal;
       case OrderStatus.delivered:

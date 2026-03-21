@@ -144,6 +144,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         return Colors.teal;
       case OrderStatus.assigned:
         return Colors.amber;
+      case OrderStatus.arrivedAtRestaurant:
+        return Colors.deepOrange;
+      case OrderStatus.arrivedAtClient:
+        return Colors.deepPurple;
       case OrderStatus.onTheWay:
         return Colors.purple;
       case OrderStatus.delivered:
@@ -167,6 +171,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         return Icons.done_all;
       case OrderStatus.assigned:
         return Icons.person_pin_circle;
+      case OrderStatus.arrivedAtRestaurant:
+        return Icons.storefront;
+      case OrderStatus.arrivedAtClient:
+        return Icons.location_on;
       case OrderStatus.onTheWay:
         return Icons.delivery_dining;
       case OrderStatus.delivered:
@@ -190,6 +198,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         return 'Listo para recoger';
       case OrderStatus.assigned:
         return 'Repartidor asignado';
+      case OrderStatus.arrivedAtRestaurant:
+        return 'Repartidor en restaurante';
+      case OrderStatus.arrivedAtClient:
+        return 'Repartidor llegó';
       case OrderStatus.onTheWay:
         return 'En camino';
       case OrderStatus.delivered:

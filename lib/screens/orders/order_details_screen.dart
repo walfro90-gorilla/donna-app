@@ -154,6 +154,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         return 'Tu pedido está listo, esperando repartidor';
       case OrderStatus.assigned:
         return 'Repartidor asignado, va camino al restaurante';
+      case OrderStatus.arrivedAtRestaurant:
+        return 'Repartidor llegó al restaurante, recogiendo tu pedido';
+      case OrderStatus.arrivedAtClient:
+        return 'El repartidor llegó a tu dirección';
       case OrderStatus.onTheWay:
         return 'En camino hacia tu dirección';
       case OrderStatus.delivered:
@@ -177,6 +181,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         return Colors.green;
       case OrderStatus.assigned:
         return Colors.amber;
+      case OrderStatus.arrivedAtRestaurant:
+        return Colors.deepOrange;
+      case OrderStatus.arrivedAtClient:
+        return Colors.deepPurple;
       case OrderStatus.onTheWay:
         return Colors.teal;
       case OrderStatus.delivered:
@@ -200,6 +208,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         return Icons.fastfood;
       case OrderStatus.assigned:
         return Icons.person_pin_circle;
+      case OrderStatus.arrivedAtRestaurant:
+        return Icons.storefront;
+      case OrderStatus.arrivedAtClient:
+        return Icons.location_on;
       case OrderStatus.onTheWay:
         return Icons.delivery_dining;
       case OrderStatus.delivered:

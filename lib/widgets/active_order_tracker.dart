@@ -135,6 +135,10 @@ class _ActiveOrderTrackerState extends State<ActiveOrderTracker>
         return 0.75;
       case OrderStatus.assigned:        // Nuevo status con progreso específico
         return 0.65;
+      case OrderStatus.arrivedAtRestaurant:
+        return 0.80;
+      case OrderStatus.arrivedAtClient:
+        return 0.93;
       case OrderStatus.onTheWay:
         return 0.9;
       case OrderStatus.delivered:
@@ -158,6 +162,10 @@ class _ActiveOrderTrackerState extends State<ActiveOrderTracker>
         return 'Tu pedido está listo, esperando repartidor';
       case OrderStatus.assigned:         // Nuevo mensaje específico
         return 'Repartidor asignado, va camino al restaurante';
+      case OrderStatus.arrivedAtRestaurant:
+        return 'Repartidor llegó al restaurante, recogiendo tu pedido';
+      case OrderStatus.arrivedAtClient:
+        return '¡El repartidor está en tu puerta!';
       case OrderStatus.onTheWay:
         return 'En camino hacia tu dirección';
       case OrderStatus.delivered:
@@ -181,6 +189,10 @@ class _ActiveOrderTrackerState extends State<ActiveOrderTracker>
         return Icons.fastfood;
       case OrderStatus.assigned:         // Icono específico para asignado
         return Icons.person_pin_circle;
+      case OrderStatus.arrivedAtRestaurant:
+        return Icons.storefront;
+      case OrderStatus.arrivedAtClient:
+        return Icons.location_on;
       case OrderStatus.onTheWay:
         return Icons.delivery_dining;
       case OrderStatus.delivered:
@@ -204,6 +216,10 @@ class _ActiveOrderTrackerState extends State<ActiveOrderTracker>
         return Colors.green;
       case OrderStatus.assigned:         // Color distintivo para asignado
         return Colors.amber;
+      case OrderStatus.arrivedAtRestaurant:
+        return Colors.deepOrange;
+      case OrderStatus.arrivedAtClient:
+        return Colors.deepPurple;
       case OrderStatus.onTheWay:
         return Colors.teal;
       case OrderStatus.delivered:

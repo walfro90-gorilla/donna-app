@@ -1276,6 +1276,10 @@ class _OrderDetailRestaurantScreenState
         return Colors.teal.shade600;
       case OrderStatus.assigned:
         return Colors.amber.shade700;
+      case OrderStatus.arrivedAtRestaurant:
+        return Colors.deepOrange.shade600;
+      case OrderStatus.arrivedAtClient:
+        return Colors.deepPurple.shade600;
       case OrderStatus.onTheWay:
         return Colors.indigo.shade600;
       case OrderStatus.delivered:
@@ -1298,6 +1302,10 @@ class _OrderDetailRestaurantScreenState
         return Icons.takeout_dining;
       case OrderStatus.assigned:
         return Icons.person_pin_circle;
+      case OrderStatus.arrivedAtRestaurant:
+        return Icons.storefront;
+      case OrderStatus.arrivedAtClient:
+        return Icons.location_on;
       case OrderStatus.onTheWay:
         return Icons.local_shipping;
       case OrderStatus.delivered:
@@ -1320,6 +1328,10 @@ class _OrderDetailRestaurantScreenState
         return 'Listo para Recoger';
       case OrderStatus.assigned:
         return 'Repartidor Asignado';
+      case OrderStatus.arrivedAtRestaurant:
+        return 'Repartidor en Restaurante';
+      case OrderStatus.arrivedAtClient:
+        return 'Repartidor en Domicilio';
       case OrderStatus.onTheWay:
         return 'En Camino al Cliente';
       case OrderStatus.delivered:
@@ -1343,6 +1355,10 @@ class _OrderDetailRestaurantScreenState
         return 'Esperando al repartidor';
       case OrderStatus.assigned:
         return 'Repartidor viene en camino';
+      case OrderStatus.arrivedAtRestaurant:
+        return 'El repartidor llegó a recoger';
+      case OrderStatus.arrivedAtClient:
+        return 'El repartidor llegó al cliente';
       case OrderStatus.onTheWay:
         return 'El repartidor lleva el pedido';
       case OrderStatus.delivered:

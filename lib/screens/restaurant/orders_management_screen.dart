@@ -1197,6 +1197,10 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
         return 'Listo para Recoger';
       case OrderStatus.assigned:
         return 'Repartidor Asignado';
+      case OrderStatus.arrivedAtRestaurant:
+        return 'Repartidor en Restaurante';
+      case OrderStatus.arrivedAtClient:
+        return 'Repartidor en Domicilio';
       case OrderStatus.onTheWay:
         return 'En Camino';
       case OrderStatus.delivered:
@@ -1220,6 +1224,10 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
         return 'Pedido listo para ser recogido';
       case OrderStatus.assigned:
         return 'Repartidor asignado, va camino al restaurante';
+      case OrderStatus.arrivedAtRestaurant:
+        return 'Repartidor llegó a recoger el pedido';
+      case OrderStatus.arrivedAtClient:
+        return 'Repartidor llegó al domicilio del cliente';
       case OrderStatus.onTheWay:
         return 'En camino hacia el cliente';
       case OrderStatus.delivered:
@@ -1243,6 +1251,10 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
         return Icons.done_all;
       case OrderStatus.assigned:
         return Icons.person_pin_circle;
+      case OrderStatus.arrivedAtRestaurant:
+        return Icons.storefront;
+      case OrderStatus.arrivedAtClient:
+        return Icons.location_on;
       case OrderStatus.onTheWay:
         return Icons.local_shipping;
       case OrderStatus.delivered:
@@ -1266,6 +1278,10 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
         return Colors.teal;
       case OrderStatus.assigned:
         return Colors.amber;
+      case OrderStatus.arrivedAtRestaurant:
+        return Colors.deepOrange;
+      case OrderStatus.arrivedAtClient:
+        return Colors.deepPurple;
       case OrderStatus.onTheWay:
         return Colors.purple;
       case OrderStatus.delivered:
@@ -1625,6 +1641,10 @@ class OrderCard extends StatelessWidget {
         return 'Listo para Recoger';
       case OrderStatus.assigned:
         return 'Repartidor Asignado';
+      case OrderStatus.arrivedAtRestaurant:
+        return 'Repartidor en Restaurante';
+      case OrderStatus.arrivedAtClient:
+        return 'Repartidor en Domicilio';
       case OrderStatus.onTheWay:
         return 'En Camino';
       case OrderStatus.delivered:
@@ -1648,6 +1668,10 @@ class OrderCard extends StatelessWidget {
         return Icons.done_all;
       case OrderStatus.assigned:
         return Icons.person_pin_circle;
+      case OrderStatus.arrivedAtRestaurant:
+        return Icons.storefront;
+      case OrderStatus.arrivedAtClient:
+        return Icons.location_on;
       case OrderStatus.onTheWay:
         return Icons.local_shipping;
       case OrderStatus.delivered:
@@ -1671,6 +1695,10 @@ class OrderCard extends StatelessWidget {
         return Colors.teal;
       case OrderStatus.assigned:
         return Colors.amber;
+      case OrderStatus.arrivedAtRestaurant:
+        return Colors.deepOrange;
+      case OrderStatus.arrivedAtClient:
+        return Colors.deepPurple;
       case OrderStatus.onTheWay:
         return Colors.purple;
       case OrderStatus.delivered:
