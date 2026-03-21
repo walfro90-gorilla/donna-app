@@ -387,86 +387,111 @@ class _ActiveOrderTrackerState extends State<ActiveOrderTracker>
                       
                       const SizedBox(height: 16),
                       
-                      // Código de confirmación (solo cuando está en camino)
-                      if (widget.order.status == OrderStatus.onTheWay && 
-                          widget.order.confirmCode != null && 
+                      // Código de confirmación (en camino O repartidor en puerta)
+                      if ({OrderStatus.onTheWay, OrderStatus.arrivedAtClient}.contains(widget.order.status) &&
+                          widget.order.confirmCode != null &&
                           widget.order.confirmCode!.isNotEmpty)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.orange.withValues(alpha: 0.8),
-                                Colors.deepOrange.withValues(alpha: 0.6),
+                        Builder(builder: (context) {
+                          final isAtDoor = widget.order.status == OrderStatus.arrivedAtClient;
+                          final bgColors = isAtDoor
+                              ? [Colors.deepPurple.withValues(alpha: 0.9), Colors.deepPurple.shade700.withValues(alpha: 0.8)]
+                              : [Colors.orange.withValues(alpha: 0.8), Colors.deepOrange.withValues(alpha: 0.6)];
+                          final shadowColor = isAtDoor ? Colors.deepPurple : Colors.orange;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: bgColors,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: shadowColor.withValues(alpha: 0.4),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
                               ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
                             ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.orange.withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.lock_outline,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Column(
+                              children: [
+                                if (isAtDoor) ...[
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.location_on, color: Colors.white, size: 14),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '¡El repartidor está en tu puerta!',
+                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                ],
+                                Row(
                                   children: [
-                                    Text(
-                                      'Código de Confirmación',
-                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                        color: Colors.white.withValues(alpha: 0.9),
-                                        fontWeight: FontWeight.w600,
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.2),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        isAtDoor ? Icons.key_rounded : Icons.lock_outline,
+                                        color: Colors.white,
+                                        size: 16,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Compártelo con el repartidor',
-                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                        color: Colors.white.withValues(alpha: 0.7),
-                                        fontSize: 11,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Código de Confirmación',
+                                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                              color: Colors.white.withValues(alpha: 0.9),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            isAtDoor ? 'Muéstraselo para recibir tu pedido' : 'Compártelo con el repartidor',
+                                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                              color: Colors.white.withValues(alpha: 0.7),
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        widget.order.confirmCode!,
+                                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: isAtDoor ? Colors.deepPurple[700] : Colors.orange[700],
+                                          letterSpacing: 1.5,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  widget.order.confirmCode!,
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.orange[700],
-                                    letterSpacing: 1.5,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                              ],
+                            ),
+                          );
+                        }),
                       
                       // Información del restaurante y repartidor
                       Row(

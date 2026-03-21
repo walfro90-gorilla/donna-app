@@ -899,8 +899,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 ),
               ),
 
-              // Código de confirmación (cuando está en camino)
-              if (_order.status == OrderStatus.onTheWay && _order.confirmCode != null) ...[
+              // Código de confirmación (en camino O repartidor en puerta)
+              if ({OrderStatus.onTheWay, OrderStatus.arrivedAtClient}.contains(_order.status) && _order.confirmCode != null) ...[
                 const SizedBox(height: 16),
                 _SectionCard(
                   title: 'Código de Confirmación',
@@ -909,28 +909,58 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [
-                          Colors.orange.withValues(alpha: 0.1),
-                          Colors.orange.withValues(alpha: 0.05),
-                        ],
+                        colors: _order.status == OrderStatus.arrivedAtClient
+                            ? [Colors.deepPurple.withValues(alpha: 0.15), Colors.deepPurple.withValues(alpha: 0.05)]
+                            : [Colors.orange.withValues(alpha: 0.1), Colors.orange.withValues(alpha: 0.05)],
                       ),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Colors.orange.withValues(alpha: 0.3),
-                        width: 1.5,
+                        color: _order.status == OrderStatus.arrivedAtClient
+                            ? Colors.deepPurple.withValues(alpha: 0.5)
+                            : Colors.orange.withValues(alpha: 0.3),
+                        width: _order.status == OrderStatus.arrivedAtClient ? 2.0 : 1.5,
                       ),
                     ),
                     child: Column(
                       children: [
+                        if (_order.status == OrderStatus.arrivedAtClient) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.deepPurple,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.location_on, color: Colors.white, size: 16),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '¡El repartidor está en tu puerta!',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                            border: Border.all(
+                              color: _order.status == OrderStatus.arrivedAtClient
+                                  ? Colors.deepPurple.withValues(alpha: 0.4)
+                                  : Colors.orange.withValues(alpha: 0.3),
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.orange.withValues(alpha: 0.1),
+                                color: (_order.status == OrderStatus.arrivedAtClient ? Colors.deepPurple : Colors.orange).withValues(alpha: 0.15),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -940,7 +970,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             _order.confirmCode!,
                             style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: Colors.orange,
+                              color: _order.status == OrderStatus.arrivedAtClient ? Colors.deepPurple : Colors.orange,
                               letterSpacing: 6.0,
                               fontSize: 32,
                             ),
@@ -951,15 +981,17 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                           children: [
                             Icon(
                               Icons.info_outline,
-                              color: Colors.orange.shade700,
+                              color: _order.status == OrderStatus.arrivedAtClient ? Colors.deepPurple.shade700 : Colors.orange.shade700,
                               size: 18,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Comparte este código con el repartidor para confirmar la entrega de tu pedido',
+                                _order.status == OrderStatus.arrivedAtClient
+                                    ? 'Muéstrale este código al repartidor para recibir tu pedido'
+                                    : 'Comparte este código con el repartidor para confirmar la entrega de tu pedido',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.orange.shade700,
+                                  color: _order.status == OrderStatus.arrivedAtClient ? Colors.deepPurple.shade700 : Colors.orange.shade700,
                                   fontWeight: FontWeight.w500,
                                 ),
                                 textAlign: TextAlign.start,
