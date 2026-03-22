@@ -67,7 +67,9 @@
       "mcp__supabase__get_logs",
       "Bash(npx supabase:*)",
       "mcp__supabase__get_project_url",
-      "Bash(grep -r \"MenuScannerScreen\\\\|menu_scanner\" /x/Codes/donna-app/lib --include=*.dart -n)"
+      "Bash(grep -r \"MenuScannerScreen\\\\|menu_scanner\" /x/Codes/donna-app/lib --include=*.dart -n)",
+      "Bash(cmd.exe /c \"cd /d x:\\\\Codes\\\\donna-app && flutter analyze lib/screens/checkout/checkout_screen.dart 2>&1\")",
+      "Bash(powershell -Command \"Set-Location ''x:\\\\Codes\\\\donna-app''; flutter analyze lib/screens/checkout/checkout_screen.dart 2>&1 | Select-Object -Last 20\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\walfr\\.claude"

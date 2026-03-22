@@ -71,6 +71,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Map<String, dynamic>? _deliveryAddressStructured;
   String? _placesSessionToken;
   String? _lastSelectedAddress;
+
+  // Validación de cobertura geográfica
+  bool? _isInCoverageArea; // null = sin verificar, true = en cobertura, false = fuera
+  bool _isCheckingCoverage = false;
   
   // Tarifa de delivery tomada del restaurante; 35 como fallback de plataforma
   double get _deliveryFee => widget.restaurant.deliveryFee ?? 35.0;
@@ -98,6 +102,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _deliveryLat = null;
         _deliveryLon = null;
         _deliveryAddressStructured = null;
+        _isInCoverageArea = null;
       }
     });
   }
@@ -218,8 +223,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _deliveryPlaceId = null; // Desconocido al cargar desde perfil
             _lastSelectedAddress = address.isNotEmpty ? address : null;
           });
-          
+
           debugPrint('✅ [CHECKOUT._loadUserData] Estado actualizado con coordenadas: lat=$_deliveryLat, lon=$_deliveryLon');
+
+          // Verificar cobertura con la dirección guardada del perfil
+          if (lat != null && lon != null) _checkCoverage(lat, lon);
         } else {
           debugPrint('⚠️ [CHECKOUT._loadUserData] No se encontraron datos del usuario');
         }
@@ -664,12 +672,37 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _deliveryLon = result.lon;
         _deliveryPlaceId = result.placeId;
         _deliveryAddressStructured = result.addressStructured;
+        _isInCoverageArea = null; // resetear hasta verificar
       });
       debugPrint('✅ [CHECKOUT] Dirección confirmada: ${result.formattedAddress}');
       debugPrint('✅ [CHECKOUT] Coordenadas: lat=${result.lat}, lon=${result.lon}');
       debugPrint('✅ [CHECKOUT] Structured: ${result.addressStructured}');
-      // Regenerate session token for next search (best practice)
       _placesSessionToken = PlacesService.newSessionToken();
+      _checkCoverage(result.lat, result.lon);
+    }
+  }
+
+  /// Verifica si las coordenadas están dentro del área de cobertura del servicio
+  Future<void> _checkCoverage(double lat, double lon) async {
+    if (!mounted) return;
+    setState(() => _isCheckingCoverage = true);
+    try {
+      final data = await SupabaseConfig.client.rpc(
+        'check_location_coverage',
+        params: {'p_lat': lat, 'p_lon': lon},
+      );
+      if (mounted) {
+        setState(() {
+          _isInCoverageArea = data != null && data.toString().isNotEmpty;
+          _isCheckingCoverage = false;
+        });
+        debugPrint(_isInCoverageArea!
+            ? '✅ [CHECKOUT] Cobertura confirmada: $data'
+            : '⚠️ [CHECKOUT] Fuera de cobertura: lat=$lat, lon=$lon');
+      }
+    } catch (e) {
+      debugPrint('❌ [CHECKOUT] Error verificando cobertura: $e');
+      if (mounted) setState(() { _isInCoverageArea = null; _isCheckingCoverage = false; });
     }
   }
 
@@ -763,7 +796,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: (_isProcessingOrder || !_hasActiveCouriers || _subtotal < 100.0 || _clientTotalDebt > 0 || _isLoadingDebt) ? null : _placeOrder,
+                  onPressed: (_isProcessingOrder || !_hasActiveCouriers || _subtotal < 100.0 || _clientTotalDebt > 0 || _isLoadingDebt || _isCheckingCoverage || _isInCoverageArea == false) ? null : _placeOrder,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _clientTotalDebt > 0
                         ? Theme.of(context).colorScheme.error
@@ -945,15 +978,53 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     _deliveryAddressStructured = placeDetails;
                     _lastSelectedAddress = formatted;
                     _addressController.text = formatted;
+                    _isInCoverageArea = null; // resetear hasta verificar
                   });
                   debugPrint('✅ [CHECKOUT.onPlaceSelected] Estado actualizado: lat=$_deliveryLat, lon=$_deliveryLon');
                   _formKey.currentState?.validate();
+                  _checkCoverage(lat, lon);
                 } else {
                   debugPrint('⚠️ [CHECKOUT.onPlaceSelected] ADVERTENCIA: lat o lon son null!');
                 }
               },
             ),
-            if (_deliveryLat != null && _deliveryLon != null)
+            if (_isCheckingCoverage)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Row(
+                  children: [
+                    SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                    SizedBox(width: 8),
+                    Text('Verificando cobertura...'),
+                  ],
+                ),
+              )
+            else if (_isInCoverageArea == false)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.location_off, color: Colors.red.shade700, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Lo sentimos, por el momento no tenemos servicio en tu área.',
+                          style: TextStyle(color: Colors.red.shade700, fontSize: 13, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (_deliveryLat != null && _deliveryLon != null && _isInCoverageArea == true)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Row(
