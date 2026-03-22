@@ -1,6 +1,39 @@
 const crypto = require('crypto');
 const axios = require('axios');
 
+// 🔍 Fuzzy product matcher — evita fallos por plurales, acentos o abreviaciones
+// Prioridades: exact > starts-with > cross-includes > any-word-match
+function findProductInMenu(menu, requestedName) {
+    const norm = s => s.trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // quitar acentos
+
+    const rn = norm(requestedName);
+
+    // P1: Coincidencia exacta
+    let m = menu.find(p => norm(p.name) === rn);
+    if (m) return m;
+
+    // P2: El nombre del menú empieza con lo pedido (ej. "Boneless 250gr" startsWith "boneless")
+    m = menu.find(p => norm(p.name).startsWith(rn));
+    if (m) return m;
+
+    // P3: Lo pedido empieza con el nombre del menú (ej. "sodas" startsWith "soda" del menú "Soda")
+    //     También cubre plurales: menú "Soda" → pedido "Sodas"
+    m = menu.find(p => rn.startsWith(norm(p.name)));
+    if (m) return m;
+
+    // P4: Contención bidireccional (ej. menú "Sodas" contiene "soda")
+    m = menu.find(p => norm(p.name).includes(rn) || rn.includes(norm(p.name)));
+    if (m) return m;
+
+    // P5: Coincidencia por primera palabra del menú (ej. "hamburguesa" vs "Hamburguesa Sirloin")
+    m = menu.find(p => {
+        const firstWord = norm(p.name).split(' ')[0];
+        return firstWord === rn || rn.startsWith(firstWord) || firstWord.startsWith(rn);
+    });
+    return m || null;
+}
+
 // 🛠️ Función Helper: Calcula los totales de la orden en memoria
 function calculateTotals(session) {
     let subtotal = 0;
@@ -318,7 +351,11 @@ module.exports = {
         // --- PREPARAMOS EL CONTEXTO PARA LA MÁQUINA DE ESTADOS DEL LLM ---
         calculateTotals(session);
         let restContext = session.restaurants ? `\nRESTAURANTES EN MEMORIA:\n${session.restaurants.map((r, i) => `${i+1}. ${r.name}`).join('\n')}` : "";
-        let menuContext = session.menu ? `\nMENU DEL LOCAL ACTUAL (${session.current_restaurant?.name}):\n${session.menu.map(i => `${i.name} ($${i.client_price.toFixed(2)})`).join(' | ')}` : "";
+        // Incluir product_id en el contexto para que GPT lo devuelva directamente (sin string-matching)
+        let menuContext = session.menu
+            ? `\nMENU DEL LOCAL ACTUAL (${session.current_restaurant?.name}):\n` +
+              session.menu.map(i => `[ID:${i.id}] ${i.name} - $${i.client_price.toFixed(2)}`).join('\n')
+            : "";
         let cartContext = (session.cart && session.cart.items && session.cart.items.length > 0) ? session.cart.items.map(i => `${i.quantity}x ${i.name}`).join(', ') : "Vacío";
 
         const prompt = `Eres Doña, la agente IA principal de delivery. Usuario: ${userName}.
@@ -340,7 +377,7 @@ SI ETAPA ES "ORDERING" o "IDLE":
 1. Si pide restaurantes -> action: SHOW_RESTAURANTS.
 2. Si selecciona un restaurante -> action: SELECT_RESTAURANT, "restaurant_name": "nombre".
 3. Si pide alimento genérico sin local -> action: SEARCH_PRODUCT, "food_query": "comida".
-4. Si PIDE PLATILLOS -> action: PROCESS_ORDER, llena "order_data".
+4. Si PIDE PLATILLOS -> action: PROCESS_ORDER, llena "order_data". CRÍTICO: para cada platillo pedido, identifica el producto correcto del menú usando semántica (ej. "chela"→cerveza, "boneles"→Boneless, "sodas"→Sodas, "una coke"→refresco). Devuelve su "product_id" EXACTO del menú (el que aparece en [ID:...]) y el "name" tal como está en el menú. Si el usuario pide algo que definitivamente NO existe en el menú, ponlo en "unknown_items". NO inventes product_ids.
 5. Si YA TERMINÓ DE ORDENAR (ej. "es todo", "ya", "listo") -> action: CONFIRM_CART.
 
 SI ETAPA ES "ASKING_NOTES":
@@ -352,10 +389,7 @@ SI ETAPA ES "CONFIRMING_ADDRESS" o "WAITING_NEW_ADDRESS":
 9. Si DA UNA NUEVA DIRECCIÓN -> action: UPDATE_ADDRESS, "extracted_info": "nueva dirección completa".
 
 SI ETAPA ES "ASKING_PAYMENT_METHOD":
-10. Evalúa el billete. Si dice "500", "con 200", extrae el número. Si dice "exacto", "cambio exacto", extrae el Total a pagar. -> action: SET_PAYMENT, "cash_amount": número.
-
-SI ETAPA ES "CONFIRMING_ORDER":
-11. Si confirma el pedido final (ej. "sí", "dale", "ok", "confirmo") -> action: SUBMIT_ORDER.
+10. Evalúa el billete. Si dice "500", "con 200", extrae el número. Si dice "exacto", "cambio exacto", extrae el Total a pagar. -> action: SET_PAYMENT, "cash_amount": número. IMPORTANTE: confirmar el monto de pago es suficiente para colocar la orden, no pidas confirmación adicional.
 
 REGLAS GLOBALES:
 - Si quiere cancelar todo -> action: CANCEL.
@@ -370,8 +404,8 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
     "extracted_info": "texto extraído (notas o dirección) o null",
     "cash_amount": 500 o null,
     "order_data": {
-        "items": [{"name": "nombre exacto", "quantity": 1}],
-        "unknown_items": ["lo inventado"]
+        "items": [{"product_id": "uuid-exacto-del-menu", "name": "nombre exacto del menú", "quantity": 1}],
+        "unknown_items": ["producto que no existe en el menú"]
     },
     "reply": "Respuesta directa"
 }`;
@@ -455,7 +489,11 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
                 session.pending_queue = []; 
 
                 for (const reqItem of orderData.items) {
-                    const existsInMenu = session.menu.find(p => p.name.trim().toLowerCase() === reqItem.name.trim().toLowerCase());
+                    // Buscar por product_id primero (GPT lo resolvió semánticamente)
+                    // Si no viene ID o no hace match, caer al fuzzy matcher como red de seguridad
+                    const existsInMenu = (reqItem.product_id
+                        ? session.menu.find(p => p.id === reqItem.product_id)
+                        : null) ?? findProductInMenu(session.menu, reqItem.name);
                     if (existsInMenu) {
                         const { data: prodMods } = await supabase.rpc('get_product_with_modifiers', { p_product_id: existsInMenu.id });
                         if (prodMods && prodMods.modifier_groups && prodMods.modifier_groups.length > 0) {
@@ -519,13 +557,13 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
                     }
                 } else {
                     session.step = 'ASKING_PAYMENT_METHOD';
-                    return msg.reply(`🤖 *Doña:* ¡Perfecto!\n\n${buildTicketString(session)}\n\nPara el pago (solo aceptamos **efectivo** 💵), ¿vas a pagar con cambio exacto o con qué billete?`);
+                    return msg.reply(`🤖 *Doña:* ¡Perfecto!\n\n${buildTicketString(session)}\n\nPara el pago (solo aceptamos *efectivo* 💵), ¿con qué billete vas a pagar?\n_(Nos ayudas muchísimo si tu pago es exacto 🙏)_`);
                 }
             }
 
             case 'CONFIRM_ADDRESS': {
                 session.step = 'ASKING_PAYMENT_METHOD';
-                return msg.reply(`🤖 *Doña:* ¡Excelente!\n\n${buildTicketString(session)}\n\nPara el pago (solo aceptamos **efectivo** 💵), ¿vas a pagar con cambio exacto o con qué billete?`);
+                return msg.reply(`🤖 *Doña:* ¡Excelente!\n\n${buildTicketString(session)}\n\nPara el pago (solo aceptamos *efectivo* 💵), ¿con qué billete vas a pagar?\n_(Nos ayudas muchísimo si tu pago es exacto 🙏)_`);
             }
 
             case 'ASK_NEW_ADDRESS': {
@@ -543,21 +581,17 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
                 const total = session.cart.total;
                 let cashAmount = agentDecision.cash_amount;
 
-                if (!cashAmount) return msg.reply(`🤖 *Doña:* Entendido. El total es de *$${total.toFixed(2)}*. ¿Con qué billete vas a pagar para llevarte cambio?`);
-                if (cashAmount < total) return msg.reply(`🤖 *Doña:* Híjole, el total es de *$${total.toFixed(2)}*, con $${cashAmount} no alcanza. Indícame un billete mayor o "cambio exacto":`);
+                if (!cashAmount) return msg.reply(`🤖 *Doña:* Entendido. El total es de *$${total.toFixed(2)}*. ¿Con qué billete vas a pagar?`);
+                if (cashAmount < total) return msg.reply(`🤖 *Doña:* Híjole, el total es de *$${total.toFixed(2)}* y con $${cashAmount} no alcanza. ¿Con cuánto vas a pagar?`);
 
                 session.cart.payment_method = 'cash';
                 session.cart.cash_amount = cashAmount;
-                session.step = 'CONFIRMING_ORDER';
-                
-                let payMsg = `🤖 *Doña:* ¡Anotado! Pago en efectivo con $${cashAmount.toFixed(2)}`;
-                if (cashAmount > total) payMsg += ` (Te llevaremos $${(cashAmount - total).toFixed(2)} de cambio). 💵`;
-                else payMsg += ` (Pago exacto, ¡gracias! 🙏). 💵`;
-                
-                return msg.reply(`${payMsg}\n\n¿Confirmo tu pedido para registrarlo y mandarlo a cocina? (Responde 'sí' o 'no')`);
+                // La confirmación del monto ES la confirmación del pedido — colocar directo
+                return await executeOrderBlueprint(msg, session, user, supabase);
             }
 
             case 'SUBMIT_ORDER': {
+                // Fallback por si GPT aún genera esta acción
                 return await executeOrderBlueprint(msg, session, user, supabase);
             }
 

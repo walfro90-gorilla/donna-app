@@ -205,8 +205,7 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
           .select('''
             *,
             restaurants (name, address, phone),
-            user:user_id (name, phone),
-            order_items (unit_price, price_at_time_of_order, quantity, is_removed)
+            user:user_id (name, phone)
           ''')
           .inFilter('status', ['confirmed', 'in_preparation', 'ready_for_pickup'])
           .isFilter('delivery_agent_id', null)
@@ -218,8 +217,7 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
           .select('''
             *,
             restaurants (name, address, phone),
-            user:user_id (name, phone),
-            order_items (unit_price, price_at_time_of_order, quantity, is_removed)
+            user:user_id (name, phone)
           ''')
           .eq('delivery_agent_id', currentUser.id)
           .order('created_at', ascending: false);
@@ -731,22 +729,8 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
   Widget _buildOrderCard(Map<String, dynamic> order, bool isMine) {
     final restaurant = order['restaurants'] ?? {};
     final deliveryFee = (order['delivery_fee'] ?? 35.0).toDouble();
-    // Compute total from active order_items + delivery_fee (avoids stale total_amount in DB)
-    final rawItems = order['order_items'] as List?;
-    final itemsTotal = rawItems != null
-        ? rawItems
-            .where((i) => i['is_removed'] != true)
-            .fold<double>(0.0, (sum, i) {
-              // Mirror effectiveUnitPrice: prefer unit_price if > 0, else price_at_time_of_order
-              final unitPrice = (i['unit_price'] as num?)?.toDouble() ?? 0.0;
-              final priceAtOrder = (i['price_at_time_of_order'] as num?)?.toDouble() ?? 0.0;
-              final effectivePrice = unitPrice > 0 ? unitPrice : priceAtOrder;
-              return sum + effectivePrice * ((i['quantity'] as num).toDouble());
-            })
-        : null;
-    final totalAmount = itemsTotal != null
-        ? itemsTotal + deliveryFee
-        : (order['total_amount'] ?? 0.0).toDouble();
+    // total_amount from the orders table is authoritative — it already includes food + delivery fee.
+    final totalAmount = (order['total_amount'] as num?)?.toDouble() ?? deliveryFee;
     final createdAt = DateTime.parse(order['created_at']);
     final status = order['status'] as String;
     final currentUser = SupabaseConfig.client.auth.currentUser;
