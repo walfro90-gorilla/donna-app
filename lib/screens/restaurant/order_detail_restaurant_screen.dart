@@ -967,12 +967,15 @@ class _OrderDetailRestaurantScreenState
           .from('order_items')
           .update({'is_removed': true}).eq('id', item.id);
 
-      // 2. Recalcular subtotal con los ítems activos restantes
+      // 2. Recalcular subtotal con los ítems activos restantes.
+      // Usa la misma lógica de precio que el display: product.price tiene prioridad
+      // (cubre órdenes de WhatsApp donde unit_price y price_at_time_of_order son 0).
       final activeItems = _orderItems.where(
           (i) => !_removedItemIds.contains(i.id) && i.id != item.id);
       final newSubtotal = activeItems.fold(0.0, (sum, i) {
-        final price = _unitPrices[i.id] ?? i.priceAtTimeOfOrder;
-        return sum + (price * i.quantity);
+        final productPrice = i.product?.price ?? (_unitPrices[i.id] ?? i.priceAtTimeOfOrder);
+        final modsTotal = (_itemModifiers[i.id] ?? []).fold(0.0, (ms, m) => ms + m.priceDelta);
+        return sum + ((productPrice + modsTotal) * i.quantity);
       });
       final deliveryFee = _currentOrder!.deliveryFee ?? 0.0;
       final newTotal = newSubtotal + deliveryFee;
