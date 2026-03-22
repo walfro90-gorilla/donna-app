@@ -16,8 +16,6 @@ class MenuScannerScreen extends StatefulWidget {
 }
 
 class _MenuScannerScreenState extends State<MenuScannerScreen> {
-  static const double _commissionRate = 0.15;
-
   _ScanPhase _phase = _ScanPhase.selection;
   PlatformFile? _selectedFile;
   List<_DetectedProduct> _detectedProducts = [];
@@ -106,7 +104,7 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
               'restaurant_id': widget.restaurantId,
               'name': product.nameController.text.trim(),
               'description': product.descriptionController.text.trim(),
-              'price': product.kitchenPrice,
+              'price': product.appPrice, // precio con comisión 15% incluida
               'type': product.type,
               'is_available': true,
               'created_at': DateTime.now().toIso8601String(),
