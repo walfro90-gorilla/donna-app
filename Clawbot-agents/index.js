@@ -88,10 +88,38 @@ const sessions = {};
 client.on('qr', qr => qrcode.generate(qr, {small: true}));
 client.on('ready', () => console.log('✅ DOÑA REPARTOS: Mothership v18.0 (CRM + Notify Integrados) Online.'));
 
-client.on('message_create', async msg => {
-    // Evitar procesar mensajes propios, estados o grupos
-    if (msg.fromMe || msg.isStatus || msg.broadcast || msg.from.includes('@g.us')) return;
+// =========================================================================
+// 🕐 DEBOUNCER — Agrupa mensajes rápidos antes de procesar (evita spam)
+// =========================================================================
+const DEBOUNCE_MS = 3000;
+const messageBuffers = {};
+const debounceTimers = {};
 
+async function showTyping(msg, durationMs = 1200) {
+    try {
+        const chat = await msg.getChat();
+        await chat.sendStateTyping();
+        await new Promise(r => setTimeout(r, durationMs));
+        await chat.clearState();
+    } catch(e) { /* ignorar si falla */ }
+}
+
+client.on('message_create', async msg => {
+    if (msg.fromMe || msg.isStatus || msg.broadcast || msg.from.includes('@g.us')) return;
+    const from = msg.from;
+    if (!messageBuffers[from]) messageBuffers[from] = [];
+    messageBuffers[from].push(msg.body.trim());
+    if (debounceTimers[from]) clearTimeout(debounceTimers[from]);
+    debounceTimers[from] = setTimeout(async () => {
+        const texts = messageBuffers[from] || [];
+        messageBuffers[from] = [];
+        delete debounceTimers[from];
+        msg.body = texts.join('\n');
+        await processMessage(msg);
+    }, DEBOUNCE_MS);
+});
+
+async function processMessage(msg) {
     const from = msg.from;
     let rawNumber = from.replace('@c.us', '').replace('@s.whatsapp.net', '');
     let contactName = null;
@@ -231,21 +259,25 @@ client.on('message_create', async msg => {
             const routingPrompt = `Eres el Enrutador Cognitivo de Doña Repartos. Usuario: ${userName}.
             Analiza el mensaje: "${text}".
             Asigna el agente según la intención primaria:
-            1. Si SOLO saluda o charla: agent="JIMBOT", action="CHAT". Salúdalo.
-            2. Si tiene hambre, quiere pedir comida, menú, o MENCIONA UN RESTAURANTE ESPECÍFICO (ej. "Juan Tacos", "Pizza"): agent="DOÑA", action="TRIGGER_DONA". 
+            1. Si SOLO saluda o charla: agent="JIMBOT", action="CHAT". Salúdalo de forma amigable y breve.
+            2. Si tiene hambre, quiere pedir comida, menú, o MENCIONA UN RESTAURANTE ESPECÍFICO: agent="DOÑA", action="TRIGGER_DONA".
                - Extrae el nombre en "restaurant_name" si menciona un local específico, sino null.
             3. Si quiere REGISTRAR SU RESTAURANTE, afiliar su negocio: agent="GORILLA", action="TRIGGER_GORILLA".
             4. Si quiere trabajar como repartidor: agent="KETZAL", action="TRIGGER_KETZAL".
+            5. Si pregunta por UBICACIÓN, DIRECCIÓN o DÓNDE ESTÁN: agent="JIMBOT", action="FAQ_LOCATION".
+            6. Si pregunta por HORARIOS o A QUÉ HORA abren/cierran: agent="JIMBOT", action="FAQ_HOURS".
+            7. Si pregunta CÓMO FUNCIONA, CÓMO PEDIR o cómo usar el servicio: agent="JIMBOT", action="FAQ_HOW".
+            8. Si pregunta por COBERTURA, ZONAS o si llegan a su colonia: agent="JIMBOT", action="FAQ_COVERAGE".
             Responde JSON estricto: {"agent": "DOÑA|JIMBOT|GORILLA|KETZAL", "action": "...", "restaurant_name": "nombre extraído o null", "reply": "tu respuesta amigable (solo si action=CHAT)"}`;
-            
+
             const routing = await openai.chat.completions.create({ model: "gpt-4o-mini", messages: [{ role: "system", content: routingPrompt }], response_format: { type: "json_object" } });
             const aiDecision = JSON.parse(routing.choices[0].message.content);
-            
+
             if (aiDecision.agent !== 'JIMBOT') {
                 sessions[from].agent = aiDecision.agent;
                 sessions[from].jimbot_state = 'IN_AGENT';
-                sessions[from].step = 'IDLE'; 
-                
+                sessions[from].step = 'IDLE';
+
                 if (aiDecision.agent === 'DOÑA') {
                     if (aiDecision.restaurant_name) {
                         sessions[from].step = 'SELECTING_RESTAURANT';
@@ -257,7 +289,23 @@ client.on('message_create', async msg => {
                     }
                 }
             } else {
-                return msg.reply(`🤖 ${aiDecision.reply}`);
+                switch (aiDecision.action) {
+                    case 'FAQ_LOCATION':
+                        await showTyping(msg, 900);
+                        return msg.reply('Somos un servicio de delivery a domicilio en Juárez, Chih. No tenemos restaurante físico propio — te llevamos comida de los locales afiliados a donde estés. 🏠');
+                    case 'FAQ_HOURS':
+                        await showTyping(msg, 900);
+                        return msg.reply('Estamos disponibles cuando los restaurantes afiliados están en línea. Escríbeme "restaurantes" para ver quién está abierto ahorita. 🕐');
+                    case 'FAQ_HOW':
+                        await showTyping(msg, 900);
+                        return msg.reply('¡Es muy fácil! Me dices qué se te antoja, te muestro el menú, haces tu pedido y pagas en efectivo al repartidor. Todo por WhatsApp. ¿Le entramos? 🛵');
+                    case 'FAQ_COVERAGE':
+                        await showTyping(msg, 900);
+                        return msg.reply('Repartimos en Juárez, Chih. Dime tu colonia y te confirmo si llegamos. 📍');
+                    default:
+                        await showTyping(msg, 1000);
+                        return msg.reply(aiDecision.reply || '¡Hola! ¿En qué te puedo ayudar? 😊');
+                }
             }
         }
 
@@ -271,7 +319,7 @@ client.on('message_create', async msg => {
         }
 
     } catch (e) { console.error("\n🔥 [CRÍTICO] ERROR MAIN:", e.stack); }
-});
+}
 
 async function handleAgentDelegation(msg, session, user) {
     try {
@@ -285,7 +333,7 @@ async function handleAgentDelegation(msg, session, user) {
         }
     } catch (err) {
         console.error(`🔥 ERROR EN AGENTE ${session.agent}:`, err.stack);
-        msg.reply("🤖 Tuvimos un parpadeo interno. ¿Me lo repites?");
+        msg.reply("Tuvimos un parpadeo interno. ¿Me lo repites?");
     }
 }
 
@@ -295,22 +343,22 @@ async function handleRegistration(msg, session, rawNumber, contactName) {
     if (session.step === 'IDLE' || session.step === 'ASKED_FOR_MENU') {
         session.step = 'REG_NAME';
         const nombreSugerido = contactName ? ` (¿Es ${contactName}?)` : '';
-        return msg.reply(`🤖 ¡Excelente! Antes de procesar tu orden, necesito registrarte en Doña Repartos.\n\n¿Cuál es tu **nombre y apellido**?${nombreSugerido}`);
+        return msg.reply(`¡Excelente! Antes de procesar tu orden, necesito registrarte en Doña Repartos.\n\n¿Cuál es tu **nombre y apellido**?${nombreSugerido}`);
     }
 
     try {
         switch (session.step) {
             case 'REG_NAME':
                 session.reg_name = text; session.step = 'REG_EMAIL';
-                return msg.reply(`🤖 Gracias, ${text}. ¿Cuál es tu **correo electrónico**?\n\n_(Nota: Este correo es solo para que puedas acceder a tu cuenta en la app y recuperar tu contraseña)_`);
+                return msg.reply(`Gracias, ${text}. ¿Cuál es tu **correo electrónico**?\n\n_(Nota: Este correo es solo para que puedas acceder a tu cuenta en la app y recuperar tu contraseña)_`);
             
             case 'REG_EMAIL':
-                if (!text.includes('@')) return msg.reply("🤖 Correo inválido. Intenta de nuevo con formato estándar (ejemplo@correo.com):");
+                if (!text.includes('@')) return msg.reply("Correo inválido. Intenta de nuevo con formato estándar (ejemplo@correo.com):");
                 session.reg_email = text; session.step = 'REG_ADDRESS';
-                return msg.reply("🤖 ¿A qué dirección enviamos tus pedidos? (Calle, número y colonia):");
+                return msg.reply("¿A qué dirección enviamos tus pedidos? (Calle, número y colonia):");
             
             case 'REG_ADDRESS':
-                msg.reply("🤖 Validando cobertura en el mapa... 📍");
+                msg.reply("Validando cobertura en el mapa... 📍");
                 
                 const geocodeAddress = text.replace(/\boasis\b/gi, 'O.');
                 
@@ -322,10 +370,10 @@ async function handleRegistration(msg, session, rawNumber, contactName) {
                 const { data: zoneName } = await supabase.rpc('check_location_coverage', { p_lat: geo.lat || 0, p_lon: geo.lon || 0 });
 
                 if (!zoneName) {
-                    return msg.reply("🤖 ¡Híjole! Me marca el mapa que esa dirección está **fuera de nuestra zona de cobertura** actual. 😔\n\nPor el momento solo repartimos en nuestras zonas designadas.\n\n¿Tienes alguna otra dirección de entrega que esté dentro de la zona?");
+                    return msg.reply("¡Híjole! Me marca el mapa que esa dirección está **fuera de nuestra zona de cobertura** actual. 😔\n\nPor el momento solo repartimos en nuestras zonas designadas.\n\n¿Tienes alguna otra dirección de entrega que esté dentro de la zona?");
                 }
-                
-                msg.reply(`🤖 ¡Súper! Estás dentro de la zona de cobertura (*${zoneName}*). Configurando tu perfil...`);
+
+                msg.reply(`¡Súper! Estás dentro de la zona de cobertura (*${zoneName}*). Configurando tu perfil...`);
 
                 const finalAddress = (geo.formatted_address && geo.formatted_address !== "México") ? `${text} (${geo.formatted_address})` : text;
                 
@@ -349,7 +397,7 @@ async function handleRegistration(msg, session, rawNumber, contactName) {
 
                 const { data: newUser } = await supabase.from('users').select('*').eq('id', auth.user.id).single();
 
-                const welcomeMsg = `🤖 ¡Bienvenido, *${session.reg_name}*! Registro exitoso en Doña Repartos.\n\n🔐 Tu cuenta web ha sido creada. Para revisar el estatus de tus órdenes, accede a la app:\n🔗 https://donna-app-three.vercel.app/\n\n📧 *Usuario:* ${session.reg_email}\n🔑 *Contraseña:* ${tempPassword}`;
+                const welcomeMsg = `¡Bienvenido, *${session.reg_name}*! Registro exitoso en Doña Repartos. 🎉\n\n🔐 Tu cuenta web ha sido creada. Para revisar el estatus de tus órdenes, accede a la app:\n🔗 https://donna-app-three.vercel.app/\n\n📧 *Usuario:* ${session.reg_email}\n🔑 *Contraseña:* ${tempPassword}`;
 
                 // Si el usuario intentó ordenar antes de registrarse, lo devolvemos directo a su carrito
                 if (session.cart && session.agent === 'DOÑA') {
@@ -367,7 +415,7 @@ async function handleRegistration(msg, session, rawNumber, contactName) {
         }
     } catch (err) { 
         console.error("🔥 Error en Registration:", err);
-        msg.reply("🤖 Tuvimos un detalle guardando los datos. ¿Me pasas un correo distinto para intentar de nuevo?"); 
+        msg.reply("Tuvimos un detalle guardando los datos. ¿Me pasas un correo distinto para intentar de nuevo?");
     }
 }
 

@@ -97,7 +97,7 @@ async function sendModifierPrompt(pItem, msg) {
 
 // 🚀 FUNCIÓN GEOFENCING
 async function processNewAddressWithGeofencing(text, user, session, supabase, msg) {
-    msg.reply("🤖 Validando cobertura en el mapa para tu nueva dirección... 📍");
+    msg.reply("Validando cobertura en el mapa para tu nueva dirección... 📍");
     try {
         const geocodeAddress = text.replace(/\boasis\b/gi, 'O.');
         const geoRes = await axios.post(`${process.env.SUPABASE_URL}/functions/v1/google-maps-proxy`,
@@ -106,17 +106,17 @@ async function processNewAddressWithGeofencing(text, user, session, supabase, ms
         const geo = geoRes.data;
         const { data: zoneName } = await supabase.rpc('check_location_coverage', { p_lat: geo.lat || 0, p_lon: geo.lon || 0 });
 
-        if (!zoneName) return "🤖 ¡Híjole patrón! Me marca el mapa que esa nueva dirección está **fuera de nuestra zona de cobertura** actual. 😔\n\nPor ahora solo repartimos en nuestras zonas designadas.\n\n¿Tendrás otra dirección de entrega que sí esté en cobertura o mandamos a la anterior?";
+        if (!zoneName) return "¡Híjole patrón! Me marca el mapa que esa nueva dirección está **fuera de nuestra zona de cobertura** actual. 😔\n\nPor ahora solo repartimos en nuestras zonas designadas.\n\n¿Tendrás otra dirección de entrega que sí esté en cobertura o mandamos a la anterior?";
 
         const finalAddress = (geo.formatted_address && geo.formatted_address !== "México") ? `${text} (${geo.formatted_address})` : text;
         await supabase.from('client_profiles').update({ address: finalAddress }).eq('user_id', user.id);
         
         session.current_address = finalAddress;
         session.step = 'ASKING_PAYMENT_METHOD';
-        return `🤖 ¡Súper! Estás dentro de la zona de cobertura (*${zoneName}*).\nDirección actualizada a *${finalAddress}*.\n\n${buildTicketString(session)}\n\nPara el pago (solo aceptamos **efectivo** 💵), ¿vas a pagar con cambio exacto o con qué billete?\n_(Nos ayuda muchísimo si tienes el cambio exacto 🙏)_`;
+        return `¡Súper! Estás dentro de la zona de cobertura (*${zoneName}*).\nDirección actualizada a *${finalAddress}*.\n\n${buildTicketString(session)}\n\nPara el pago (solo aceptamos **efectivo** 💵), ¿vas a pagar con cambio exacto o con qué billete?\n_(Nos ayuda muchísimo si tienes el cambio exacto 🙏)_`;
     } catch (e) {
         console.error("Error en Geofencing Dona:", e);
-        return "🤖 Uf, falló mi radar del mapa. ¿Me puedes repetir la calle y el número por favor?";
+        return "Uf, falló mi radar del mapa. ¿Me puedes repetir la calle y el número por favor?";
     }
 }
 
@@ -124,7 +124,7 @@ async function processNewAddressWithGeofencing(text, user, session, supabase, ms
 async function executeOrderBlueprint(msg, session, user, supabase) {
     if (!user || !user.id) {
         session.step = 'REG_NAME'; 
-        return "🤖 *Doña:* ¡Anotado! Pero veo que aún no estás registrado.\n\nPara poder enviarte tu pedido, ¿cuál es tu **nombre y apellido**?";
+        return "¡Anotado! Pero veo que aún no estás registrado.\n\nPara poder enviarte tu pedido, ¿cuál es tu **nombre y apellido**?";
     }
 
     try {
@@ -133,7 +133,7 @@ async function executeOrderBlueprint(msg, session, user, supabase) {
             if (session.reminderTimer) clearTimeout(session.reminderTimer);
             if (session.cancelTimer) clearTimeout(session.cancelTimer);
             session.step = 'IDLE'; session.jimbot_state = 'IDLE'; session.agent = 'JIMBOT'; session.cart = null;
-            return "🤖 *Doña:* ¡Híjole patrón! Ahorita todos mis repartidores están ocupados o fuera de turno. No te puedo tomar el pedido en este momento, discúlpame.";
+            return "¡Híjole patrón! Ahorita todos mis repartidores están ocupados o fuera de turno. No te puedo tomar el pedido en este momento, discúlpame.";
         }
 
         calculateTotals(session);
@@ -186,7 +186,7 @@ async function executeOrderBlueprint(msg, session, user, supabase) {
         if (session.cancelTimer) clearTimeout(session.cancelTimer);
         session.step = 'IDLE'; session.jimbot_state = 'IDLE'; session.agent = 'JIMBOT'; session.cart = null;
 
-        let finalMsg = `🤖 *Doña:* ¡Listo! Tu orden ha sido registrada y enviada a la cocina. 🍳🛵\n\n`;
+        let finalMsg = `¡Listo! Tu orden ha sido registrada y enviada a la cocina. 🍳🛵\n\n`;
         finalMsg += `💵 El total a pagar al repartidor es: *$${totalAmount.toFixed(2)}* (ya incluye envío).\n`;
         
         if (cashAmount > totalAmount) {
@@ -212,7 +212,7 @@ async function executeOrderBlueprint(msg, session, user, supabase) {
         if (session.reminderTimer) clearTimeout(session.reminderTimer);
         if (session.cancelTimer) clearTimeout(session.cancelTimer);
         session.step = 'IDLE'; session.jimbot_state = 'IDLE'; session.agent = 'JIMBOT'; session.cart = null;
-        return "🤖 *Doña:* Ay, se me trabó el sistema de la cocina y no pude guardar tu orden por completo. ¿Me das un segundo e intentamos de nuevo?";
+        return "Ay, se me trabó el sistema de la cocina y no pude guardar tu orden por completo. ¿Me das un segundo e intentamos de nuevo?";
     }
 }
 
@@ -239,11 +239,11 @@ module.exports = {
 
                 const THREE_MINUTES = 3 * 60 * 1000;
                 session.reminderTimer = setTimeout(() => {
-                    originalReply(`🤖 *Doña:* ¡Oye ${userName}! Se me quedó tu orden a medias. 😅\n\n¿Seguimos con el pedido o te ayudo con otra cosa?`);
+                    originalReply(`¡Oye ${userName}! Se me quedó tu orden a medias. 😅\n\n¿Seguimos con el pedido o te ayudo con otra cosa?`);
                     session.cancelTimer = setTimeout(() => {
                         session.step = 'IDLE'; session.cart = null; session.current_restaurant = null; session.pending_queue = [];
                         session.jimbot_state = 'IDLE'; session.agent = 'JIMBOT';
-                        originalReply(`🤖 *Doña:* Como me quedé esperando, cancelé el pedido pendiente para atender a otros clientes. ¡Escríbeme cuando vuelva el hambre, ${userName}! 🌮🛵`);
+                        originalReply(`Como me quedé esperando, cancelé el pedido pendiente para atender a otros clientes. ¡Escríbeme cuando vuelva el hambre, ${userName}! 🌮🛵`);
                     }, THREE_MINUTES);
                 }, THREE_MINUTES);
             }
@@ -255,7 +255,7 @@ module.exports = {
             if (session.reminderTimer) clearTimeout(session.reminderTimer);
             if (session.cancelTimer) clearTimeout(session.cancelTimer);
             session.step = 'IDLE'; session.cart = null; session.current_restaurant = null; session.pending_queue = [];
-            return msg.reply(`🤖 *Doña:* Va que va, orden cancelada, ${userName}. ¿Qué se te antoja hacer entonces?`);
+            return msg.reply(`Va que va, orden cancelada, ${userName}. ¿Qué se te antoja hacer entonces?`);
         }
         
         // =========================================================================
@@ -265,13 +265,13 @@ module.exports = {
             const pItem = session.pending_item;
             if (!pItem) {
                 session.step = 'ORDERING';
-                return msg.reply("🤖 Se me cruzaron los cables con las opciones. ¿Qué te preparo?");
+                return msg.reply("Se me cruzaron los cables con las opciones. ¿Qué te preparo?");
             }
 
             const group = pItem.pending_groups[pItem.current_group_index];
             const selectedIndexes = text.match(/\d+/g);
 
-            if (!selectedIndexes) return msg.reply(`🤖 Por favor, responde con el número de tu elección.`);
+            if (!selectedIndexes) return msg.reply(`Por favor, responde con el número de tu elección.`);
 
             if (selectedIndexes.includes('0') && !group.is_required) {
                 pItem.current_group_index++;
@@ -282,8 +282,8 @@ module.exports = {
                     if (group.options[idx]) chosenMods.push(group.options[idx]);
                 }
 
-                if (chosenMods.length < group.min_selections) return msg.reply(`🤖 Debes elegir al menos ${group.min_selections} opción(es). Intenta de nuevo.`);
-                if (group.max_selections > 0 && chosenMods.length > group.max_selections) return msg.reply(`🤖 Máximo ${group.max_selections} opción(es). Intenta de nuevo.`);
+                if (chosenMods.length < group.min_selections) return msg.reply(`Debes elegir al menos ${group.min_selections} opción(es). Intenta de nuevo.`);
+                if (group.max_selections > 0 && chosenMods.length > group.max_selections) return msg.reply(`Máximo ${group.max_selections} opción(es). Intenta de nuevo.`);
 
                 chosenMods.forEach(m => {
                     pItem.selected_modifiers.push({ modifier_id: m.id, group_id: group.id, name: m.name, group_name: group.name, price_delta: m.price_delta });
@@ -307,7 +307,7 @@ module.exports = {
                     session.pending_item = null;
                     calculateTotals(session);
                     
-                    let replyMsg = `🤖 ¡Listo! Agregado al carrito.\n\n🛒 *Tu carrito actual:*\n`;
+                    let replyMsg = `¡Listo! Agregado al carrito.\n\n🛒 *Tu carrito actual:*\n`;
                     session.cart.items.forEach(item => {
                         replyMsg += `▪️ ${item.quantity}x ${item.name}`;
                         if (item.selected_modifiers && item.selected_modifiers.length > 0) {
@@ -332,7 +332,7 @@ module.exports = {
                 if (session.restaurants[idx]) {
                     const rest = session.restaurants[idx];
                     const { data: menu } = await supabase.from('products').select('*').eq('restaurant_id', rest.id).eq('is_available', true);
-                    if (!menu || menu.length === 0) return msg.reply(`🤖 *Doña:* Fíjate que *${rest.name}* no ha subido sus platillos. ¿Checamos otro local?`);
+                    if (!menu || menu.length === 0) return msg.reply(`Fíjate que *${rest.name}* no ha subido sus platillos. ¿Checamos otro local?`);
 
                     // 🛠️ CORRECCIÓN: Leemos el precio directamente de la DB, sin inflarlo un 15%
                     session.menu = menu.map(item => ({ ...item, client_price: Number(item.price.toFixed(2)) }));
@@ -420,14 +420,14 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
             console.log(`🎯 [DOÑA ACTION] ${agentDecision.action}\n`);
         } catch (error) {
             console.error("[🤖 DOÑA LLM ERR]", error);
-            return msg.reply(`🤖 *Doña:* Uf, se me cruzaron los cables un segundo, ${userName}. ¿Me lo repites porfa?`);
+            return msg.reply(`Uf, se me cruzaron los cables un segundo, ${userName}. ¿Me lo repites porfa?`);
         }
 
         if (user && user.id && ['SHOW_RESTAURANTS', 'SEARCH_PRODUCT', 'SELECT_RESTAURANT'].includes(agentDecision.action)) {
             const { data: debt } = await supabase.rpc('get_client_total_debt', { p_client_id: user.id });
             if (debt && debt > 0) {
                 session.step = 'IDLE'; session.cart = null; session.current_restaurant = null;
-                return msg.reply(`🤖 *Doña:* ¡Híjole, ${userName}! 🛑\n\nTienes un adeudo de *$${debt.toFixed(2)}* por una orden anterior. Entra a la app para saldar tu cuenta:\n🔗 https://donna-app-three.vercel.app/`);
+                return msg.reply(`¡Híjole, ${userName}! 🛑\n\nTienes un adeudo de *$${debt.toFixed(2)}* por una orden anterior. Entra a la app para saldar tu cuenta:\n🔗 https://donna-app-three.vercel.app/`);
             }
         }
 
@@ -437,22 +437,22 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
         switch (agentDecision.action) {
             case 'SHOW_RESTAURANTS': {
                 const { data: res } = await supabase.from('restaurants').select('*').eq('status', 'approved').eq('online', true).order('created_at', { ascending: true });
-                if (!res || res.length === 0) return msg.reply(`🤖 *Doña:* Ahorita no hay locales abiertos, ${userName}. Échale un ojo más al rato.`);
+                if (!res || res.length === 0) return msg.reply(`Ahorita no hay locales abiertos, ${userName}. Échale un ojo más al rato.`);
                 session.restaurants = res; session.step = 'SELECTING_RESTAURANT';
-                let list = `🤖 *Doña:* ¿Hambre, ${userName}? Checa los locales abiertos:\n\n`;
+                let list = `¿Hambre, ${userName}? Checa los locales abiertos:\n\n`;
                 res.forEach((r, i) => list += `${i+1}. *${r.name}* ${r.cuisine_type ? `(${r.cuisine_type})` : ''}\n`);
                 return msg.reply(list + `\n👉 *Escribe el número o nombre del restaurante*.`);
             }
             case 'SEARCH_PRODUCT': {
                 const query = agentDecision.food_query;
-                if (!query) return msg.reply(`🤖 *Doña:* No capté bien, ¿qué se te antojaba?`);
+                if (!query) return msg.reply(`No capté bien, ¿qué se te antojaba?`);
                 const { data: onlineRests } = await supabase.from('restaurants').select('id, name').eq('status', 'approved').eq('online', true);
-                if (!onlineRests || onlineRests.length === 0) return msg.reply(`🤖 *Doña:* Ahorita no hay locales abiertos, patrón.`);
+                if (!onlineRests || onlineRests.length === 0) return msg.reply(`Ahorita no hay locales abiertos, patrón.`);
                 const { data: matchedProducts } = await supabase.from('products').select('restaurant_id, name, price').in('restaurant_id', onlineRests.map(r=>r.id)).ilike('name', `%${query}%`).eq('is_available', true);
-                if (!matchedProducts || matchedProducts.length === 0) return msg.reply(`🤖 *Doña:* Busqué "${query}" pero ningún local lo tiene ahorita.`);
+                if (!matchedProducts || matchedProducts.length === 0) return msg.reply(`Busqué "${query}" pero ningún local lo tiene ahorita.`);
                 const matchedRests = onlineRests.filter(r => [...new Set(matchedProducts.map(p => p.restaurant_id))].includes(r.id));
                 session.restaurants = matchedRests; session.step = 'SELECTING_RESTAURANT';
-                let list = `🤖 *Doña:* ¡Te encontré opciones de "${query}" en estos locales!\n\n`;
+                let list = `¡Te encontré opciones de "${query}" en estos locales!\n\n`;
                 matchedRests.forEach((r, i) => list += `${i+1}. *${r.name}*\n`);
                 return msg.reply(list + `\n👉 *Escribe el número o nombre del restaurante*.`);
             }
@@ -461,7 +461,7 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
                 const { data: rest } = await supabase.from('restaurants').select('id, name, commission_bps, delivery_fee').ilike('name', `%${targetName}%`).single();
                 if (rest) {
                     const { data: menu } = await supabase.from('products').select('*').eq('restaurant_id', rest.id).eq('is_available', true);
-                    if (!menu || menu.length === 0) return msg.reply(`🤖 *Doña:* Fíjate que *${rest.name}* no ha subido sus platillos todavía.`);
+                    if (!menu || menu.length === 0) return msg.reply(`Fíjate que *${rest.name}* no ha subido sus platillos todavía.`);
                     
                     // 🛠️ CORRECCIÓN: Leemos el precio directamente de la DB, sin inflarlo un 15%
                     session.menu = menu.map(item => ({ ...item, client_price: Number(item.price.toFixed(2)) }));
@@ -470,10 +470,10 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
                     session.menu.forEach((item) => menuText += `🥘 *${item.name}* - $${item.client_price.toFixed(2)}\n_${item.description || ''}_\n\n`);
                     return msg.reply(menuText + `¿Qué te preparo? Escribe tu pedido.`);
                 }
-                return msg.reply(`🤖 *Doña:* No capté cuál local querías.`);
+                return msg.reply(`No capté cuál local querías.`);
             }
             case 'SHOW_MENU': {
-                if (!session.current_restaurant) return msg.reply(`🤖 *Doña:* Primero escoge un restaurante.`);
+                if (!session.current_restaurant) return msg.reply(`Primero escoge un restaurante.`);
                 session.step = 'ORDERING';
                 let menuText = `🍔 *Menú de ${session.current_restaurant.name}:*\n\n`;
                 session.menu.forEach((item) => menuText += `🥘 *${item.name}* - $${item.client_price.toFixed(2)}\n_${item.description || ''}_\n\n`);
@@ -482,7 +482,7 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
             
             case 'PROCESS_ORDER': {
                 const orderData = agentDecision.order_data;
-                if (!orderData || !orderData.items) return msg.reply("🤖 *Doña:* No capté qué platillos querías. ¿Me confirmas?");
+                if (!orderData || !orderData.items) return msg.reply("No capté qué platillos querías. ¿Me confirmas?");
                 
                 const validItems = [];
                 const invalidItems = orderData.unknown_items || [];
@@ -517,13 +517,13 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
                 if (session.pending_queue.length > 0) {
                     session.step = 'COLLECTING_MODIFIERS';
                     session.pending_item = session.pending_queue.shift();
-                    let initialMsg = "🤖 ¡Anotado!";
+                    let initialMsg = "¡Anotado!";
                     if (invalidItems.length > 0) initialMsg += `\n⚠️ No manejo: *${invalidItems.join(', ')}*.`;
                     await msg.reply(initialMsg + `\n\nAntes de agregarlo al carrito, personaliza tu pedido:`);
                     return sendModifierPrompt(session.pending_item, msg);
                 }
 
-                let replyMsg = `🤖 *Doña:* ¡Anotado!\n\n`;
+                let replyMsg = `¡Anotado!\n\n`;
                 if (invalidItems.length > 0) replyMsg += `⚠️ Fíjate que no manejo: *${invalidItems.join(', ')}*.\n\n`;
                 if (session.cart.items.length === 0) return msg.reply(`${replyMsg}Tu carrito quedó vacío. ¿Qué te preparo?`);
 
@@ -538,9 +538,9 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
             }
 
             case 'CONFIRM_CART': {
-                if (!session.cart || !session.cart.items || session.cart.items.length === 0) return msg.reply("🤖 *Doña:* Tu carrito está vacío. ¿Qué te preparo primero?");
+                if (!session.cart || !session.cart.items || session.cart.items.length === 0) return msg.reply("Tu carrito está vacío. ¿Qué te preparo primero?");
                 session.step = 'ASKING_NOTES';
-                return msg.reply(`🤖 *Doña:* ¡Perfecto, ${userName}!\n\n¿Tienes alguna **instrucción especial** para la cocina (ej. "sin cebolla")? Si no, dime *"no"*.`);
+                return msg.reply(`¡Perfecto, ${userName}!\n\n¿Tienes alguna **instrucción especial** para la cocina (ej. "sin cebolla")? Si no, dime *"no"*.`);
             }
 
             case 'SAVE_NOTES': {
@@ -550,30 +550,30 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
                     session.current_address = profile?.address;
                     if (session.current_address) {
                         session.step = 'CONFIRMING_ADDRESS';
-                        return msg.reply(`🤖 *Doña:* ¡Anotado!\n\nTengo esta dirección tuya guardada:\n📍 *${session.current_address}*\n\n¿Es correcta o enviamos a otra parte?`);
+                        return msg.reply(`¡Anotado!\n\nTengo esta dirección tuya guardada:\n📍 *${session.current_address}*\n\n¿Es correcta o enviamos a otra parte?`);
                     } else {
                         session.step = 'WAITING_NEW_ADDRESS';
-                        return msg.reply(`🤖 *Doña:* ¡Anotado!\n\nOye, no tengo una dirección de entrega guardada tuya. ¿Me escribes tu dirección completa (Calle, número, colonia)?`);
+                        return msg.reply(`¡Anotado!\n\nOye, no tengo una dirección de entrega guardada tuya. ¿Me escribes tu dirección completa (Calle, número, colonia)?`);
                     }
                 } else {
                     session.step = 'ASKING_PAYMENT_METHOD';
-                    return msg.reply(`🤖 *Doña:* ¡Perfecto!\n\n${buildTicketString(session)}\n\nPara el pago (solo aceptamos *efectivo* 💵), ¿con qué billete vas a pagar?\n_(Nos ayudas muchísimo si tu pago es exacto 🙏)_`);
+                    return msg.reply(`¡Perfecto!\n\n${buildTicketString(session)}\n\nPara el pago (solo aceptamos *efectivo* 💵), ¿con qué billete vas a pagar?\n_(Nos ayudas muchísimo si tu pago es exacto 🙏)_`);
                 }
             }
 
             case 'CONFIRM_ADDRESS': {
                 session.step = 'ASKING_PAYMENT_METHOD';
-                return msg.reply(`🤖 *Doña:* ¡Excelente!\n\n${buildTicketString(session)}\n\nPara el pago (solo aceptamos *efectivo* 💵), ¿con qué billete vas a pagar?\n_(Nos ayudas muchísimo si tu pago es exacto 🙏)_`);
+                return msg.reply(`¡Excelente!\n\n${buildTicketString(session)}\n\nPara el pago (solo aceptamos *efectivo* 💵), ¿con qué billete vas a pagar?\n_(Nos ayudas muchísimo si tu pago es exacto 🙏)_`);
             }
 
             case 'ASK_NEW_ADDRESS': {
                 session.step = 'WAITING_NEW_ADDRESS';
-                return msg.reply("🤖 *Doña:* Va, escríbeme la nueva dirección completa para actualizarla:");
+                return msg.reply("Va, escríbeme la nueva dirección completa para actualizarla:");
             }
 
             case 'UPDATE_ADDRESS': {
                 if (agentDecision.extracted_info && user && user.id) return await processNewAddressWithGeofencing(agentDecision.extracted_info, user, session, supabase, msg);
-                return msg.reply(`🤖 *Doña:* No capté la dirección, ¿me la escribes completa de nuevo?`);
+                return msg.reply(`No capté la dirección, ¿me la escribes completa de nuevo?`);
             }
 
             case 'SET_PAYMENT': {
@@ -581,8 +581,8 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
                 const total = session.cart.total;
                 let cashAmount = agentDecision.cash_amount;
 
-                if (!cashAmount) return msg.reply(`🤖 *Doña:* Entendido. El total es de *$${total.toFixed(2)}*. ¿Con qué billete vas a pagar?`);
-                if (cashAmount < total) return msg.reply(`🤖 *Doña:* Híjole, el total es de *$${total.toFixed(2)}* y con $${cashAmount} no alcanza. ¿Con cuánto vas a pagar?`);
+                if (!cashAmount) return msg.reply(`Entendido. El total es de *$${total.toFixed(2)}*. ¿Con qué billete vas a pagar?`);
+                if (cashAmount < total) return msg.reply(`Híjole, el total es de *$${total.toFixed(2)}* y con $${cashAmount} no alcanza. ¿Con cuánto vas a pagar?`);
 
                 session.cart.payment_method = 'cash';
                 session.cart.cash_amount = cashAmount;
@@ -597,16 +597,16 @@ ESTRUCTURA JSON ESTRICTA DE SALIDA:
 
             case 'SWITCH_AGENT': {
                 session.agent = agentDecision.target_agent; session.step = 'IDLE';
-                return msg.reply(`🤖 *Doña:* ¡Órale! Ese tema lo maneja mi compañero. Te paso con él...`);
+                return msg.reply(`¡Órale! Ese tema lo maneja mi compañero. Te paso con él...`);
             }
             case 'CANCEL': {
                 if (session.reminderTimer) clearTimeout(session.reminderTimer);
                 if (session.cancelTimer) clearTimeout(session.cancelTimer);
                 session.step = 'IDLE'; session.cart = null; session.current_restaurant = null; session.pending_queue = [];
-                return msg.reply(agentDecision.reply || `🤖 *Doña:* Listo, cancelado. ¿Qué más hacemos, ${userName}?`);
+                return msg.reply(agentDecision.reply || `Listo, cancelado. ¿Qué más hacemos, ${userName}?`);
             }
             case 'CHAT':
-            default: return msg.reply(`🤖 *Doña:* ${agentDecision.reply || '¿En qué más te ayudo?'}`);
+            default: return msg.reply(`${agentDecision.reply || '¿En qué más te ayudo?'}`);
         }
     }
 };
