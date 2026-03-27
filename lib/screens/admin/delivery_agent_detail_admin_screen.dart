@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:doa_repartos/models/doa_models.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
 import 'package:doa_repartos/screens/admin/admin_account_ledger_screen.dart';
+import 'package:doa_repartos/core/services/financial_service.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latLng;
 import 'package:intl/intl.dart';
@@ -29,6 +31,12 @@ class _AdminDeliveryAgentDetailScreenState extends State<AdminDeliveryAgentDetai
   double _avgRating = 0;
   int _totalReviews = 0;
   late TabController _tabController;
+
+  // Liquidaciones
+  final FinancialService _financial = FinancialService();
+  List<Map<String, dynamic>> _agentSettlements = [];
+  String? _platformAccountId;
+  bool _collectingCash = false;
   
   // Profile fields from delivery_agent_profiles según DATABASE_SCHEMA.sql
   String? _profileImageUrl;
@@ -136,6 +144,28 @@ class _AdminDeliveryAgentDetailScreenState extends State<AdminDeliveryAgentDetai
         debugPrint('❌ Error loading account: $e');
       }
 
+      // 3b) Settlements where agent is payer + platform account id
+      List<Map<String, dynamic>> agentSettlements = [];
+      String? platformAccId;
+      if (account != null) {
+        try {
+          final settleRaw = await SupabaseConfig.client
+              .from('settlements')
+              .select('id, payer_account_id, receiver_account_id, amount, status, notes, initiated_at, completed_at')
+              .eq('payer_account_id', account.id)
+              .order('initiated_at', ascending: false)
+              .limit(30);
+          agentSettlements = List<Map<String, dynamic>>.from(settleRaw);
+        } catch (e) {
+          debugPrint('❌ Error loading agent settlements: $e');
+        }
+        try {
+          platformAccId = await _financial.getPlatformAccountId();
+        } catch (e) {
+          debugPrint('❌ Error loading platform account: $e');
+        }
+      }
+
       // 4) Recent orders assigned to this agent
       List<DoaOrder> orders = [];
       try {
@@ -206,6 +236,8 @@ class _AdminDeliveryAgentDetailScreenState extends State<AdminDeliveryAgentDetai
         _updatedAt = profUpdatedAt;
         _account = account;
         _allTx = tx;
+        _agentSettlements = agentSettlements;
+        _platformAccountId = platformAccId;
         _recentOrders = orders;
         _reviews = reviews;
         _avgRating = avg;
@@ -346,7 +378,11 @@ class _AdminDeliveryAgentDetailScreenState extends State<AdminDeliveryAgentDetai
           const Text('Cuenta Financiera', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           _buildFinancials(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
+          const Text('Liquidaciones', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          _buildLiquidationsSection(),
+          const SizedBox(height: 24),
           const Text('Historial de Ubicaciones (últimas 50)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           _buildLocationHistory(),
@@ -954,6 +990,305 @@ class _AdminDeliveryAgentDetailScreenState extends State<AdminDeliveryAgentDetai
       ),
     );
   }
+
+  // ── LIQUIDACIONES ────────────────────────────────────────────────────────────
+
+  Widget _buildLiquidationsSection() {
+    if (_account == null) {
+      return _emptyState('Sin cuenta financiera — no se puede liquidar');
+    }
+
+    final balance = _account!.balance;
+    // Un balance negativo significa que el repartidor debe dinero a la plataforma.
+    // Un balance positivo significa que la plataforma debe pagarle al repartidor.
+    final owes = balance < 0;
+    final debtAmount = balance.abs();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Tarjeta de estado de deuda ─────────────────────────────────────
+        Material(
+          elevation: 1,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(
+                  owes ? Icons.payments_outlined : Icons.check_circle_outline,
+                  color: owes ? Colors.orange.shade700 : Colors.green,
+                  size: 32,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        owes
+                            ? 'Debe a Doña: ${_formatCurrency(debtAmount)}'
+                            : 'Sin adeudo pendiente',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: owes ? Colors.orange.shade700 : Colors.green,
+                        ),
+                      ),
+                      if (owes)
+                        const Text(
+                          'El repartidor tiene efectivo pendiente de entregar',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // ── Botón cobrar ───────────────────────────────────────────────────
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: (_collectingCash || _platformAccountId == null)
+                ? null
+                : () => _showCollectCashDialog(suggestedAmount: owes ? debtAmount : 0),
+            icon: _collectingCash
+                ? const SizedBox(
+                    width: 18, height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.payments),
+            label: Text(_collectingCash ? 'Procesando...' : 'Cobrar Efectivo al Repartidor'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE4007C),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+
+        if (_platformAccountId == null) ...[
+          const SizedBox(height: 6),
+          const Text(
+            'No se pudo cargar la cuenta de la plataforma',
+            style: TextStyle(fontSize: 12, color: Colors.red),
+          ),
+        ],
+
+        const SizedBox(height: 20),
+
+        // ── Historial de liquidaciones ─────────────────────────────────────
+        Text(
+          'Historial de Liquidaciones (${_agentSettlements.length})',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        ),
+        const SizedBox(height: 8),
+
+        if (_agentSettlements.isEmpty)
+          _emptyState('Sin liquidaciones registradas')
+        else
+          Column(
+            children: _agentSettlements.map((s) => _buildSettlementCard(s)).toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSettlementCard(Map<String, dynamic> s) {
+    final status = s['status']?.toString() ?? 'pending';
+    final amount = double.tryParse(s['amount']?.toString() ?? '') ?? 0.0;
+    final notes = s['notes']?.toString();
+    final initiatedAt = s['initiated_at'] != null
+        ? DateTime.tryParse(s['initiated_at'].toString())?.toLocal()
+        : null;
+    final completedAt = s['completed_at'] != null
+        ? DateTime.tryParse(s['completed_at'].toString())?.toLocal()
+        : null;
+
+    final isCompleted = status == 'completed';
+    final statusColor = isCompleted ? Colors.green : Colors.orange;
+    final statusLabel = isCompleted ? 'Completada' : 'Pendiente';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+        color: statusColor.withValues(alpha: 0.04),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _formatCurrency(amount),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: statusColor),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: statusColor),
+                ),
+              ),
+            ],
+          ),
+          if (initiatedAt != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Iniciada: ${_formatDate(initiatedAt)}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+          ],
+          if (completedAt != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              'Cobrada: ${_formatDate(completedAt)}',
+              style: const TextStyle(fontSize: 12, color: Colors.green),
+            ),
+          ],
+          if ((notes ?? '').isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(notes!, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showCollectCashDialog({double suggestedAmount = 0}) async {
+    final amountCtrl = TextEditingController(
+      text: suggestedAmount > 0 ? suggestedAmount.toStringAsFixed(2) : '',
+    );
+    final notesCtrl = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cobrar Efectivo al Repartidor'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Repartidor: ${(_agent?.name?.isNotEmpty ?? false) ? _agent!.name! : widget.agent.email}',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: amountCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                LengthLimitingTextInputFormatter(10),
+              ],
+              decoration: InputDecoration(
+                labelText: 'Monto a cobrar',
+                hintText: '0.00',
+                suffixText: 'MXN',
+                prefixIcon: const Icon(Icons.attach_money),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: notesCtrl,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Notas (opcional)',
+                hintText: 'Ej: Cobro en efectivo 27-mar',
+                prefixIcon: const Icon(Icons.note_alt_outlined),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.check),
+            label: const Text('Confirmar Cobro'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE4007C),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final amount = double.tryParse(amountCtrl.text.trim());
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresa un monto válido mayor a 0')),
+      );
+      return;
+    }
+
+    final notes = notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim();
+    await _collectCashFromAgent(amount, notes);
+  }
+
+  Future<void> _collectCashFromAgent(double amount, String? notes) async {
+    if (_account == null || _platformAccountId == null) return;
+
+    setState(() => _collectingCash = true);
+    try {
+      debugPrint('💰 [ADMIN] Cobrando $amount al repartidor ${widget.agent.id} → plataforma');
+      final settlement = await _financial.adminCreateSettlement(
+        payerAccountId: _account!.id,
+        receiverAccountId: _platformAccountId!,
+        amount: amount,
+        notes: notes,
+        autoComplete: true,
+      );
+
+      if (!mounted) return;
+      if (settlement != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Cobro registrado: ${_formatCurrency(amount)}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _loadAll();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo registrar el cobro'), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ [ADMIN] Error cobrando al repartidor: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _collectingCash = false);
+    }
+  }
+
+  // ── FIN LIQUIDACIONES ─────────────────────────────────────────────────────
 
   Widget _buildLocationHistory() {
     if (_locationHistory.isEmpty) {
