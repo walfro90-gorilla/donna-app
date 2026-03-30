@@ -7,11 +7,13 @@ import 'package:doa_repartos/screens/restaurant/modifier_group_edit_screen.dart'
 class ModifierGroupsScreen extends StatefulWidget {
   final String productId;
   final String productName;
+  final String restaurantId;
 
   const ModifierGroupsScreen({
     super.key,
     required this.productId,
     required this.productName,
+    required this.restaurantId,
   });
 
   @override
@@ -33,16 +35,21 @@ class _ModifierGroupsScreenState extends State<ModifierGroupsScreen> {
     setState(() => _isLoading = true);
     try {
       final data = await _client
-          .from('modifier_groups')
-          .select('*, modifiers(*)')
+          .from('product_modifier_groups')
+          .select(
+            'sort_order, modifier_groups!inner(id, name, description, selection_type, '
+            'min_selections, max_selections, is_required, is_active, '
+            'modifiers(id, group_id, name, description, price_delta, is_available, sort_order))',
+          )
           .eq('product_id', widget.productId)
-          .eq('is_active', true)
+          .eq('modifier_groups.is_active', true)
           .order('sort_order');
 
       setState(() {
-        _groups = (data as List)
-            .map((g) => DoaModifierGroup.fromJson(g as Map<String, dynamic>))
-            .toList();
+        _groups = (data as List).map((row) {
+          final mg = Map<String, dynamic>.from(row['modifier_groups'] as Map);
+          return DoaModifierGroup.fromJson(mg);
+        }).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -86,6 +93,7 @@ class _ModifierGroupsScreenState extends State<ModifierGroupsScreen> {
       MaterialPageRoute(
         builder: (_) => ModifierGroupEditScreen(
           productId: widget.productId,
+          restaurantId: widget.restaurantId,
           group: group,
         ),
       ),

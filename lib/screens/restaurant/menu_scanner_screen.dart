@@ -124,21 +124,31 @@ class _MenuScannerScreenState extends State<MenuScannerScreen> {
             if (enabledMods.isEmpty) continue;
 
             try {
+              final currentGroupOrder = groupOrder++;
               final groupInserted = await SupabaseConfig.client
                   .from('modifier_groups')
                   .insert({
-                    'product_id': productId,
+                    'restaurant_id': widget.restaurantId,
                     'name': group.nameController.text.trim(),
                     'selection_type': group.selectionType,
                     'min_selections': group.minSelections,
                     'max_selections': group.maxSelections,
                     'is_required': group.isRequired,
-                    'sort_order': groupOrder++,
+                    'sort_order': currentGroupOrder,
                   })
                   .select('id')
                   .single();
 
               final groupId = groupInserted['id'] as String;
+
+              // Registrar relación M:M en join table
+              await SupabaseConfig.client
+                  .from('product_modifier_groups')
+                  .insert({
+                    'product_id': productId,
+                    'modifier_group_id': groupId,
+                    'sort_order': currentGroupOrder,
+                  });
 
               int modOrder = 0;
               for (final mod in enabledMods) {

@@ -747,21 +747,26 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> with Si
     );
   }
 
-  /// Carga modifier_groups del producto (con caché por sesión)
+  /// Carga modifier_groups del producto vía join table (M:M — arquitectura actualizada)
   Future<List<DoaModifierGroup>> _getModifierGroups(String productId) async {
     if (_modifierGroupsCache.containsKey(productId)) {
       return _modifierGroupsCache[productId]!;
     }
     try {
       final data = await Supabase.instance.client
-          .from('modifier_groups')
-          .select('*, modifiers(*)')
+          .from('product_modifier_groups')
+          .select(
+            'sort_order, modifier_groups!inner(id, name, description, selection_type, '
+            'min_selections, max_selections, is_required, is_active, '
+            'modifiers(id, group_id, name, description, price_delta, is_available, sort_order))',
+          )
           .eq('product_id', productId)
-          .eq('is_active', true)
+          .eq('modifier_groups.is_active', true)
           .order('sort_order');
-      final groups = (data as List)
-          .map((g) => DoaModifierGroup.fromJson(g as Map<String, dynamic>))
-          .toList();
+      final groups = (data as List).map((row) {
+        final mg = Map<String, dynamic>.from(row['modifier_groups'] as Map);
+        return DoaModifierGroup.fromJson(mg);
+      }).toList();
       _modifierGroupsCache[productId] = groups;
       return groups;
     } catch (e) {

@@ -226,6 +226,7 @@ class _ProductEditScreenState extends State<ProductEditScreen> {
                       builder: (_) => ModifierGroupsScreen(
                         productId: widget.product!.id,
                         productName: widget.product!.name,
+                        restaurantId: widget.restaurant.id,
                       ),
                     ),
                   ),

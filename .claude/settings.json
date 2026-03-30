@@ -65,7 +65,9 @@
       "Read(//x/Programs/flutter/**)",
       "mcp__supabase__list_edge_functions",
       "Read(//x/Codes//**)",
-      "Bash(grep -r \"clawbot\\\\|whatsapp\\\\|notify\" /x/Codes/donna-website/ --include=*.ts --include=*.js --include=*.json -l)"
+      "Bash(grep -r \"clawbot\\\\|whatsapp\\\\|notify\" /x/Codes/donna-website/ --include=*.ts --include=*.js --include=*.json -l)",
+      "Bash(ls -lt /x/Codes/donna-app/sql_migrations/*.sql)",
+      "Bash(grep -l \"modifier_groups\\\\|product_modifier_groups\\\\|modifiers\" /x/Codes/donna-website/lib/supabase/*.sql)"
     ]
   }
 }

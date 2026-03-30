@@ -6,11 +6,13 @@ import 'package:doa_repartos/models/doa_models.dart';
 /// Permite configurar nombre, tipo (single/multiple), si es obligatorio, y las opciones.
 class ModifierGroupEditScreen extends StatefulWidget {
   final String productId;
+  final String restaurantId;
   final DoaModifierGroup? group; // null = crear nuevo
 
   const ModifierGroupEditScreen({
     super.key,
     required this.productId,
+    required this.restaurantId,
     this.group,
   });
 
@@ -86,10 +88,11 @@ class _ModifierGroupEditScreenState extends State<ModifierGroupEditScreen> {
 
     setState(() => _isSaving = true);
     try {
-      // 1. Upsert del grupo
+      // 1. Upsert del grupo (incluye restaurant_id y registra en product_modifier_groups)
       final groupResult = await _client.rpc('upsert_modifier_group', params: {
         'p_id': _isEditing ? widget.group!.id : null,
         'p_product_id': widget.productId,
+        'p_restaurant_id': widget.restaurantId,
         'p_name': name,
         'p_description': _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         'p_selection_type': _selectionType,

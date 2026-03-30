@@ -1531,7 +1531,7 @@ class DoaModifier {
 /// Grupo de modificadores de un producto (e.g., "Elige tu salsa")
 class DoaModifierGroup {
   final String id;
-  final String productId;
+  final String? productId; // nullable — legacy field, nuevo esquema usa product_modifier_groups
   final String name;
   final String? description;
   /// 'single' | 'multiple'
@@ -1545,7 +1545,7 @@ class DoaModifierGroup {
 
   const DoaModifierGroup({
     required this.id,
-    required this.productId,
+    this.productId,
     required this.name,
     this.description,
     required this.selectionType,
@@ -1561,7 +1561,7 @@ class DoaModifierGroup {
     final modifiersRaw = json['modifiers'] as List<dynamic>? ?? [];
     return DoaModifierGroup(
       id: json['id'] as String,
-      productId: json['product_id'] as String,
+      productId: json['product_id'] as String?,
       name: json['name'] as String,
       description: json['description'] as String?,
       selectionType: json['selection_type'] as String? ?? 'single',
