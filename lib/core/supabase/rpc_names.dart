@@ -48,4 +48,16 @@ class RpcNames {
   // Restaurants
   static const String findNearbyRestaurants = 'rpc_find_nearby_restaurants';
   static const String adminDeleteUser = 'rpc_admin_delete_user';
+
+  // Billing model (commission vs subscription)
+  static const String getBillingMode = 'rpc_get_billing_mode';
+  static const String adminSetBillingMode = 'rpc_admin_set_billing_mode';
+  static const String createSubscriptionForAccount = 'rpc_create_subscription_for_account';
+  static const String adminBootstrapSubscriptions = 'rpc_admin_bootstrap_subscriptions';
+  static const String adminMarkInvoicePaid = 'rpc_admin_mark_invoice_paid';
+  static const String adminWaiveInvoice = 'rpc_admin_waive_invoice';
+  static const String adminExtendGrace = 'rpc_admin_extend_grace';
+  static const String getMySubscriptionStatus = 'rpc_get_my_subscription_status';
+  static const String adminListSubscriptions = 'rpc_admin_list_subscriptions';
+  static const String adminListInvoicesForSubscription = 'rpc_admin_list_invoices_for_subscription';
 }

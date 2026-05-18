@@ -13,6 +13,7 @@ import 'package:doa_repartos/screens/reviews/review_screen.dart';
 import 'package:doa_repartos/services/review_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:doa_repartos/widgets/welcome_onboarding_card.dart';
+import 'package:doa_repartos/widgets/subscription_guard.dart';
 import 'package:doa_repartos/services/onboarding_notification_service.dart';
 import 'package:doa_repartos/screens/delivery/delivery_onboarding_dashboard.dart';
 import 'package:doa_repartos/widgets/delivery_profile_progress_card.dart';
@@ -813,7 +814,7 @@ class _DeliveryMainDashboardState extends State<DeliveryMainDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SubscriptionGuard(child: Scaffold(
       body: PageView(
         controller: _pageController,
         onPageChanged: (index) => setState(() => _selectedIndex = index),
@@ -856,7 +857,7 @@ class _DeliveryMainDashboardState extends State<DeliveryMainDashboard> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   /// Página principal del dashboard (index 0)

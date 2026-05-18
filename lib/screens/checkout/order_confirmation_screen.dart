@@ -13,6 +13,7 @@ class OrderConfirmationScreen extends StatelessWidget {
   final PaymentMethod paymentMethod;
   final double total;
   final double? cashAmount;
+  final double tipAmount;
 
   const OrderConfirmationScreen({
     super.key,
@@ -24,6 +25,7 @@ class OrderConfirmationScreen extends StatelessWidget {
     required this.paymentMethod,
     required this.total,
     this.cashAmount,
+    this.tipAmount = 0,
   });
 
   List<DoaProduct> get _cartProducts {
@@ -180,6 +182,8 @@ class OrderConfirmationScreen extends StatelessWidget {
             _buildDetailRow(context, 'Order ID', orderId.substring(0, 8).toUpperCase()),
             _buildDetailRow(context, 'Restaurant', restaurant.name),
             _buildDetailRow(context, 'Items', '$_totalItems item${_totalItems > 1 ? 's' : ''}'),
+            if (tipAmount > 0)
+              _buildDetailRow(context, 'Propina al repartidor', '\$${tipAmount.toStringAsFixed(2)}'),
             _buildDetailRow(context, 'Total Amount', '\$${total.toStringAsFixed(2)}'),
             _buildDetailRow(context, 'Estimated Delivery', _estimatedDeliveryTime),
           ],

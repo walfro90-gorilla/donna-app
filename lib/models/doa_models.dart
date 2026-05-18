@@ -757,6 +757,14 @@ class DoaRestaurant {
   /// Ejemplo: kitchenPrice=$80, commissionBps=1500 → $80 × 1.15 = $92.
   double clientPrice(double kitchenPrice) => kitchenPrice * (1 + commissionBps / 10000);
 
+  /// Versión dependiente del modo de cobro global.
+  ///   - billingMode='commission' → comportamiento histórico (markup).
+  ///   - billingMode='subscription' → precio sin markup.
+  double clientPriceForMode(double kitchenPrice, String billingMode) {
+    if (billingMode == 'subscription') return kitchenPrice;
+    return clientPrice(kitchenPrice);
+  }
+
   /// Tasa de comisión como decimal (ej: 1500 bps → 0.15)
   double get commissionRate => commissionBps / 10000;
 }
@@ -1000,6 +1008,8 @@ class DoaOrder {
   final String? pickupCode; // Código de 4 dígitos para recoger en restaurante
   final String? orderNotes; // Notas del pedido (opcional)
   final double? cashAmount; // Monto con el que paga el cliente (null = no efectivo)
+  final String billingMode; // Snapshot del modo al crear la orden: 'commission' | 'subscription'
+  final double tipAmount;   // Propina opcional al repartidor (modo subscription, card)
   final DoaUser? user;
   final DoaRestaurant? restaurant;
   final DoaUser? deliveryAgent;
@@ -1027,6 +1037,8 @@ class DoaOrder {
     this.pickupCode, // Código de recogida opcional
     this.orderNotes, // Notas del pedido opcionales
     this.cashAmount, // Monto con el que pagará el cliente (opcional)
+    this.billingMode = 'commission',
+    this.tipAmount = 0,
     this.user,
     this.restaurant,
     this.deliveryAgent,
@@ -1077,6 +1089,8 @@ class DoaOrder {
         pickupCode: json['pickup_code']?.toString(),
         orderNotes: json['order_notes']?.toString(),
         cashAmount: (json['cash_amount'] as num?)?.toDouble(),
+        billingMode: json['billing_mode']?.toString() ?? 'commission',
+        tipAmount: (json['tip_amount'] as num?)?.toDouble() ?? 0,
         user: json['user'] != null ? DoaUser.fromJson(json['user']) : null,
         restaurant: json['restaurant'] != null ? DoaRestaurant.fromJson(json['restaurant']) : null,
         deliveryAgent: () {
@@ -1138,6 +1152,8 @@ class DoaOrder {
       'pickup_code': pickupCode,
       'order_notes': orderNotes,
       'cash_amount': cashAmount,
+      'billing_mode': billingMode,
+      'tip_amount': tipAmount,
     };
   }
 
@@ -1163,6 +1179,8 @@ class DoaOrder {
     String? pickupCode,
     String? orderNotes,
     double? cashAmount,
+    String? billingMode,
+    double? tipAmount,
     DoaUser? user,
     DoaRestaurant? restaurant,
     DoaUser? deliveryAgent,
@@ -1190,6 +1208,8 @@ class DoaOrder {
       pickupCode: pickupCode ?? this.pickupCode,
       orderNotes: orderNotes ?? this.orderNotes,
       cashAmount: cashAmount ?? this.cashAmount,
+      billingMode: billingMode ?? this.billingMode,
+      tipAmount: tipAmount ?? this.tipAmount,
       user: user ?? this.user,
       restaurant: restaurant ?? this.restaurant,
       deliveryAgent: deliveryAgent ?? this.deliveryAgent,
@@ -1870,10 +1890,14 @@ class DoaAccountTransaction {
 enum TransactionType {
   ORDER_REVENUE,
   PLATFORM_COMMISSION,
+  PLATFORM_DELIVERY_MARGIN,
+  RESTAURANT_PAYABLE,
   DELIVERY_EARNING,
   CASH_COLLECTED,
   SETTLEMENT_PAYMENT,
-  SETTLEMENT_RECEPTION;
+  SETTLEMENT_RECEPTION,
+  SUBSCRIPTION_FEE,
+  TIP_EARNING;
 
   static TransactionType fromString(String type) {
     return TransactionType.values.firstWhere(
@@ -1891,6 +1915,10 @@ enum TransactionType {
         return 'Ingreso por Pedido';
       case TransactionType.PLATFORM_COMMISSION:
         return 'Comisión Plataforma';
+      case TransactionType.PLATFORM_DELIVERY_MARGIN:
+        return 'Margen Plataforma Delivery';
+      case TransactionType.RESTAURANT_PAYABLE:
+        return 'Pago a Restaurante';
       case TransactionType.DELIVERY_EARNING:
         return 'Ganancia Entrega';
       case TransactionType.CASH_COLLECTED:
@@ -1899,6 +1927,10 @@ enum TransactionType {
         return 'Pago Liquidación';
       case TransactionType.SETTLEMENT_RECEPTION:
         return 'Recepción Liquidación';
+      case TransactionType.SUBSCRIPTION_FEE:
+        return 'Cuota Mensual';
+      case TransactionType.TIP_EARNING:
+        return 'Propina';
     }
   }
 
@@ -1907,8 +1939,12 @@ enum TransactionType {
       case TransactionType.ORDER_REVENUE:
       case TransactionType.DELIVERY_EARNING:
       case TransactionType.SETTLEMENT_PAYMENT:
+      case TransactionType.RESTAURANT_PAYABLE:
+      case TransactionType.SUBSCRIPTION_FEE:
+      case TransactionType.TIP_EARNING:
         return Colors.green;
       case TransactionType.PLATFORM_COMMISSION:
+      case TransactionType.PLATFORM_DELIVERY_MARGIN:
       case TransactionType.CASH_COLLECTED:
       case TransactionType.SETTLEMENT_RECEPTION:
         return Colors.red;
@@ -1921,6 +1957,10 @@ enum TransactionType {
         return Icons.restaurant;
       case TransactionType.PLATFORM_COMMISSION:
         return Icons.percent;
+      case TransactionType.PLATFORM_DELIVERY_MARGIN:
+        return Icons.local_shipping;
+      case TransactionType.RESTAURANT_PAYABLE:
+        return Icons.store;
       case TransactionType.DELIVERY_EARNING:
         return Icons.delivery_dining;
       case TransactionType.CASH_COLLECTED:
@@ -1929,6 +1969,10 @@ enum TransactionType {
         return Icons.payment;
       case TransactionType.SETTLEMENT_RECEPTION:
         return Icons.money_off;
+      case TransactionType.SUBSCRIPTION_FEE:
+        return Icons.event_repeat;
+      case TransactionType.TIP_EARNING:
+        return Icons.volunteer_activism;
     }
   }
 }
@@ -2068,4 +2112,261 @@ enum SettlementStatus {
         return Colors.red;
     }
   }
+}
+
+// ============================================================================
+// MODELO DE COBRO DUAL: SUSCRIPCIONES
+// ============================================================================
+
+enum SubscriptionStatus {
+  active,
+  past_due,
+  suspended,
+  cancelled;
+
+  static SubscriptionStatus fromString(String s) {
+    return SubscriptionStatus.values.firstWhere(
+      (e) => e.name == s,
+      orElse: () => SubscriptionStatus.active,
+    );
+  }
+
+  String get displayName {
+    switch (this) {
+      case SubscriptionStatus.active:
+        return 'Activa';
+      case SubscriptionStatus.past_due:
+        return 'Vencida';
+      case SubscriptionStatus.suspended:
+        return 'Suspendida';
+      case SubscriptionStatus.cancelled:
+        return 'Cancelada';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case SubscriptionStatus.active:
+        return Colors.green;
+      case SubscriptionStatus.past_due:
+        return Colors.orange;
+      case SubscriptionStatus.suspended:
+        return Colors.red;
+      case SubscriptionStatus.cancelled:
+        return Colors.grey;
+    }
+  }
+}
+
+enum InvoiceStatus {
+  pending,
+  paid,
+  overdue,
+  waived,
+  cancelled;
+
+  static InvoiceStatus fromString(String s) {
+    return InvoiceStatus.values.firstWhere(
+      (e) => e.name == s,
+      orElse: () => InvoiceStatus.pending,
+    );
+  }
+
+  String get displayName {
+    switch (this) {
+      case InvoiceStatus.pending:
+        return 'Pendiente';
+      case InvoiceStatus.paid:
+        return 'Pagada';
+      case InvoiceStatus.overdue:
+        return 'Vencida';
+      case InvoiceStatus.waived:
+        return 'Perdonada';
+      case InvoiceStatus.cancelled:
+        return 'Cancelada';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case InvoiceStatus.pending:
+        return Colors.orange;
+      case InvoiceStatus.paid:
+        return Colors.green;
+      case InvoiceStatus.overdue:
+        return Colors.red;
+      case InvoiceStatus.waived:
+        return Colors.blueGrey;
+      case InvoiceStatus.cancelled:
+        return Colors.grey;
+    }
+  }
+}
+
+/// Suscripción mensual de un restaurante o repartidor en modo 'subscription'.
+class DoaSubscription {
+  final String id;
+  final String accountId;
+  final String role; // 'restaurant' | 'delivery_agent'
+  final double monthlyFee;
+  final SubscriptionStatus status;
+  final DateTime currentPeriodStart;
+  final DateTime currentPeriodEnd;
+  final DateTime? lastPaidAt;
+  final DateTime? suspendedAt;
+  final String? externalSubscriptionId;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  // Joins opcionales (vienen de rpc_admin_list_subscriptions)
+  final String? userId;
+  final String? userName;
+  final String? userEmail;
+  final String? restaurantName;
+  final int openInvoices;
+  final DateTime? nextDueDate;
+
+  const DoaSubscription({
+    required this.id,
+    required this.accountId,
+    required this.role,
+    required this.monthlyFee,
+    required this.status,
+    required this.currentPeriodStart,
+    required this.currentPeriodEnd,
+    this.lastPaidAt,
+    this.suspendedAt,
+    this.externalSubscriptionId,
+    required this.createdAt,
+    required this.updatedAt,
+    this.userId,
+    this.userName,
+    this.userEmail,
+    this.restaurantName,
+    this.openInvoices = 0,
+    this.nextDueDate,
+  });
+
+  factory DoaSubscription.fromJson(Map<String, dynamic> json) {
+    return DoaSubscription(
+      id: json['id']?.toString() ?? '',
+      accountId: json['account_id']?.toString() ?? '',
+      role: json['role']?.toString() ?? 'restaurant',
+      monthlyFee: (json['monthly_fee'] as num?)?.toDouble() ?? 0,
+      status: SubscriptionStatus.fromString(json['status']?.toString() ?? 'active'),
+      currentPeriodStart: DateTime.parse(json['current_period_start'].toString()),
+      currentPeriodEnd: DateTime.parse(json['current_period_end'].toString()),
+      lastPaidAt: json['last_paid_at'] != null ? DateTime.parse(json['last_paid_at'].toString()) : null,
+      suspendedAt: json['suspended_at'] != null ? DateTime.parse(json['suspended_at'].toString()) : null,
+      externalSubscriptionId: json['external_subscription_id']?.toString(),
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'].toString()) : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'].toString())
+          : (json['created_at'] != null ? DateTime.parse(json['created_at'].toString()) : DateTime.now()),
+      userId: json['user_id']?.toString(),
+      userName: json['user_name']?.toString(),
+      userEmail: json['user_email']?.toString(),
+      restaurantName: json['restaurant_name']?.toString(),
+      openInvoices: (json['open_invoices'] as num?)?.toInt() ?? 0,
+      nextDueDate: json['next_due_date'] != null ? DateTime.parse(json['next_due_date'].toString()) : null,
+    );
+  }
+
+  String get displayName {
+    if (restaurantName != null && restaurantName!.isNotEmpty) return restaurantName!;
+    if (userName != null && userName!.isNotEmpty) return userName!;
+    return userEmail ?? id;
+  }
+
+  int get daysUntilDue {
+    final due = nextDueDate ?? currentPeriodEnd;
+    return due.difference(DateTime.now()).inDays;
+  }
+}
+
+/// Factura mensual de una suscripción.
+class DoaSubscriptionInvoice {
+  final String id;
+  final String subscriptionId;
+  final String accountId;
+  final DateTime periodStart;
+  final DateTime periodEnd;
+  final double amount;
+  final InvoiceStatus status;
+  final DateTime dueDate;
+  final DateTime? paidAt;
+  final String? paidByAdminId;
+  final String? paymentMethod; // 'spei' | 'mp_recurring' | 'admin_waive'
+  final String? paymentReference;
+  final String? notes;
+  final String? idempotencyKey;
+  final String? externalInvoiceId;
+  final DateTime createdAt;
+
+  const DoaSubscriptionInvoice({
+    required this.id,
+    required this.subscriptionId,
+    required this.accountId,
+    required this.periodStart,
+    required this.periodEnd,
+    required this.amount,
+    required this.status,
+    required this.dueDate,
+    this.paidAt,
+    this.paidByAdminId,
+    this.paymentMethod,
+    this.paymentReference,
+    this.notes,
+    this.idempotencyKey,
+    this.externalInvoiceId,
+    required this.createdAt,
+  });
+
+  factory DoaSubscriptionInvoice.fromJson(Map<String, dynamic> json) {
+    return DoaSubscriptionInvoice(
+      id: json['id']?.toString() ?? '',
+      subscriptionId: json['subscription_id']?.toString() ?? '',
+      accountId: json['account_id']?.toString() ?? '',
+      periodStart: DateTime.parse(json['period_start'].toString()),
+      periodEnd: DateTime.parse(json['period_end'].toString()),
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      status: InvoiceStatus.fromString(json['status']?.toString() ?? 'pending'),
+      dueDate: DateTime.parse(json['due_date'].toString()),
+      paidAt: json['paid_at'] != null ? DateTime.parse(json['paid_at'].toString()) : null,
+      paidByAdminId: json['paid_by_admin_id']?.toString(),
+      paymentMethod: json['payment_method']?.toString(),
+      paymentReference: json['payment_reference']?.toString(),
+      notes: json['notes']?.toString(),
+      idempotencyKey: json['idempotency_key']?.toString(),
+      externalInvoiceId: json['external_invoice_id']?.toString(),
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'].toString()) : DateTime.now(),
+    );
+  }
+}
+
+/// Configuración global del modo de cobro.
+class BillingModeConfig {
+  final String mode; // 'commission' | 'subscription'
+  final double subscriptionFeeRestaurant;
+  final double subscriptionFeeDelivery;
+  final int graceDays;
+
+  const BillingModeConfig({
+    required this.mode,
+    required this.subscriptionFeeRestaurant,
+    required this.subscriptionFeeDelivery,
+    required this.graceDays,
+  });
+
+  factory BillingModeConfig.fromJson(Map<String, dynamic> json) {
+    return BillingModeConfig(
+      mode: json['mode']?.toString() ?? 'commission',
+      subscriptionFeeRestaurant: (json['subscription_fee_restaurant'] as num?)?.toDouble() ?? 999,
+      subscriptionFeeDelivery: (json['subscription_fee_delivery'] as num?)?.toDouble() ?? 999,
+      graceDays: (json['grace_days'] as num?)?.toInt() ?? 7,
+    );
+  }
+
+  bool get isSubscription => mode == 'subscription';
+  bool get isCommission => mode == 'commission';
 }

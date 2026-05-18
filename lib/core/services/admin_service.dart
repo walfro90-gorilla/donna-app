@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:doa_repartos/core/services/base_service.dart';
+import 'package:doa_repartos/core/supabase/rpc_names.dart';
 import 'package:doa_repartos/models/doa_models.dart';
 import 'package:doa_repartos/supabase/supabase_config.dart';
 
@@ -310,6 +311,135 @@ class AdminService extends BaseService {
       loadDashboardStats();
       loadOrders();
     });
+  }
+
+  // ==========================================================================
+  // 💰 Modelo de cobro dual (commission vs subscription)
+  // ==========================================================================
+
+  /// Lee la configuración actual del modo de cobro global.
+  Future<BillingModeConfig> getBillingMode() async {
+    final res = await SupabaseConfig.client.rpc(RpcNames.getBillingMode);
+    return BillingModeConfig.fromJson(Map<String, dynamic>.from(res as Map));
+  }
+
+  /// Cambia el modo global. Solo admin.
+  Future<void> setBillingMode(String mode) async {
+    final res = await SupabaseConfig.client.rpc(
+      RpcNames.adminSetBillingMode,
+      params: {'p_mode': mode},
+    );
+    final map = Map<String, dynamic>.from(res as Map);
+    if (map['success'] != true) {
+      throw Exception(map['error'] ?? 'Failed to set billing mode');
+    }
+  }
+
+  /// Crea suscripciones para todas las cuentas que aún no tienen.
+  /// Llamar una vez al activar modo subscription por primera vez.
+  Future<int> bootstrapSubscriptions() async {
+    final res = await SupabaseConfig.client.rpc(RpcNames.adminBootstrapSubscriptions);
+    final map = Map<String, dynamic>.from(res as Map);
+    if (map['success'] != true) {
+      throw Exception(map['error'] ?? 'Bootstrap failed');
+    }
+    return (map['created'] as num?)?.toInt() ?? 0;
+  }
+
+  /// Lista paginada de suscripciones con filtros.
+  Future<List<DoaSubscription>> listSubscriptions({
+    String? role,
+    String? status,
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    final res = await SupabaseConfig.client.rpc(
+      RpcNames.adminListSubscriptions,
+      params: {
+        'p_role': role,
+        'p_status': status,
+        'p_limit': limit,
+        'p_offset': offset,
+      },
+    );
+    final map = Map<String, dynamic>.from(res as Map);
+    if (map['success'] != true) {
+      throw Exception(map['error'] ?? 'List failed');
+    }
+    final rows = (map['subscriptions'] as List?) ?? const [];
+    return rows
+        .map((e) => DoaSubscription.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  /// Lista invoices de una suscripción, más reciente primero.
+  Future<List<DoaSubscriptionInvoice>> listInvoicesForSubscription(String subscriptionId) async {
+    final res = await SupabaseConfig.client.rpc(
+      RpcNames.adminListInvoicesForSubscription,
+      params: {'p_subscription_id': subscriptionId},
+    );
+    final map = Map<String, dynamic>.from(res as Map);
+    if (map['success'] != true) {
+      throw Exception(map['error'] ?? 'List invoices failed');
+    }
+    final rows = (map['invoices'] as List?) ?? const [];
+    return rows
+        .map((e) => DoaSubscriptionInvoice.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  /// Marca una invoice como pagada (SPEI manual u origen externo).
+  Future<void> markInvoicePaid({
+    required String invoiceId,
+    String method = 'spei',
+    String? reference,
+    String? notes,
+  }) async {
+    final res = await SupabaseConfig.client.rpc(
+      RpcNames.adminMarkInvoicePaid,
+      params: {
+        'p_invoice_id': invoiceId,
+        'p_method': method,
+        'p_reference': reference,
+        'p_notes': notes,
+      },
+    );
+    final map = Map<String, dynamic>.from(res as Map);
+    if (map['success'] != true) {
+      throw Exception(map['error'] ?? 'Mark paid failed');
+    }
+  }
+
+  /// Perdona la invoice (no toca ledger, reactiva la suscripción si aplica).
+  Future<void> waiveInvoice({required String invoiceId, String? notes}) async {
+    final res = await SupabaseConfig.client.rpc(
+      RpcNames.adminWaiveInvoice,
+      params: {'p_invoice_id': invoiceId, 'p_notes': notes},
+    );
+    final map = Map<String, dynamic>.from(res as Map);
+    if (map['success'] != true) {
+      throw Exception(map['error'] ?? 'Waive failed');
+    }
+  }
+
+  /// Extiende el due_date de la invoice activa de una suscripción.
+  Future<void> extendGrace({
+    required String subscriptionId,
+    required int extraDays,
+    String? notes,
+  }) async {
+    final res = await SupabaseConfig.client.rpc(
+      RpcNames.adminExtendGrace,
+      params: {
+        'p_subscription_id': subscriptionId,
+        'p_extra_days': extraDays,
+        'p_notes': notes,
+      },
+    );
+    final map = Map<String, dynamic>.from(res as Map);
+    if (map['success'] != true) {
+      throw Exception(map['error'] ?? 'Extend grace failed');
+    }
   }
 
   /// 🧹 Limpiar recursos

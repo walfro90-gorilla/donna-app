@@ -1465,6 +1465,7 @@ class DoaRepartosService {
     String? deliveryPlaceId,
     Map<String, dynamic>? deliveryAddressStructured,
     double? cashAmount,
+    double tipAmount = 0,
   }) async {
     try {
       print('🎯 [SUPABASE] Wrapper: Creating order using SAFE RPC method...');
@@ -1483,13 +1484,14 @@ class DoaRepartosService {
       }
       final orderResult = await SupabaseConfig.client.rpc(RpcNames.createOrderSafe, params: {
         'p_user_id': userId,                              // UUID
-        'p_restaurant_id': restaurantId,                  // UUID  
+        'p_restaurant_id': restaurantId,                  // UUID
         'p_total_amount': totalAmount,                    // NUMERIC
         'p_delivery_address': deliveryAddress,            // TEXT
         'p_delivery_fee': 35.0,                          // NUMERIC (not INTEGER!)
         'p_order_notes': orderNotes,                     // TEXT (default)
         'p_payment_method': paymentMethod,               // TEXT (default)
         'p_cash_amount': cashAmount,                     // NUMERIC (null if not cash)
+        'p_tip_amount': tipAmount,                       // NUMERIC (default 0)
       });
       
       print('🎯 [SUPABASE] RPC Response: $orderResult');
@@ -1685,18 +1687,27 @@ class DoaRepartosService {
 
   /// Accept an order atomically via RPC (assigns current user and sets status 'assigned')
   static Future<bool> acceptOrder(String orderId) async {
+    final r = await acceptOrderDetailed(orderId);
+    return r['success'] == true;
+  }
+
+  /// Versión detallada de acceptOrder: devuelve el JSON completo del RPC
+  /// para que el caller pueda distinguir errores específicos
+  /// (p.ej. code='delivery_suspended' cuando billing_mode=subscription).
+  static Future<Map<String, dynamic>> acceptOrderDetailed(String orderId) async {
     try {
       debugPrint('✋ [SUPABASE] RPC accept_order for: $orderId');
       final result = await SupabaseConfig.client
           .rpc(RpcNames.acceptOrder, params: {'p_order_id': orderId});
       debugPrint('📦 [SUPABASE] accept_order result: $result');
 
-      if (result is Map && result['success'] == true) return true;
-      // Some setups might return json as string
-      if (result is String) {
-        if (result.contains('success') && result.contains('true')) return true;
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
       }
-      return false;
+      if (result is String && result.contains('success') && result.contains('true')) {
+        return {'success': true};
+      }
+      return {'success': false, 'message': 'Unknown result format'};
     } on PostgrestException catch (e) {
       debugPrint('❌ [SUPABASE] accept_order Postgrest error: ${e.message}');
       rethrow;

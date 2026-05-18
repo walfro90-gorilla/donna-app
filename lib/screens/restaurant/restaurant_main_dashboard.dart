@@ -16,6 +16,7 @@ import 'package:doa_repartos/widgets/welcome_onboarding_card.dart';
 import 'package:doa_repartos/core/utils/business_hours_helper.dart';
 import 'package:doa_repartos/services/onboarding_notification_service.dart';
 import 'package:doa_repartos/core/theme/app_theme_controller.dart';
+import 'package:doa_repartos/widgets/subscription_guard.dart';
 
 /// Dashboard principal con navbar para restaurantes
 class RestaurantMainDashboard extends StatefulWidget {
@@ -1261,7 +1262,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
+    return SubscriptionGuard(child: Scaffold(
       body: PageView(
         controller: _pageController,
         onPageChanged: (index) => setState(() => _selectedIndex = index),
@@ -1315,7 +1316,7 @@ class _RestaurantMainDashboardState extends State<RestaurantMainDashboard> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   /// Página principal del dashboard (index 0)

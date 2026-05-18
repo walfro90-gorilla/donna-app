@@ -72,7 +72,16 @@
       "Bash(powershell -Command \"Set-Location ''x:\\\\Codes\\\\donna-app''; flutter analyze lib/screens/checkout/checkout_screen.dart 2>&1 | Select-Object -Last 20\")",
       "mcp__supabase__get_edge_function",
       "Bash(dart analyze:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(Get-ChildItem -Path supabase_scripts -Filter *.sql -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object Name)",
+      "Bash(Sort-Object Name)",
+      "mcp__supabase__list_extensions",
+      "Bash(sort -k6,7)",
+      "Bash(awk '{print $1}')",
+      "Bash(cd /x && ls -la 2>/dev/null | head -5 || ls -d \"C:/Users/\"* 2>/dev/null | head -3)",
+      "Read(//c/Users/**)",
+      "Bash(grep -E \"\\\\.\\(sql|dart\\)$\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\walfr\\.claude"

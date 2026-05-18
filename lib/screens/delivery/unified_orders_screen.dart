@@ -295,9 +295,12 @@ class _UnifiedOrdersScreenState extends State<UnifiedOrdersScreen> {
         return;
       }
 
-      final ok = await DoaRepartosService.acceptOrder(orderId);
-      if (!ok) {
-        throw Exception('No fue posible asignar el pedido. Quizá ya no está disponible.');
+      final r = await DoaRepartosService.acceptOrderDetailed(orderId);
+      if (r['success'] != true) {
+        if (r['code'] == 'delivery_suspended') {
+          throw Exception('Tu suscripción está suspendida. Paga tu cuota mensual para volver a aceptar pedidos.');
+        }
+        throw Exception(r['message'] ?? 'No fue posible asignar el pedido. Quizá ya no está disponible.');
       }
 
       try {

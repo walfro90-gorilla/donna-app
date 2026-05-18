@@ -4,6 +4,7 @@ import 'package:doa_repartos/screens/admin/restaurants_management_screen.dart';
 import 'package:doa_repartos/screens/admin/delivery_agents_management_screen.dart';
 import 'package:doa_repartos/screens/admin/clients_management_screen.dart';
 import 'package:doa_repartos/screens/admin/orders_monitor_screen.dart';
+import 'package:doa_repartos/screens/admin/subscriptions_management_screen.dart';
 import 'package:doa_repartos/core/theme/app_theme_controller.dart';
 import 'package:doa_repartos/core/session/session_manager.dart';
 import 'package:doa_repartos/screens/auth/login_screen.dart';
@@ -27,6 +28,7 @@ class _AdminMainDashboardState extends State<AdminMainDashboard> {
     RestaurantsManagementScreen(),
     DeliveryAgentsManagementScreen(),
     ClientsManagementScreen(),
+    SubscriptionsManagementScreen(),
   ];
 
   @override
@@ -130,6 +132,11 @@ class _AdminMainDashboardState extends State<AdminMainDashboard> {
                     selectedIcon: Icon(Icons.person),
                     label: Text('Clientes'),
                   ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.event_repeat_outlined),
+                    selectedIcon: Icon(Icons.event_repeat),
+                    label: Text('Cuotas'),
+                  ),
                 ],
               ),
               const VerticalDivider(width: 1),
@@ -173,6 +180,11 @@ class _AdminMainDashboardState extends State<AdminMainDashboard> {
                   icon: Icon(Icons.person_outline),
                   selectedIcon: Icon(Icons.person),
                   label: 'Clientes',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.event_repeat_outlined),
+                  selectedIcon: Icon(Icons.event_repeat),
+                  label: 'Cuotas',
                 ),
               ],
             ),

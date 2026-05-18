@@ -13,6 +13,7 @@ import 'package:doa_repartos/core/supabase/supabase_rpc.dart';
 import 'package:doa_repartos/core/supabase/rpc_names.dart';
 import 'package:doa_repartos/widgets/phone_dial_input.dart';
 import 'package:doa_repartos/core/config/payment_config.dart';
+import 'package:doa_repartos/core/services/billing_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final DoaRestaurant restaurant;
@@ -79,6 +80,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // Tarifa de delivery tomada del restaurante; 35 como fallback de plataforma
   double get _deliveryFee => widget.restaurant.deliveryFee ?? 35.0;
 
+  // Modelo de cobro global (commission vs subscription)
+  BillingModeConfig? _billingMode;
+
+  // Propina opcional al repartidor (solo modo subscription + pago tarjeta)
+  double _tipAmount = 0;
+  bool get _showTipField =>
+      _billingMode?.isSubscription == true &&
+      _selectedPaymentMethod != PaymentMethod.cash;
+
   // Dirección canónica: formatted_address de Google Maps si está disponible, sino el texto del controller
   String get _canonicalDeliveryAddress {
     final formatted = _deliveryAddressStructured?['formatted_address'] as String?;
@@ -93,6 +103,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _loadClientDebt();
     _placesSessionToken = PlacesService.newSessionToken();
     _initCourierGate();
+    _initBillingMode();
     // Si el usuario edita manualmente tras seleccionar desde Google, invalidamos la selección
     _addressController.addListener(() {
       final current = _addressController.text.trim();
@@ -105,6 +116,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _isInCoverageArea = null;
       }
     });
+  }
+
+  Future<void> _initBillingMode() async {
+    try {
+      final mode = await BillingService.instance.getMode();
+      if (mounted) setState(() => _billingMode = mode);
+    } catch (_) {}
   }
 
   Future<void> _initCourierGate() async {
@@ -368,7 +386,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return total;
   }
 
-  double get _total => _subtotal + _deliveryFee;
+  double get _total => _subtotal + _deliveryFee + (_showTipField ? _tipAmount : 0);
 
   List<DoaProduct> get _cartProducts {
     return widget.products.where((p) => widget.cartItems.containsKey(p.id)).toList();
@@ -605,6 +623,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           deliveryPlaceId: _deliveryPlaceId,
           deliveryAddressStructured: _deliveryAddressStructured,
           cashAmount: _cashAmount,
+          tipAmount: _showTipField ? _tipAmount : 0,
         );
 
         if (result['success'] != true) {
@@ -632,6 +651,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 paymentMethod: _selectedPaymentMethod,
                 total: _total,
                 cashAmount: _cashAmount,
+                tipAmount: _showTipField ? _tipAmount : 0,
               ),
             ),
           );
@@ -1346,6 +1366,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 Text('MXN ${_deliveryFee.toStringAsFixed(2)}', style: Theme.of(context).textTheme.bodyLarge),
               ],
             ),
+            if (_showTipField) ...[
+              const SizedBox(height: 12),
+              _buildTipPicker(),
+            ],
             const Divider(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1358,6 +1382,36 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTipPicker() {
+    const presets = <double>[0, 10, 20, 50, 100];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.volunteer_activism, size: 18, color: Colors.green),
+            const SizedBox(width: 6),
+            Text('Propina al repartidor', style: Theme.of(context).textTheme.bodyLarge),
+            const Spacer(),
+            Text('MXN ${_tipAmount.toStringAsFixed(2)}',
+                style: Theme.of(context).textTheme.bodyLarge),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          children: presets.map((p) {
+            return ChoiceChip(
+              label: Text(p == 0 ? 'Sin propina' : '\$${p.toStringAsFixed(0)}'),
+              selected: _tipAmount == p,
+              onSelected: (_) => setState(() => _tipAmount = p),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
